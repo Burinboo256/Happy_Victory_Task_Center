@@ -1,6 +1,6 @@
 # แผนพัฒนา Web App บน Vercel
 
-วันที่: 5 พฤศจิกายน 2026 · อัปเดต 6 พฤศจิกายน 2026: **เริ่มพัฒนาและทดสอบบนเครื่องแล้ว** ดู [หลักฐานและงานคงเหลือ](vercel-progress.md) ยังไม่สร้างบริการ cloud หรือสลับ production
+วันที่: 5 พฤศจิกายน 2026 · อัปเดต 6 พฤศจิกายน 2026: พัฒนาและทดสอบบนเครื่องแล้ว เจ้าของอนุญาต GitHub / Vercel และมี [deployment แรก](vercel-first-deployment.md) ออนไลน์ แต่ยังไม่ตั้ง backend cloud หรือสลับ production ดู [หลักฐานและงานคงเหลือ](vercel-progress.md)
 
 ## 1. เป้าหมายและขอบเขต
 
@@ -16,7 +16,7 @@
 - Airtable มี Users, Tasks, Task Updates, Follow-ups และ Notifications ใช้ [schema เดิม](database-schema.md) และ [Base/Table mappings](airtable-connection.md)
 - มี Admin เจ้าของระบบแล้ว ยังไม่มี Agent / Secretary จริงครบสำหรับทดสอบหลายบัญชี Google OAuth ยังเป็น External / Testing
 - มีชุดทดสอบเดิม 60 รายการ แต่ยังไม่ได้ยืนยันทุก flow กับหลายบัญชีและ LINE บนมือถือจริง ดู [validation.md](validation.md)
-- ตอนเริ่มแผน checkout ไม่มี Git; ปัจจุบันสร้าง local repository แล้ว แต่ยังไม่มี commit / remote และยังไม่เชื่อม Git deployment
+- ตอนเริ่มแผน checkout ไม่มี Git; ปัจจุบัน push initial commit ขึ้น GitHub / main, CI ผ่าน และเชื่อม Vercel กับ repo แล้ว
 
 ## 3. สถาปัตยกรรมที่เสนอ
 

@@ -2,6 +2,8 @@
 
 สถานะ 6 พฤศจิกายน 2026: เจ้าของมีทั้ง iPhone และ Android; **ยังไม่มีผลทดสอบอุปกรณ์จริง** Chrome mobile viewport / axe บนเครื่องเป็นหลักฐานแยก ไม่ใช้ทำเครื่องหมายผ่านในหน้านี้
 
+มี [หน้าเว็บ Vercel ออนไลน์](https://happy-victory-task-center.vercel.app/login) แล้ว แต่ยังแสดงเตรียมระบบเพราะ cloud DB / OAuth ไม่ตั้งค่า จึงยังเริ่มกรณี Login / ส่งงานด้านล่างไม่ได้ ดู [สถานะ deployment](vercel-first-deployment.md)
+
 ## เตรียมรอบทดสอบ
 
 - ต้องมี HTTPS origin ของ staging ที่ทั้งสองโทรศัพท์เข้าถึงได้ พร้อม OAuth callback ตรง origin และเชื่อม test Base เท่านั้น `localhost:3000` ปัจจุบันเข้าถึงได้เฉพาะคอมพิวเตอร์ ไม่ใช้แทน URL บนโทรศัพท์

@@ -118,4 +118,4 @@ Next dev กรอง incoming request log ของ `/api/auth/google/callback`
 
 ## Deploy
 
-ใช้ [แผนพัฒนา](../docs/vercel-development-plan.md), [แผน Deploy](../docs/vercel-deployment-plan.md) และ [สถานะล่าสุด](../docs/vercel-progress.md) ตั้ง Vercel Root Directory เป็น `web/` ไม่มี Vercel project, โดเมน หรือ production credentials ของระบบใหม่ถูกสร้างจากคำสั่ง build / tests เหล่านี้
+ใช้ [แผนพัฒนา](../docs/vercel-development-plan.md), [แผน Deploy](../docs/vercel-deployment-plan.md) และ [สถานะล่าสุด](../docs/vercel-progress.md) ตั้ง Vercel Root Directory เป็น `web/` เจ้าของอนุญาตและมี [deployment แรก](../docs/vercel-first-deployment.md) แล้วที่ https://happy-victory-task-center.vercel.app หน้าเว็บออนไลน์ แต่ cloud DB / OAuth ยังไม่ตั้งค่า คำสั่ง build / tests ไม่สร้างหรือเชื่อมบริการเหล่านี้เอง

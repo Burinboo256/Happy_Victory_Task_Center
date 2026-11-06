@@ -61,6 +61,8 @@ npm run test:load -- --users=5 --tasks=250 --delay-ms=60
 
 ## หลักฐานก่อน release ที่ยังขาด
 
+เพิ่ม regression ของ queued mutation ที่จอง slot ก่อนคำขออื่นได้รับ 429 แล้ว: ต้องตรวจ shared cooldown อีกครั้งหลังรอ slot และหยุดก่อนเรียก transport ผลก่อนแก้ส่งออกไป 2 calls; หลังแก้ส่งเพียง call แรก และ mutation ได้ AIRTABLE_BUSY / Retry-After โดยไม่กลายเป็น uncertain write ชุด PostgreSQL ปัจจุบันผ่าน 8 tests; CI ตรวจซ้ำครบแล้วตาม [deployment แรก](vercel-first-deployment.md)
+
 - วัด Airtable จริงกับข้อมูลและขนาดทีมใกล้งานจริง รวม API usage budget ของบัญชีที่ใช้
 - วัด staging ใน region / PostgreSQL provider ที่เลือก รวม cold start, sustained load และ network failure
 - เก็บ latency แยก successful / busy, throughput และ error rate ด้วย samples มากพอ แล้วตกลงเกณฑ์รับรองกับเจ้าของ

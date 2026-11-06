@@ -4,6 +4,8 @@
 
 **Host:** Google Apps Script HTML Service · **Database:** Airtable · **Timezone:** Asia/Bangkok
 
+เว็บ Next.js ขึ้น [Vercel](https://happy-victory-task-center.vercel.app) และ [GitHub](https://github.com/Burinboo256/Happy_Victory_Task_Center) แล้ว หน้าเว็บออนไลน์แต่ยังรอตั้ง PostgreSQL / OAuth บน cloud จึงยัง Login และส่งงานบน URL ใหม่ไม่ได้ ดู [สถานะ deployment แรก](docs/vercel-first-deployment.md) Google Apps Script ยังคงเป็นระบบใช้งานจริง
+
 ## เริ่มทดลองบนเครื่อง
 
 ต้องมี Node.js 20 ขึ้นไป ไม่ต้องติดตั้ง dependencies
@@ -39,7 +41,7 @@ npm run preview
 
 ## ติดตั้งใช้งานจริง
 
-เริ่มพัฒนาแอป Next.js ใน `web/` บนเครื่องแล้ว ดู [วิธีรันและทดสอบ](web/README.md), [สถานะพัฒนาล่าสุด](docs/vercel-progress.md), [แผนพัฒนา](docs/vercel-development-plan.md) และ [แผน Deploy / Cutover / Rollback](docs/vercel-deployment-plan.md) ยังไม่ได้สร้างบริการ cloud หรือ Deploy Vercel; ระบบใช้งานจริงด้านล่างยังเป็น Google Apps Script
+แอป Next.js ใน `web/` มี deployment แรกบน Vercel แล้ว ดู [วิธีรันและทดสอบ](web/README.md), [สถานะพัฒนาล่าสุด](docs/vercel-progress.md), [แผนพัฒนา](docs/vercel-development-plan.md) และ [แผน Deploy / Cutover / Rollback](docs/vercel-deployment-plan.md) ยังไม่ตั้ง backend cloud หรือสลับผู้ใช้จริง ระบบใช้งานจริงด้านล่างยังเป็น Google Apps Script
 
 1. สร้างตารางตาม [โครงสร้าง Airtable](docs/database-schema.md)
 2. ทำตาม [คู่มือติดตั้ง Google Apps Script และ Google OAuth](docs/deployment.md)

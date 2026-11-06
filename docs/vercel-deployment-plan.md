@@ -1,8 +1,8 @@
 # แผน Deploy และย้ายระบบไป Vercel
 
-วันที่: 5 พฤศจิกายน 2026 · สถานะ: **runbook เป้าหมาย ยังไม่ได้ Deploy Vercel**
+วันที่: 5 พฤศจิกายน 2026 · อัปเดต 6 พฤศจิกายน 2026: **มี deployment แรกบน Vercel แต่ backend cloud ยังไม่ตั้งค่าและยังไม่ cutover** ดู [หลักฐาน](vercel-first-deployment.md)
 
-ใช้ร่วมกับ [แผนพัฒนา](vercel-development-plan.md) สำหรับ M0–M7 เว็บ Google Apps Script ปัจจุบันยังเป็น production ตาม [deployment.md](deployment.md) เริ่มพัฒนา local แล้ว ดู [สถานะล่าสุด](vercel-progress.md) และ [คำสั่งที่มีจริงใน web/](../web/README.md) ส่วน URL และ cloud configuration ใน runbook นี้ยังไม่ได้ตั้งค่า
+ใช้ร่วมกับ [แผนพัฒนา](vercel-development-plan.md) สำหรับ M0–M7 เว็บ Google Apps Script ปัจจุบันยังเป็น production ตาม [deployment.md](deployment.md) ดู [สถานะล่าสุด](vercel-progress.md) และ [คำสั่งที่มีจริงใน web/](../web/README.md) URL .vercel.app พร้อมแล้ว ส่วน custom domains, cloud DB / OAuth และ cutover configuration ใน runbook นี้ยังไม่ตั้งค่า
 
 ## 1. Environment และทรัพยากร
 

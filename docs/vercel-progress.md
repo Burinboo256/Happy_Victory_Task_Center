@@ -1,6 +1,6 @@
 # สถานะพัฒนา Vercel
 
-อัปเดต: 6 พฤศจิกายน 2026 · เจ้าของอนุญาตให้นำโค้ดขึ้น GitHub [`Burinboo256/Happy_Victory_Task_Center`](https://github.com/Burinboo256/Happy_Victory_Task_Center) และ Deploy Vercel เพื่อเตรียมทดสอบมือถือแล้ว กำลังตั้งค่า ยังไม่สลับ production จาก Apps Script
+อัปเดต: 6 พฤศจิกายน 2026 · โค้ดขึ้น GitHub [`Burinboo256/Happy_Victory_Task_Center`](https://github.com/Burinboo256/Happy_Victory_Task_Center) และ [Vercel](https://happy-victory-task-center.vercel.app) แล้ว CI ผ่านครบ หน้าเว็บยังแสดงเตรียมระบบเพราะ backend cloud ยังไม่ตั้งค่า ยังไม่สลับ production จาก Apps Script ดู [หลักฐาน deployment](vercel-first-deployment.md)
 
 ## สิ่งที่มีใน source แล้ว
 
@@ -20,7 +20,7 @@
 - ตรวจ record envelopes, dates / timestamps, Status / Priority และ single-owner links; ข้อมูลผิดรูปคืน error ที่ไม่เผย field values และไม่เดาสถานะเป็น New ส่วน attachment URLs ที่ใช้ไม่ได้จะไม่ส่งไป client
 - `diagnose` ตรวจ schema contract ของ 5 ตารางด้วย schema-read token แยกสำหรับ CLI พร้อมทดสอบคำสั่งจริงกับ upstream จำลอง ไม่เพิ่ม schema scopes ให้ runtime PAT
 - ปรับ contrast ข้อความ / badges, ชื่อ landmarks และ dialog semantics; เพิ่ม axe scans แบบไม่ exclude / disable rules พร้อมรายงาน `artifacts/vercel/accessibility/` รวมรายการที่ต้องให้คนตรวจต่อ
-- สร้าง local Git repository แล้ว ยังไม่มี commit / remote; เตรียม `.github/workflows/verify.yml` รวม load rehearsal 5 คน / 250 งานหลัง build / API tests แต่ยังไม่ได้รันบน GitHub
+- Push initial commit `ec44e92` ขึ้น GitHub / main แล้ว `.github/workflows/verify.yml` รวม load rehearsal 5 คน / 250 งานผ่านบน GitHub Actions; Vercel เชื่อม repo / root web / Node 24 และ deployment แรก READY
 - เพิ่ม maintenance guard ของ Apps Script ใน source พร้อม test; ยังไม่ได้ Deploy guard หรือปิดการเขียนบนเว็บเดิม
 
 ## หลักฐานตรวจสอบบนเครื่อง
@@ -39,6 +39,8 @@
 
 รวม tests ของเว็บใหม่ **85 รายการผ่านตามรอบตรวจที่ระบุ** แยกจาก Apps Script 61 รายการ ภาพ UI ที่ใช้ข้อมูลสมมติอยู่ใน `artifacts/vercel/` ภายหลังเจ้าของอนุญาตทดสอบบริการจริง จึงสร้าง credentials ใหม่เฉพาะ test Base / localhost เก็บใน ignored `web/.env.local`; ไม่มี production credentials ใน workspace การตรวจ bundle รอบ automated tests ใช้ค้นหา marker ของ test preloader / synthetic token / fixture controls / schema-only token variable แล้วไม่พบ
 
+CI ของ initial commit รันครบใน [run 42172256512](https://github.com/Burinboo256/Happy_Victory_Task_Center/actions/runs/42172256512): unit 25 / integration 15 / PostgreSQL 8 / browser E2E 24 / HTTP API 13 และ Apps Script 61 ผ่านทั้งหมด รวม lint / typecheck / audit / build / synthetic load ตัวเลข partial reruns ด้านล่างเป็นประวัติการตรวจ local ก่อน push
+
 หลังแก้ detail metadata / เวลา รัน TypeScript, Biome, production build และ E2E เฉพาะ Secretary / axe หน้าหลัก desktop + mobile รวม 4 cases ผ่าน ไม่ได้รันทั้ง 83 ซ้ำ สแกน output ล่าสุด 350 ไฟล์ไม่พบค่า secret ทั้ง 6 รายการที่ตั้งจริงในเครื่อง
 
 หลังแก้ rate admission รัน unit 25 / integration 15 / PostgreSQL 7 / HTTP-browser API 13 พร้อม lint / typecheck / build ผ่าน Browser E2E 24 และ Apps Script 61 เป็นผลรอบก่อน ไม่ได้รันซ้ำในรอบแก้ rate limiter เพิ่ม `test:load` ตามขนาดที่เจ้าของระบุ 5 คน / 250 งาน: normal burst สำเร็จ 5/5, overload 20 คำขอตอบ busy 14 และฟื้นหลังคิวจบ ตรวจ HTTP / DB จริงแต่ใช้ sessions และ Airtable สมมติ รายงานและข้อจำกัดใน [ผลโหลดบนเครื่อง](vercel-load-acceptance.md)
@@ -51,18 +53,18 @@
 
 | Milestone | สถานะ / งานคงเหลือ |
 |---|---|
-| M0 | ตรึง stack และเริ่ม Git แล้ว; Base ทดสอบ, PAT แยก, OAuth client localhost และ PostgreSQL local ถาวรพร้อมตาม [สถานะ local acceptance](vercel-local-acceptance.md); cloud / domains / backups ยังเลื่อน |
+| M0 | GitHub / CI / Vercel project และ .vercel.app URL พร้อม; Base ทดสอบ / localhost OAuth / PostgreSQL local พร้อม; PostgreSQL cloud / backup / ค่าใช้จ่ายก่อนใช้งานจริงยังต้องสรุป |
 | M1 | โครงแอป, DB และ adapter ผ่าน tests; schema diagnostics / table access กับ Airtable test Base จริงผ่านครบ 5 ตาราง |
 | M2 | Google Login จริงครบ Admin, Secretary, Agent A/B; return-to-form และ Active revocation / restore ผ่าน; สอง Chrome profiles มี session พร้อมกัน ตรวจ cross-owner ทั้งสองทิศทาง และ Agent A logout ไม่กระทบ Agent B ผ่าน |
 | M3 | 5 mutations และ recovery ผ่านตามขอบเขตเดิม; HTTP lost ACK / negative drift / same-key retry ไม่ซ้ำ; สอง profiles สร้างงานต่างเจ้าของซ้อนกันได้ภายใต้ test acknowledgement barrier มี running journals ต่างผู้ใช้ 2 รายการและ task / audit อย่างละ 1 ต่อคำขอ; live HTTP contention บนงานเดียวกันยังไม่ได้ซ้อม |
 | M4 | หน้าหลัก / keyboard / errors และ automated axe scans ผ่านบน Chrome desktop / mobile viewport แล้ว; รายงานเก็บ incomplete results ไว้ ยังต้องตรวจ screen reader และ Safari / Rich Menu บนอุปกรณ์จริง |
-| M5–M6 | ยังไม่เริ่ม staging / cutover; ระบบเดิมยังเป็น production |
+| M5–M6 | Vercel deployment แรก READY แต่ backend cloud / OAuth ยังไม่ตั้ง จึงยังไม่ผ่าน staging acceptance; ระบบเดิมยังเป็น production และยังไม่ cutover |
 | M7 | LINE linking / delivery worker / scheduler และผู้ให้บริการอีเมลของระบบใหม่ยังไม่พัฒนา ช่องทางส่งจริงปิดไว้ |
 
 ## งานถัดไปบนเครื่อง
 
 1. วัด load / latency กับ Airtable จริงและ staging ต่อจาก local rehearsal 5 คน / 250 งาน; กำหนดเกณฑ์รับรองและ API usage budget ก่อน release
 2. เจ้าของมี iPhone / Android พร้อมแล้ว; ตรวจ screen reader / Safari / LINE Rich Menu ตาม [คู่มืออุปกรณ์จริง](vercel-device-acceptance.md) หลังมี HTTPS origin ที่เข้าถึงจากมือถือ
-3. เตรียม staging หลังเจ้าของเลือกเริ่มขั้นนั้น; staging / cutover ยังไม่เริ่ม ดู [รายละเอียดสอง profiles และรอบซ้อมที่ไม่ผ่าน](vercel-local-acceptance.md#สอง-browser-profiles-พร้อมกัน)
+3. ตั้ง cloud DB / OAuth / environment หลัง deployment แรก แล้วรับรอง staging ก่อน cutover ตาม [รายการงานที่เหลือ](vercel-first-deployment.md#ขั้นถัดไปให้-login-และส่งงานได้)
 
 ผล build และ tests ที่ใช้ข้อมูลจำลองไม่ยืนยันว่าพร้อมใช้กับบัญชีจริง ยังไม่ผ่าน release gates ทั้งหมดใน [แผนพัฒนา](vercel-development-plan.md) และ [แผน Deploy](vercel-deployment-plan.md)

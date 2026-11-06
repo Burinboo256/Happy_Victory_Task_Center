@@ -2,6 +2,8 @@
 
 อัปเดต 6 พฤศจิกายน 2026: เจ้าของอนุญาต **เตรียม Base ทดสอบและ OAuth สำหรับ localhost** ไม่ได้อนุญาต Deploy / cutover จากขั้นตอนนี้
 
+ภายหลังเจ้าของอนุญาต GitHub / Vercel และมี [deployment แรก](vercel-first-deployment.md) แล้ว หน้าเว็บออนไลน์ยังไม่ตั้ง backend cloud; หลักฐานด้านล่างเป็นการทดสอบ localhost ไม่ใช่ acceptance ของเว็บบน Vercel
+
 ## ทรัพยากรทดสอบ
 
 | รายการ | สถานะ |
