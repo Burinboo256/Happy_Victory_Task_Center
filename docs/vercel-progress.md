@@ -1,0 +1,68 @@
+# สถานะพัฒนา Vercel
+
+อัปเดต: 6 พฤศจิกายน 2026 · เจ้าของอนุญาตให้นำโค้ดขึ้น GitHub [`Burinboo256/Happy_Victory_Task_Center`](https://github.com/Burinboo256/Happy_Victory_Task_Center) และ Deploy Vercel เพื่อเตรียมทดสอบมือถือแล้ว กำลังตั้งค่า ยังไม่สลับ production จาก Apps Script
+
+## สิ่งที่มีใน source แล้ว
+
+- `web/`: Next.js 16.4.5, React 19.3.1, TypeScript 6.0.3, Node.js 24; มี lockfile และ Biome recommended lint rules
+- หน้า Login, Dashboard, รายการ / การ์ด / ค้นหา / filters / pagination, ฟอร์ม `/tasks/new`, รายละเอียด, comments / internal notes, status, followups, calendar, reports และ team
+- Detail แสดงประเภทงาน / วันที่ส่งงาน, วันกำหนดส่ง / นัดมีปี และ timeline แสดงวันที่พร้อมเวลา Bangkok; มี regression ข้ามเที่ยงคืน
+- Google OIDC authorization code + PKCE, nonce และการตรวจ JWT signature; session แบบ HttpOnly cookie อายุ 6 ชั่วโมง, CSRF และการตรวจ Users ใหม่ทุก protected request
+- Airtable adapter ฝั่ง server รองรับ pagination, shared rate slots ใน PostgreSQL, cooldown เมื่อ 429 และแยกผลการเขียนที่ไม่แน่นอนออกจากการปฏิเสธที่ยืนยันได้
+- Rate admission ตรวจคิวเต็มแบบ atomic ก่อนจอง slot; rejected requests ไม่เลื่อนคิว / cooldown และตอบ Retry-After จากเวลารอปัจจุบัน คำขอที่รอ slot ตรวจ cooldown ใหม่ก่อน dispatch เพื่อไม่ส่ง mutation ระหว่างพักหลัง 429 ของอีก instance
+- PostgreSQL migrations, environment binding, runtime write switch และ durable operation journal; ไม่คืนสิทธิ์เก่าจาก snapshot เมื่อ role เปลี่ยนระหว่างคำขอค้าง
+- CLI `db:migrate`, `diagnose`, `ops:runtime`, `ops:inspect`, `ops:recover`; [วิธีใช้](../web/README.md)
+- Recovery เก็บ write intent ก่อนเรียก Airtable, เทียบผลแบบอ่านอย่างเดียวก่อนคืนคำขอเป็น pending และบันทึก operator / evidence reference แบบ atomic; คง resource จนคำขอเสร็จ และกันการแก้ไขงานที่ create ยังไม่ครบ
+- Browser แยก retry key ตาม payload เพื่อไม่ทำ key ของคำขอที่ยังค้างหายเมื่อผู้ใช้แก้ฟอร์ม
+- เมนูมือถือปิดแล้วรับ focus ไม่ได้ เปิดแล้วใช้ Tab / Shift+Tab วนในเมนูและ Escape ปิดได้; skip link ไปเนื้อหา และ progress indicators มีชื่อให้อ่าน
+- Network / JSON errors แสดงภาษาไทย, โหลดล้มเหลวล้างข้อมูลหน้าจอ และไม่ให้ response เก่าคืนข้อมูลทับผลล่าสุด
+- ฟอร์ม / detail โหลด bootstrap แบบ context โดยไม่ list Tasks; หน้ารวมอ่านเฉพาะ summary fields รวม Description สำหรับค้นหา และยังตาม pagination ครบทุกหน้าโดยไม่ cache สิทธิ์
+- ตรวจ record envelopes, dates / timestamps, Status / Priority และ single-owner links; ข้อมูลผิดรูปคืน error ที่ไม่เผย field values และไม่เดาสถานะเป็น New ส่วน attachment URLs ที่ใช้ไม่ได้จะไม่ส่งไป client
+- `diagnose` ตรวจ schema contract ของ 5 ตารางด้วย schema-read token แยกสำหรับ CLI พร้อมทดสอบคำสั่งจริงกับ upstream จำลอง ไม่เพิ่ม schema scopes ให้ runtime PAT
+- ปรับ contrast ข้อความ / badges, ชื่อ landmarks และ dialog semantics; เพิ่ม axe scans แบบไม่ exclude / disable rules พร้อมรายงาน `artifacts/vercel/accessibility/` รวมรายการที่ต้องให้คนตรวจต่อ
+- สร้าง local Git repository แล้ว ยังไม่มี commit / remote; เตรียม `.github/workflows/verify.yml` รวม load rehearsal 5 คน / 250 งานหลัง build / API tests แต่ยังไม่ได้รันบน GitHub
+- เพิ่ม maintenance guard ของ Apps Script ใน source พร้อม test; ยังไม่ได้ Deploy guard หรือปิดการเขียนบนเว็บเดิม
+
+## หลักฐานตรวจสอบบนเครื่อง
+
+| ชุดตรวจ | ผลล่าสุด | ขอบเขตหลักฐาน |
+|---|---|---|
+| TypeScript + Biome | ผ่าน | ตรวจโค้ดเว็บ / tools / tests ไม่ใช่ live service readiness |
+| Production build | ผ่าน | routes ใหม่ compile และเป็น dynamic; ไม่มี test preloader / test token ใน server หรือ client bundle |
+| Unit tests เว็บ | 25 ผ่าน | ownership / security, invalid data / dates, 250-task pagination / projection, rate limit / uncertain writes และ schema contract / metadata token isolation |
+| Integration บน PGlite | 15 ผ่าน | SQL จริงใน embedded engine, signed OIDC doubles, sessions / role changes, journal replay, lost response, recovery ของ status / followup และ maintenance race |
+| PostgreSQL จริงใน Docker | 8 ผ่าน | หลาย connections, คำขอซ้ำ / resource conflict, recovery สองผู้ดูแลพร้อมกัน, shared slots / overload ไม่ต่อคิว rejected requests, queued mutation เคารพ cooldown ที่เกิดใหม่ และ migration CLI idempotency / rollback |
+| Browser E2E | 24 ผ่าน | production build + Chrome desktop / mobile viewport, keyboard / focus / error states และ axe scans ของ 8 หน้าหลัก + Login / errors / mobile menu; ใช้ API doubles เฉพาะ tests |
+| HTTP / Browser ต่อ API จริง | 13 ผ่าน | PostgreSQL จริง, revocation / expiry / kill switch, context / invalid data, diagnostics CLI และ axe บน configured Login; จำลองเฉพาะ Airtable upstream |
+| Apps Script regression | 61 ผ่าน | รวม guard หยุด business mutations และยังอ่านข้อมูลได้ |
+| npm dependency audit | ไม่พบช่องโหว่หลังติดตั้ง | เปลี่ยนจากชุด ESLint ที่มี advisory เป็น Biome; ไม่มี runtime dependency advisory ค้าง ณ รอบตรวจ |
+
+รวม tests ของเว็บใหม่ **85 รายการผ่านตามรอบตรวจที่ระบุ** แยกจาก Apps Script 61 รายการ ภาพ UI ที่ใช้ข้อมูลสมมติอยู่ใน `artifacts/vercel/` ภายหลังเจ้าของอนุญาตทดสอบบริการจริง จึงสร้าง credentials ใหม่เฉพาะ test Base / localhost เก็บใน ignored `web/.env.local`; ไม่มี production credentials ใน workspace การตรวจ bundle รอบ automated tests ใช้ค้นหา marker ของ test preloader / synthetic token / fixture controls / schema-only token variable แล้วไม่พบ
+
+หลังแก้ detail metadata / เวลา รัน TypeScript, Biome, production build และ E2E เฉพาะ Secretary / axe หน้าหลัก desktop + mobile รวม 4 cases ผ่าน ไม่ได้รันทั้ง 83 ซ้ำ สแกน output ล่าสุด 350 ไฟล์ไม่พบค่า secret ทั้ง 6 รายการที่ตั้งจริงในเครื่อง
+
+หลังแก้ rate admission รัน unit 25 / integration 15 / PostgreSQL 7 / HTTP-browser API 13 พร้อม lint / typecheck / build ผ่าน Browser E2E 24 และ Apps Script 61 เป็นผลรอบก่อน ไม่ได้รันซ้ำในรอบแก้ rate limiter เพิ่ม `test:load` ตามขนาดที่เจ้าของระบุ 5 คน / 250 งาน: normal burst สำเร็จ 5/5, overload 20 คำขอตอบ busy 14 และฟื้นหลังคิวจบ ตรวจ HTTP / DB จริงแต่ใช้ sessions และ Airtable สมมติ รายงานและข้อจำกัดใน [ผลโหลดบนเครื่อง](vercel-load-acceptance.md)
+
+เพิ่ม `probe:live` แบบ opt-in จำกัด GET 30 คำขอเฉพาะ test Base: รันจริงสำเร็จ 25 calls, mutation 0; Agent full 4 งานใช้ 657–698 ms / Secretary full 11 งานใช้ 996–1,057 ms รวม Users GET ใหม่ ก่อน service bootstrap นำ upstream latency ราว 330 ms ไปซ้อม synthetic 250 งาน: 5 sessions พร้อมกันผ่าน 5/5 สูงสุด 2,448 ms ผลนี้ไม่ใช่ Google / browser / live 250-task load acceptance และยังไม่ยืนยัน quota workspace ดู [หลักฐานและขอบเขต](vercel-load-acceptance.md#เวลาอ่าน-airtable-จริง)
+
+กรณีจำลอง 250 tasks / 3 users: bootstrap เต็มอ่าน Tasks 3 หน้า + Users 1 หน้า; context ของ Secretary อ่าน Users 1 หน้า และของ Agent ไม่ list ตารางใด ตัวเลขนี้ไม่รวม GET Users ที่ตรวจ session ทุก protected request ยังคงอ่าน summaries ครบเพื่อคำนวณรายงานและแบ่งหน้าใน browser จึงยังต้องวัด load กับปริมาณงานจริง ดู [ขอบเขตการอ่าน](../web/README.md#ขอบเขตการอ่านและข้อมูลผิดรูป)
+
+## เทียบ milestone กับแผน
+
+| Milestone | สถานะ / งานคงเหลือ |
+|---|---|
+| M0 | ตรึง stack และเริ่ม Git แล้ว; Base ทดสอบ, PAT แยก, OAuth client localhost และ PostgreSQL local ถาวรพร้อมตาม [สถานะ local acceptance](vercel-local-acceptance.md); cloud / domains / backups ยังเลื่อน |
+| M1 | โครงแอป, DB และ adapter ผ่าน tests; schema diagnostics / table access กับ Airtable test Base จริงผ่านครบ 5 ตาราง |
+| M2 | Google Login จริงครบ Admin, Secretary, Agent A/B; return-to-form และ Active revocation / restore ผ่าน; สอง Chrome profiles มี session พร้อมกัน ตรวจ cross-owner ทั้งสองทิศทาง และ Agent A logout ไม่กระทบ Agent B ผ่าน |
+| M3 | 5 mutations และ recovery ผ่านตามขอบเขตเดิม; HTTP lost ACK / negative drift / same-key retry ไม่ซ้ำ; สอง profiles สร้างงานต่างเจ้าของซ้อนกันได้ภายใต้ test acknowledgement barrier มี running journals ต่างผู้ใช้ 2 รายการและ task / audit อย่างละ 1 ต่อคำขอ; live HTTP contention บนงานเดียวกันยังไม่ได้ซ้อม |
+| M4 | หน้าหลัก / keyboard / errors และ automated axe scans ผ่านบน Chrome desktop / mobile viewport แล้ว; รายงานเก็บ incomplete results ไว้ ยังต้องตรวจ screen reader และ Safari / Rich Menu บนอุปกรณ์จริง |
+| M5–M6 | ยังไม่เริ่ม staging / cutover; ระบบเดิมยังเป็น production |
+| M7 | LINE linking / delivery worker / scheduler และผู้ให้บริการอีเมลของระบบใหม่ยังไม่พัฒนา ช่องทางส่งจริงปิดไว้ |
+
+## งานถัดไปบนเครื่อง
+
+1. วัด load / latency กับ Airtable จริงและ staging ต่อจาก local rehearsal 5 คน / 250 งาน; กำหนดเกณฑ์รับรองและ API usage budget ก่อน release
+2. เจ้าของมี iPhone / Android พร้อมแล้ว; ตรวจ screen reader / Safari / LINE Rich Menu ตาม [คู่มืออุปกรณ์จริง](vercel-device-acceptance.md) หลังมี HTTPS origin ที่เข้าถึงจากมือถือ
+3. เตรียม staging หลังเจ้าของเลือกเริ่มขั้นนั้น; staging / cutover ยังไม่เริ่ม ดู [รายละเอียดสอง profiles และรอบซ้อมที่ไม่ผ่าน](vercel-local-acceptance.md#สอง-browser-profiles-พร้อมกัน)
+
+ผล build และ tests ที่ใช้ข้อมูลจำลองไม่ยืนยันว่าพร้อมใช้กับบัญชีจริง ยังไม่ผ่าน release gates ทั้งหมดใน [แผนพัฒนา](vercel-development-plan.md) และ [แผน Deploy](vercel-deployment-plan.md)

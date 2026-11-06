@@ -1,0 +1,13 @@
+.clasp.json
+.clasprc.json
+.env*
+!.env.example
+dist/
+artifacts/
+node_modules/
+.next/
+.vercel/
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo

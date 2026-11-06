@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#8d4662">
+  <title>Happy Victory Rinlyn Task Center</title>
+  <?!= include_('Styles'); ?>
+</head>
+<body>
+  <div id="app"><div class="initial-loader" role="status"><div class="brand-mark">hv<span>✦</span></div><p>กำลังเตรียมพื้นที่ทำงานของคุณ…</p></div></div>
+  <div id="overlay"></div>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script>window.HVR_BOOT = <?!= bootJson ?>;</script>
+  <?!= include_('Scripts'); ?>
+</body>
+</html>

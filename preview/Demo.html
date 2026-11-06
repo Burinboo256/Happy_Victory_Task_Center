@@ -1,0 +1,63 @@
+<script>
+// This adapter is included ONLY in the local preview, never the Apps Script deployment.
+(() => {
+  const KEY='hvr-demo-v1';
+  const day=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Bangkok',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+  const shift=n=>{const d=new Date(day()+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10);};
+  const id=n=>'rec'+String(n).padStart(14,'0');
+  const people=[{id:id(1),name:'รินลิน',role:'Secretary',email:'secretary@example.com'},...['ณัฐชา','พิชญา','กานต์','ธนกร','พิมพ์ชนก','ศิรินภา','อริสา','ปกรณ์','ณิชา','วีรภัทร'].map((name,i)=>({id:id(i+2),name,role:'Agent',email:`agent${i+1}@example.com`}))];
+  const categories=['เอกสารกรมธรรม์','บริการลูกค้า','นัดหมาย','การเงิน','งานทั่วไป'];
+  function seed(){
+    const sample=[
+      ['ติดตามเอกสารประกอบกรมธรรม์',0,'In Progress','Urgent',-1,0,0],
+      ['ตรวจสอบสถานะการอนุมัติกรมธรรม์',1,'Waiting','High',1,0,0],
+      ['ประสานงานนัดหมายลูกค้าใหม่',2,'New','Normal',0,1,2],
+      ['ขอหนังสือรับรองการชำระเบี้ย',3,'In Progress','Normal',2,2,3],
+      ['ตรวจสอบข้อมูลผู้รับผลประโยชน์',4,'Waiting','High',-2,-1,1],
+      ['จัดเตรียมเอกสารต่ออายุกรมธรรม์',5,'In Progress','Normal',3,2,0],
+      ['สรุปข้อมูลแผนประกันให้ลูกค้า',0,'Completed','Normal',-1,null,1],
+      ['ประสานงานเปลี่ยนที่อยู่จัดส่ง',6,'New','Low',4,null,1],
+      ['ตรวจสอบรายการคืนเงินลูกค้า',7,'Waiting','Urgent',-1,0,3],
+      ['ขอสำเนาเอกสารกรมธรรม์',8,'New','Normal',2,null,0],
+      ['จัดนัดประชุมทบทวนแผนประกัน',9,'In Progress','Normal',5,3,2],
+      ['ยืนยันเอกสารเปลี่ยนผู้ชำระเบี้ย',1,'Completed','High',-2,null,0],
+      ['ติดตามผลการตรวจสุขภาพ',2,'Waiting','High',1,1,1],
+      ['รวบรวมข้อมูลสำหรับรายงานทีม',4,'New','Normal',4,null,4],
+      ['ส่งเอกสารสรุปความคุ้มครอง',6,'Completed','Normal',-3,null,0],
+      ['ยืนยันวันนัดหมายที่ปรึกษา',9,'Cancelled','Low',-2,null,2]
+    ];
+    const tasks=sample.map(([title,agent,status,priority,due,follow,cat],i)=>({id:id(100+i),code:`HVR-${String(i+1).padStart(5,'0')}`,title,description:'ข้อมูลตัวอย่างสำหรับทดลองการทำงาน\nกรุณาช่วยประสานงานและตรวจสอบรายละเอียด พร้อมแจ้งความคืบหน้าให้ Agent ทราบ',agentId:id(agent+2),secretaryId:id(1),category:categories[cat],status,priority,dueDate:shift(due),followupDate:follow===null?'':shift(follow),createdAt:shift(-5-(i%3))+'T02:30:00Z',completedAt:status==='Completed'?shift(-1)+'T08:00:00Z':'',version:'v1',referenceUrl:'',attachments:[]}));
+    const updates=tasks.flatMap((t,i)=>[{id:id(300+i*3),taskId:t.id,type:'Created',message:'ส่งงานใหม่: '+t.title,actor:people.find(u=>u.id===t.agentId).name,createdAt:t.createdAt,visible:true},...(t.status==='New'?[]:[{id:id(301+i*3),taskId:t.id,type:'Status',message:'ตรวจสอบรายละเอียดแล้ว อยู่ระหว่างประสานงานกับฝ่ายที่เกี่ยวข้อง',actor:'รินลิน',createdAt:shift(-1)+'T03:30:00Z',visible:true,newStatus:t.status}]),{id:id(302+i*3),taskId:t.id,type:'Comment',message:'บันทึกตัวอย่างภายในทีมเลขาฯ ข้อความนี้ไม่แสดงให้ Agent',actor:'รินลิน',createdAt:shift(-1)+'T04:30:00Z',visible:false}]);
+    const followups=tasks.filter(t=>t.followupDate).map((t,i)=>({id:id(500+i),taskId:t.id,date:t.followupDate,status:'Pending',notes:'ตรวจสอบความคืบหน้ากับฝ่ายที่เกี่ยวข้อง',completedAt:''}));
+    return {userId:id(1),tasks,updates,followups,operations:{}};
+  }
+  let db;try{db=JSON.parse(localStorage.getItem(KEY));}catch{}if(!db?.tasks)db=seed();
+  function save(){try{localStorage.setItem(KEY,JSON.stringify(db));}catch{}}
+  const user=()=>people.find(u=>u.id===db.userId)||people[0];
+  const manager=()=>user().role!=='Agent';
+  function task(id){const t=db.tasks.find(t=>t.id===id);if(!t||(!manager()&&t.agentId!==user().id))throw new Error('FORBIDDEN: ไม่มีสิทธิ์เข้าถึงงานนี้');return t;}
+  const copy=x=>JSON.parse(JSON.stringify(x));
+  function log(t,type,message,visible=true,extra={}){db.updates.push({id:crypto.randomUUID(),taskId:t.id,type,message,visible,actor:user().name,createdAt:new Date().toISOString(),...extra});}
+  function next(t){t.followupDate=db.followups.filter(f=>f.taskId===t.id&&f.status==='Pending').map(f=>f.date).sort()[0]||'';t.version=crypto.randomUUID();}
+  window.HVR_DEMO={users:()=>people,reset(){db=seed();save();},setUser(id){if(people.some(u=>u.id===id)){db.userId=id;save();}},async api(action,d={}){
+    if(action==='bootstrap')return copy({user:user(),users:manager()?people: [user()],tasks:db.tasks.filter(t=>manager()||t.agentId===user().id),today:day(),categories,syncedAt:new Date().toISOString()});
+    if(action==='detail'){const t=task(d.id);return copy({task:t,updates:db.updates.filter(u=>u.taskId===t.id&&(manager()||u.visible)),followups:manager()?db.followups.filter(f=>f.taskId===t.id):[]});}
+    const key=user().id+':'+d.requestId;if(db.operations[key])return copy(db.operations[key]);
+    let t;
+    if(action==='create'){
+      if(!d.title?.trim()||!d.description?.trim()||!d.dueDate)throw new Error('กรุณากรอกข้อมูลให้ครบ');
+      t={id:id(Date.now()),code:`HVR-${String(db.tasks.length+1).padStart(5,'0')}`,title:d.title,description:d.description,priority:d.priority,category:d.category,dueDate:d.dueDate,referenceUrl:d.referenceUrl||'',agentId:manager()?d.agentId:user().id,secretaryId:manager()?user().id:'',status:'New',followupDate:'',createdAt:new Date().toISOString(),completedAt:'',version:crypto.randomUUID(),attachments:[]};
+      if(!people.some(u=>u.id===t.agentId&&u.role==='Agent'))throw new Error('กรุณาเลือก Agent');db.tasks.push(t);log(t,'Created','ส่งงานใหม่: '+t.title);
+    }else{
+      t=task(d.id);
+      if(['status','followup','resolveFollowup'].includes(action)&&!manager())throw new Error('FORBIDDEN: เฉพาะเลขาฯ');
+      if(action==='status'){if(d.version!==t.version)throw new Error('CONFLICT: งานนี้มีการแก้ไข กรุณาเปิดรายละเอียดใหม่');const old=t.status;t.status=d.status;t.version=crypto.randomUUID();t.completedAt=d.status==='Completed'?(old==='Completed'?t.completedAt:new Date().toISOString()):'';log(t,'Status',d.message||'อัปเดตสถานะงาน',true,{oldStatus:old,newStatus:t.status});}
+      else if(action==='comment'){if(!d.message?.trim())throw new Error('กรุณากรอกข้อความ');log(t,'Comment',d.message,manager()?d.visible!==false:true);}
+      else if(action==='followup'){if(['Completed','Cancelled'].includes(t.status))throw new Error('งานปิดแล้ว');db.followups.push({id:id(Date.now()),taskId:t.id,date:d.date,status:'Pending',notes:d.notes||'',completedAt:''});next(t);log(t,'Follow-up','นัดติดตาม '+d.date+'\n'+(d.notes||''),false);}
+      else if(action==='resolveFollowup'){const f=db.followups.find(f=>f.id===d.followupId&&f.taskId===t.id);if(!f||f.status!=='Pending')throw new Error('ไม่พบนัดติดตามที่ยังเปิดอยู่');f.status=d.status;f.notes=d.notes;f.completedAt=new Date().toISOString();next(t);log(t,'Follow-up','บันทึกผลติดตาม: '+d.notes,false);}
+      else throw new Error('ไม่พบคำสั่ง');
+    }
+    const result={id:t.id};db.operations[key]=result;save();return copy(result);
+  }};
+})();
+</script>

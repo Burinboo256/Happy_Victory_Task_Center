@@ -1,0 +1,49 @@
+{
+  "name": "happy-victory-web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "24.x"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "biome lint src tools tests --error-on-warnings",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test --test-isolation=none tests/*.test.ts",
+    "test:integration": "tsx --test --test-isolation=none tests/integration/*.test.ts",
+    "test:postgres": "tsx --test --test-isolation=none tests/postgres/*.test.ts",
+    "test:e2e": "playwright test",
+    "test:api": "tsx tools/test-api.ts",
+    "test:load": "tsx tools/load-local.ts",
+    "probe:live": "tsx tools/probe-live.ts",
+    "db:migrate": "tsx tools/migrate.ts",
+    "diagnose": "tsx tools/diagnose.ts",
+    "rehearse:live": "tsx tools/rehearse-live.ts",
+    "ops:runtime": "tsx tools/runtime.ts",
+    "ops:inspect": "tsx tools/inspect-operation.ts",
+    "ops:recover": "tsx tools/recover-operation.ts"
+  },
+  "dependencies": {
+    "next": "16.4.5",
+    "openid-client": "6.8.9",
+    "pg": "8.23.1",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
+    "@biomejs/biome": "2.6.5",
+    "@electric-sql/pglite": "0.5.15",
+    "@playwright/test": "1.64.1",
+    "@types/node": "26.6.6",
+    "@types/pg": "8.23.1",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "tsx": "4.23.15",
+    "typescript": "6.0.3"
+  }
+}

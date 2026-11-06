@@ -1,0 +1,14 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
+let html=await fs.readFile(path.join(root,'apps-script/Index.html'),'utf8');
+for(const name of ['Styles','Scripts'])html=html.replace(`<?!= include_('${name}'); ?>`,await fs.readFile(path.join(root,`apps-script/${name}.html`),'utf8'));
+html=html.replace('<?!= bootJson ?>',JSON.stringify({demo:true,name:'Happy Victory Rinlyn Task Center'}));
+const demo=await fs.readFile(path.join(root,'preview/Demo.html'),'utf8');
+let injected=false;
+html=html.replace(/<script>\s*'use strict';/,match=>{injected=true;return demo+'\n'+match;});
+if(!injected||html.includes('<?'))throw new Error('Preview assembly incomplete: missing script anchor or unresolved template.');
+await fs.mkdir(path.join(root,'dist'),{recursive:true});
+await fs.writeFile(path.join(root,'dist/index.html'),html);
+console.log('Built dist/index.html — local demo only; deploy apps-script/ to Google Apps Script.');

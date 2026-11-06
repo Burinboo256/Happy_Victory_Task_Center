@@ -1,0 +1,19 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: hvr_local
+      POSTGRES_PASSWORD: ${LOCAL_DATABASE_PASSWORD:?Set LOCAL_DATABASE_PASSWORD in .env.local}
+      POSTGRES_DB: hvr_development
+    ports:
+      - '127.0.0.1:55433:5432'
+    volumes:
+      - local_database:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U hvr_local -d hvr_development']
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+volumes:
+  local_database:
