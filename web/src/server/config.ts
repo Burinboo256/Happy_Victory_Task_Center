@@ -5,12 +5,15 @@ const flag = z
   .enum(['true', 'false'])
   .default('false')
   .transform((v) => v === 'true');
-const schema = z.object({
+const databaseFields = {
   APP_ENV: z.enum(['development', 'staging', 'production']),
-  APP_ORIGIN: z.url(),
   DATABASE_URL: z.string().min(1),
-  AIRTABLE_TOKEN: z.string().min(12),
   AIRTABLE_BASE_ID: z.string().regex(/^app[a-zA-Z0-9]{14}$/),
+};
+const schema = z.object({
+  ...databaseFields,
+  APP_ORIGIN: z.url(),
+  AIRTABLE_TOKEN: z.string().min(12),
   AIRTABLE_USERS_TABLE: z.string().regex(/^tbl[a-zA-Z0-9]{14}$/),
   AIRTABLE_TASKS_TABLE: z.string().regex(/^tbl[a-zA-Z0-9]{14}$/),
   AIRTABLE_UPDATES_TABLE: z.string().regex(/^tbl[a-zA-Z0-9]{14}$/),
@@ -26,10 +29,47 @@ const schema = z.object({
 });
 export type Config = z.infer<typeof schema>;
 export const productionBase = 'appDS1Ji5cqIohPq3';
+const invalid = () => new AppError(503, 'NOT_CONFIGURED', 'ระบบยังตั้งค่าบริการไม่ครบ กรุณาติดต่อผู้ดูแล');
+
+function validateDatabase(value: string) {
+  const database = new URL(value);
+  if (!['postgres:', 'postgresql:'].includes(database.protocol)) throw invalid();
+  if (
+    !['localhost', '127.0.0.1', '[::1]'].includes(database.hostname) &&
+    database.searchParams.get('sslmode') !== 'verify-full'
+  )
+    throw invalid();
+}
+function validateBinding(config: Pick<Config, 'APP_ENV' | 'AIRTABLE_BASE_ID'>, target?: string) {
+  if (config.APP_ENV !== 'production' && config.AIRTABLE_BASE_ID === productionBase)
+    throw invalid();
+  if (target === 'preview' && config.APP_ENV !== 'staging') throw invalid();
+  if (target === 'production' && config.APP_ENV !== 'production') throw invalid();
+}
+
+// Database setup precedes OAuth/PAT setup. This validator is used only by the migration CLI.
+export function readMigrationConfig(env: Record<string, string | undefined> = process.env) {
+  const parsed = z
+    .object({ ...databaseFields, DATABASE_MIGRATION_URL: z.string().optional() })
+    .safeParse(env);
+  if (!parsed.success) throw invalid();
+  try {
+    validateBinding(parsed.data, env.VERCEL_ENV);
+    validateDatabase(parsed.data.DATABASE_URL);
+    const connection = parsed.data.DATABASE_MIGRATION_URL || parsed.data.DATABASE_URL;
+    validateDatabase(connection);
+    return {
+      APP_ENV: parsed.data.APP_ENV,
+      AIRTABLE_BASE_ID: parsed.data.AIRTABLE_BASE_ID,
+      DATABASE_URL: connection,
+    };
+  } catch {
+    throw invalid();
+  }
+}
 
 export function readConfig(env: Record<string, string | undefined> = process.env): Config {
   const result = schema.safeParse(env);
-  const invalid = () => new AppError(503, 'NOT_CONFIGURED', 'ระบบยังตั้งค่าบริการไม่ครบ กรุณาติดต่อผู้ดูแล');
   if (!result.success) throw invalid();
   const config = result.data;
   try {
@@ -41,17 +81,8 @@ export function readConfig(env: Record<string, string | undefined> = process.env
       !(config.APP_ENV === 'development' && local && origin.protocol === 'http:')
     )
       throw invalid();
-    const database = new URL(config.DATABASE_URL);
-    if (!['postgres:', 'postgresql:'].includes(database.protocol)) throw invalid();
-    if (
-      !['localhost', '127.0.0.1', '[::1]'].includes(database.hostname) &&
-      database.searchParams.get('sslmode') !== 'verify-full'
-    )
-      throw invalid();
-    if (config.APP_ENV !== 'production' && config.AIRTABLE_BASE_ID === productionBase)
-      throw invalid();
-    if (env.VERCEL_ENV === 'preview' && config.APP_ENV !== 'staging') throw invalid();
-    if (env.VERCEL_ENV === 'production' && config.APP_ENV !== 'production') throw invalid();
+    validateDatabase(config.DATABASE_URL);
+    validateBinding(config, env.VERCEL_ENV);
     if (
       config.APP_ENV !== 'production' &&
       (config.JOBS_ENABLED || config.ENABLE_EMAIL_NOTIFICATIONS || config.ENABLE_LINE_NOTIFICATIONS)

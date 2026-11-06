@@ -15,9 +15,11 @@ npm run diagnose
 npm run dev
 ```
 
-เปิด `http://localhost:3000` ถ้ายังไม่มี credentials จะเห็นสถานะเตรียมระบบแทนการ Login จำลอง ตัวอย่าง `.env.example` เป็น placeholder และตั้ง writes / jobs เป็น false ต้องเปลี่ยนค่าจริงก่อน migrate หรือ diagnose ได้ Google callback คือ `/api/auth/google/callback` ตาม `APP_ORIGIN`
+เปิด `http://localhost:3000` ถ้ายังไม่มี credentials จะเห็นสถานะเตรียมระบบแทนการ Login จำลอง ตัวอย่าง `.env.example` เป็น placeholder และตั้ง writes / jobs เป็น false ก่อน migrate ต้องมี `APP_ENV` / test `AIRTABLE_BASE_ID` / `DATABASE_URL` จริง ส่วน diagnose และเว็บต้องตั้ง auth / Airtable configuration ครบ Google callback คือ `/api/auth/google/callback` ตาม `APP_ORIGIN`
 
 `DATABASE_URL` ของผู้ให้บริการภายนอกต้องใช้ `sslmode=verify-full` และ certificate chain ที่ตรวจสอบได้ สำหรับ migration สามารถกำหนด `DATABASE_MIGRATION_URL` แบบ direct connection แยกจาก runtime pool ตามข้อกำหนด provider ไม่มีการ migrate ระหว่าง build หรือเริ่ม Function
+
+Migration CLI ตรวจเฉพาะ DB / environment binding เพื่อเตรียม schema ก่อนตั้ง Google OAuth หรือ PAT ได้ ไม่ต้องใช้ credentials ปลอม runtime validation ยังคงเข้มงวดตามเดิม ดู [Neon staging](../docs/vercel-staging.md) และเก็บ direct connection เฉพาะ release runner ไม่ใส่ใน runtime variables
 
 สำหรับ acceptance บนเครื่อง ใช้ `compose.local.yaml` กับ `LOCAL_DATABASE_PASSWORD` แบบสุ่มใน `.env.local` และ `DATABASE_URL` ที่ตรงกัน (`hvr_local`, DB `hvr_development`, `127.0.0.1:55433`) เริ่มด้วย `docker compose --project-name hvr-local --env-file .env.local -f compose.local.yaml up -d --wait` เก็บข้อมูลใน named volume แยกจาก container ทดสอบชั่วคราว หยุดด้วยคำสั่งเดียวกันเปลี่ยน `up -d --wait` เป็น `stop` และรันเว็บด้วย `npm run dev -- --hostname 127.0.0.1 --port 3000` ดู [ผลทดสอบกับบริการจริง](../docs/vercel-local-acceptance.md)
 

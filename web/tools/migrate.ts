@@ -1,15 +1,13 @@
 import { readFile, readdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
-import { localConfig } from './environment';
+import { localEnvironment } from './environment';
 import { getPool, transaction } from '../src/server/db';
-import { readConfig } from '../src/server/config';
+import { readMigrationConfig } from '../src/server/config';
 
-const config = localConfig();
-const migrationConfig = process.env.DATABASE_MIGRATION_URL
-  ? readConfig({ ...process.env, DATABASE_URL: process.env.DATABASE_MIGRATION_URL })
-  : config;
-const db = getPool(migrationConfig);
+let db: ReturnType<typeof getPool> | undefined;
 try {
+  const config = readMigrationConfig(localEnvironment());
+  db = getPool(config);
   await transaction(db, async (client) => {
     await client.query('SELECT pg_advisory_xact_lock(817204321)');
     await client.query(
@@ -51,5 +49,5 @@ try {
   );
   process.exitCode = 1;
 } finally {
-  await db.end();
+  await db?.end();
 }

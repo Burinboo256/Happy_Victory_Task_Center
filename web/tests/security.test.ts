@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readConfig, productionBase } from '../src/server/config';
+import { readConfig, readMigrationConfig, productionBase } from '../src/server/config';
 import {
   safeReturnTo,
   safeEqual,
@@ -31,6 +31,41 @@ test('configuration rejects production data in development and unsafe origins wi
     );
   }
 });
+test('migration config permits database setup before web credentials while preserving TLS and environment isolation', () => {
+  const minimal = {
+    APP_ENV: 'staging',
+    AIRTABLE_BASE_ID: environment.AIRTABLE_BASE_ID,
+    DATABASE_URL:
+      'postgresql://test:private-db-value@runtime.example.test/test?sslmode=verify-full',
+    DATABASE_MIGRATION_URL:
+      'postgresql://test:private-db-value@direct.example.test/test?sslmode=verify-full',
+    VERCEL_ENV: 'preview',
+  };
+  assert.equal(readMigrationConfig(minimal).DATABASE_URL, minimal.DATABASE_MIGRATION_URL);
+  assert.throws(() => readConfig(minimal), 'runtime still requires complete auth configuration');
+  assert.equal(
+    readMigrationConfig({ ...minimal, DATABASE_MIGRATION_URL: '' }).DATABASE_URL,
+    minimal.DATABASE_URL,
+  );
+  for (const override of [
+    { AIRTABLE_BASE_ID: productionBase },
+    { APP_ENV: 'development' },
+    { VERCEL_ENV: 'production' },
+    {
+      DATABASE_URL: 'postgresql://test:private-db-value@runtime.example.test/test?sslmode=require',
+    },
+    {
+      DATABASE_MIGRATION_URL:
+        'postgresql://test:private-db-value@direct.example.test/test?sslmode=require',
+    },
+    { DATABASE_MIGRATION_URL: 'not-a-url-private-db-value' },
+  ])
+    assert.throws(
+      () => readMigrationConfig({ ...minimal, ...override }),
+      (error) => error instanceof Error && !error.message.includes('private-db-value'),
+    );
+});
+
 test('return destinations allow only known local paths', () => {
   assert.equal(safeReturnTo('/tasks/new'), '/tasks/new');
   for (const input of [

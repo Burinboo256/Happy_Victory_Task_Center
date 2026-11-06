@@ -32,7 +32,16 @@ test('migration CLI is idempotent, binds the environment and rolls back changed-
   const db = new Pool({ connectionString: raw, max: 1 });
   const url = new URL(raw);
   url.searchParams.set('options', '-c search_path=' + schema);
-  const env = { ...environment, DATABASE_URL: url.href, DATABASE_MIGRATION_URL: '' };
+  const env = {
+    ...environment,
+    DATABASE_URL: url.href,
+    DATABASE_MIGRATION_URL: '',
+    APP_ORIGIN: '',
+    AIRTABLE_TOKEN: '',
+    GOOGLE_CLIENT_ID: '',
+    GOOGLE_CLIENT_SECRET: '',
+    AUTH_SECRET: '',
+  };
   const query = new Pool({ connectionString: url.href, max: 1 });
   try {
     await db.query('CREATE SCHEMA ' + schema);
