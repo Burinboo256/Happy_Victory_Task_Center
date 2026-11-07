@@ -46,7 +46,7 @@
   align-items: center;
   justify-content: space-between;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 12px;
   gap: 10px;
 }
 .pagination > div {
@@ -80,7 +80,7 @@ body {
   background: var(--bg);
   color: var(--ink);
   font-family: "DM Sans", "Noto Sans Thai", sans-serif;
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1.65;
 }
 button,
@@ -146,17 +146,17 @@ p {
   top: 1px;
 }
 .brand strong {
-  font-size: 14px;
+  font-size: 16px;
   display: block;
 }
 .brand small {
   display: block;
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
   letter-spacing: 1.9px;
 }
 .eyebrow {
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 1.7px;
   font-weight: 600;
   color: var(--rose);
@@ -172,7 +172,7 @@ p {
   gap: 10px;
   padding: 11px 18px;
   font-weight: 500;
-  font-size: 13px;
+  font-size: 15px;
 }
 .btn:hover {
   background: #faf6f8;
@@ -187,7 +187,7 @@ p {
 }
 .btn.small {
   padding: 7px 12px;
-  font-size: 12px;
+  font-size: 14px;
 }
 .login-page {
   min-height: 100svh;
@@ -214,7 +214,7 @@ p {
   border: 1px solid #e4d3de;
   border-radius: 30px;
   padding: 8px 12px;
-  font-size: 8px;
+  font-size: 12px;
   letter-spacing: 0.6px;
   color: #72596b;
 }
@@ -230,10 +230,10 @@ p {
 .login-story p {
   color: #72596b;
   line-height: 1.9;
-  font-size: 13px;
+  font-size: 15px;
 }
 .login-story footer {
-  font-size: 8px;
+  font-size: 12px;
   letter-spacing: 1.2px;
   color: #72596b;
   z-index: 1;
@@ -257,12 +257,12 @@ p {
   max-width: 390px;
 }
 .login-card h2 {
-  font-size: 25px;
+  font-size: 28px;
   margin: 12px 0 10px;
   letter-spacing: -0.5px;
 }
 .login-card > p {
-  font-size: 13px;
+  font-size: 15px;
   color: var(--muted);
 }
 .google-button {
@@ -285,7 +285,7 @@ p {
   gap: 9px;
   margin-top: 34px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 13px;
 }
 .login-note > span {
   font-size: 24px;
@@ -295,7 +295,7 @@ p {
   padding-top: 35px;
   margin-top: 35px;
   border-top: 1px solid var(--line);
-  font-size: 11px;
+  font-size: 13px;
   color: var(--muted);
   display: flex;
   justify-content: space-between;
@@ -307,7 +307,7 @@ p {
   border-radius: 8px;
   padding: 12px 14px;
   margin: 20px 0;
-  font-size: 12px;
+  font-size: 14px;
 }
 .setup-notice {
   background: var(--paper);
@@ -317,10 +317,10 @@ p {
   margin-top: 28px;
 }
 .setup-notice strong {
-  font-size: 14px;
+  font-size: 16px;
 }
 .setup-notice p {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--muted);
   margin-top: 7px;
 }
@@ -355,7 +355,7 @@ p {
     margin: 8px 0 12px;
   }
   .login-story p {
-    font-size: 12px;
+    font-size: 14px;
   }
   .story-decoration {
     font-size: 260px;
@@ -366,7 +366,7 @@ p {
     padding: 35px 25px;
   }
   .login-card h2 {
-    font-size: 23px;
+    font-size: 26px;
   }
   .login-bottom {
     padding-top: 20px;
@@ -441,15 +441,15 @@ p {
 }
 .workspace-label strong {
   display: block;
-  font-size: 12px;
+  font-size: 14px;
 }
 .workspace-label small {
   display: block;
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
 }
 .nav-label {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
   letter-spacing: 1.3px;
   margin: 0 14px 10px;
@@ -466,7 +466,7 @@ p {
   padding: 12px 14px;
   border-radius: 9px;
   color: #6d6476;
-  font-size: 13px;
+  font-size: 15px;
 }
 .sidebar nav a > span {
   font-size: 21px;
@@ -483,7 +483,7 @@ p {
 }
 .sidebar nav small {
   margin-left: auto;
-  font-size: 10px;
+  font-size: 12px;
   min-width: 20px;
   text-align: center;
   background: #fff;
@@ -499,15 +499,15 @@ p {
 }
 .sidebar-note span {
   display: block;
-  font-size: 10px;
+  font-size: 12px;
   color: var(--rose);
   margin-bottom: 8px;
 }
 .sidebar-note strong {
-  font-size: 11px;
+  font-size: 13px;
 }
 .sidebar-note p {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
   margin-top: 5px;
 }
@@ -520,10 +520,10 @@ p {
 }
 .profile strong {
   display: block;
-  font-size: 12px;
+  font-size: 14px;
 }
 .profile small {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
 }
 .profile .icon-btn {
@@ -539,7 +539,7 @@ p {
   color: #7a4a60;
   background: #f0e1e8;
   font-weight: 600;
-  font-size: 11px;
+  font-size: 13px;
   flex-shrink: 0;
 }
 .icon-btn {
@@ -564,7 +564,7 @@ p {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 12px;
+  font-size: 14px;
 }
 .topbar > div {
   display: flex;
@@ -594,12 +594,12 @@ p {
   margin-bottom: 28px;
 }
 .page-heading h1 {
-  font-size: 27px;
+  font-size: 30px;
   letter-spacing: -0.6px;
   margin: 7px 0 6px;
 }
 .page-heading p {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--muted);
 }
 .stats {
@@ -616,7 +616,9 @@ p {
   position: relative;
 }
 .stat > span:first-child {
-  font-size: 11px;
+  display: block;
+  padding-right: 42px;
+  font-size: 13px;
   color: var(--muted);
 }
 .stat .stat-icon {
@@ -652,7 +654,7 @@ p {
   margin: 13px 0;
 }
 .stat small {
-  font-size: 9px;
+  font-size: 12px;
   color: var(--muted);
 }
 .dashboard-grid {
@@ -680,12 +682,12 @@ p {
   gap: 15px;
 }
 .panel-title h2 {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 600;
 }
 .panel-title small {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 12px;
   display: block;
   margin-top: 3px;
 }
@@ -705,7 +707,7 @@ p {
   background: transparent;
   padding: 11px 0;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 13px;
   white-space: nowrap;
   position: relative;
 }
@@ -735,7 +737,7 @@ p {
   border-radius: 8px;
   color: var(--ink);
   padding: 9px 11px;
-  font-size: 11px;
+  font-size: 13px;
 }
 .filters input {
   flex: 1;
@@ -754,7 +756,7 @@ p {
   padding: 17px 0;
   border-top: 1px solid #f3eff5;
   color: var(--ink);
-  font-size: 11px;
+  font-size: 13px;
 }
 .task-row:hover .task-title strong {
   color: var(--rose);
@@ -764,14 +766,14 @@ p {
   min-width: 0;
 }
 .task-title strong {
-  font-size: 12px;
+  font-size: 16px;
   display: block;
   overflow-wrap: anywhere;
 }
 .task-title small {
   display: block;
   color: #71667b;
-  font-size: 9px;
+  font-size: 12px;
   margin-top: 5px;
 }
 .task-agent {
@@ -788,7 +790,7 @@ p {
 .badge {
   padding: 4px 9px;
   border-radius: 5px;
-  font-size: 9px;
+  font-size: 12px;
   white-space: nowrap;
   display: inline-block;
   background: #f4f0f6;
@@ -815,7 +817,7 @@ p {
   color: #855565;
 }
 .priority {
-  font-size: 10px;
+  font-size: 12px;
   white-space: nowrap;
 }
 .priority::before {
@@ -853,11 +855,11 @@ p {
   margin-bottom: 5px;
 }
 .empty strong {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 500;
 }
 .empty p {
-  font-size: 10px;
+  font-size: 12px;
 }
 .followup-item {
   display: block;
@@ -866,24 +868,24 @@ p {
 }
 .followup-item strong {
   display: block;
-  font-size: 12px;
+  font-size: 14px;
   color: var(--ink);
 }
 .followup-item small {
   display: block;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 12px;
   margin-top: 5px;
 }
 .panel-bottom {
   display: block;
   border-top: 1px solid var(--line);
   padding: 14px 20px;
-  font-size: 10px;
+  font-size: 12px;
   text-align: right;
 }
 .count {
-  font-size: 9px;
+  font-size: 12px;
   padding: 2px 6px;
   border-radius: 4px;
   background: #fbf5e8;
@@ -893,10 +895,10 @@ p {
   padding: 22px;
 }
 .progress-panel h2 {
-  font-size: 13px;
+  font-size: 15px;
 }
 .progress-panel > p {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
   margin: 4px 0 20px;
 }
@@ -906,14 +908,14 @@ p {
   font-weight: 600;
 }
 .progress-panel > strong small {
-  font-size: 15px;
+  font-size: 17px;
   color: var(--muted);
   padding-left: 2px;
 }
 .progress-panel > small {
   display: block;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 12px;
   margin-top: 10px;
 }
 progress {
@@ -937,7 +939,7 @@ progress::-webkit-progress-value {
   align-items: center;
   justify-content: space-between;
   gap: 15px;
-  font-size: 9px;
+  font-size: 12px;
   color: var(--muted);
   padding: 10px 0;
 }
@@ -960,7 +962,7 @@ progress::-webkit-progress-value {
   padding: 13px 16px;
   border-radius: 9px;
   margin-bottom: 20px;
-  font-size: 12px;
+  font-size: 14px;
 }
 .maintenance-notice {
   background: #faf5e9;
@@ -968,7 +970,7 @@ progress::-webkit-progress-value {
   color: #7a6128;
   padding: 12px 15px;
   border-radius: 9px;
-  font-size: 12px;
+  font-size: 14px;
   margin-bottom: 20px;
 }
 .form-panel {
@@ -987,12 +989,12 @@ progress::-webkit-progress-value {
   display: flex;
   flex-direction: column;
   gap: 7px;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 500;
   margin: 15px 0;
 }
 .task-form label small {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 400;
   color: var(--muted);
 }
@@ -1006,7 +1008,7 @@ progress::-webkit-progress-value {
   border-radius: 8px;
   padding: 11px 12px;
   color: var(--ink);
-  font-size: 13px;
+  font-size: 16px;
 }
 .task-form input::placeholder,
 .task-form textarea::placeholder {
@@ -1036,14 +1038,14 @@ progress::-webkit-progress-value {
   padding: 5px 26px 24px;
 }
 .detail-body > h3 {
-  font-size: 14px;
+  font-size: 16px;
   padding-top: 24px;
   margin-top: 23px;
   border-top: 1px solid var(--line);
   margin-bottom: 15px;
 }
 .detail-body > h3 small {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 400;
   color: var(--muted);
   margin-left: 8px;
@@ -1051,7 +1053,7 @@ progress::-webkit-progress-value {
 .detail-description {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  font-size: 13px;
+  font-size: 15px;
   color: var(--muted);
   margin-bottom: 23px;
 }
@@ -1062,12 +1064,12 @@ progress::-webkit-progress-value {
   margin: 15px 0 24px;
 }
 .detail-grid dt {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
   margin-bottom: 5px;
 }
 .detail-grid dd {
-  font-size: 12px;
+  font-size: 15px;
   margin: 0;
 }
 .attachment {
@@ -1076,7 +1078,7 @@ progress::-webkit-progress-value {
   border: 1px solid var(--line);
   border-radius: 8px;
   margin: 10px 0;
-  font-size: 12px;
+  font-size: 14px;
   overflow-wrap: anywhere;
 }
 .task-form.compact {
@@ -1111,18 +1113,18 @@ progress::-webkit-progress-value {
 }
 .timeline article small {
   display: block;
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
 }
 .timeline article strong {
   display: block;
-  font-size: 12px;
+  font-size: 15px;
   margin: 4px 0;
 }
 .timeline article p {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  font-size: 12px;
+  font-size: 15px;
   color: var(--muted);
 }
 .followup-detail {
@@ -1132,10 +1134,10 @@ progress::-webkit-progress-value {
   margin: 12px 0;
 }
 .followup-detail strong {
-  font-size: 12px;
+  font-size: 15px;
 }
 .followup-detail > p {
-  font-size: 12px;
+  font-size: 15px;
   white-space: pre-wrap;
   color: var(--muted);
 }
@@ -1152,11 +1154,11 @@ progress::-webkit-progress-value {
 }
 .team-person strong {
   display: block;
-  font-size: 12px;
+  font-size: 15px;
 }
 .team-person small {
   display: block;
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
 }
 .report-content {
@@ -1167,7 +1169,7 @@ progress::-webkit-progress-value {
   grid-template-columns: 150px 1fr 60px;
   gap: 20px;
   align-items: center;
-  font-size: 12px;
+  font-size: 14px;
   padding: 15px 0;
 }
 .report-row strong {
@@ -1181,7 +1183,7 @@ progress::-webkit-progress-value {
   padding: 20px;
 }
 .calendar-head h2 {
-  font-size: 16px;
+  font-size: 18px;
 }
 .calendar-grid {
   display: grid;
@@ -1192,7 +1194,7 @@ progress::-webkit-progress-value {
 .calendar-label {
   background: #faf8fc;
   text-align: center;
-  font-size: 11px;
+  font-size: 13px;
   padding: 12px;
 }
 .calendar-day {
@@ -1202,7 +1204,7 @@ progress::-webkit-progress-value {
   min-width: 0;
 }
 .calendar-day > strong {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 400;
   color: var(--muted);
 }
@@ -1217,7 +1219,7 @@ progress::-webkit-progress-value {
 }
 .calendar-day a {
   display: block;
-  font-size: 10px;
+  font-size: 12px;
   overflow-wrap: anywhere;
   background: var(--blush);
   border-radius: 4px;
@@ -1274,7 +1276,7 @@ progress::-webkit-progress-value {
   .topbar {
     height: 62px;
     padding: 0 16px;
-    font-size: 11px;
+    font-size: 13px;
   }
   .topbar > div {
     gap: 10px;
@@ -1291,14 +1293,14 @@ progress::-webkit-progress-value {
     margin-bottom: 22px;
   }
   .page-heading h1 {
-    font-size: 23px;
+    font-size: 26px;
   }
   .page-heading p {
-    font-size: 11px;
+    font-size: 13px;
     max-width: 250px;
   }
   .page-heading .btn {
-    font-size: 11px;
+    font-size: 13px;
     padding: 9px;
   }
   .stats {
@@ -1317,14 +1319,16 @@ progress::-webkit-progress-value {
     font-size: 16px;
   }
   .stat > span:first-child {
-    font-size: 10px;
+    min-height: 3.3em;
+    padding-right: 32px;
+    font-size: 12px;
   }
   .stat > strong {
     font-size: 29px;
     margin: 9px 0;
   }
   .stat small {
-    font-size: 8px;
+    font-size: 12px;
   }
   .dashboard-grid > aside {
     grid-template-columns: 1fr;
@@ -1361,27 +1365,29 @@ progress::-webkit-progress-value {
   }
   .task-agent {
     max-width: 90px;
-    font-size: 10px;
+    font-size: 12px;
   }
   .task-row > .badge {
-    font-size: 9px;
+    font-size: 12px;
   }
   .task-date,
   .priority {
-    font-size: 10px;
+    font-size: 12px;
   }
   .task-row > span:last-child {
     margin-left: auto;
   }
   .footer {
     align-items: flex-start;
-    font-size: 8px;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 12px;
   }
   .task-form {
     padding: 0 18px 20px;
   }
   .task-form label {
-    font-size: 12px;
+    font-size: 14px;
   }
   .task-form input,
   .task-form textarea,
@@ -1406,18 +1412,18 @@ progress::-webkit-progress-value {
   .report-row {
     grid-template-columns: 100px 1fr 45px;
     gap: 12px;
-    font-size: 11px;
+    font-size: 13px;
   }
   .calendar-day {
     min-height: 85px;
     padding: 6px;
   }
   .calendar-day a {
-    font-size: 9px;
+    font-size: 12px;
     padding: 3px;
   }
   .calendar-label {
-    font-size: 10px;
+    font-size: 12px;
     padding: 8px;
   }
   .check-label input {

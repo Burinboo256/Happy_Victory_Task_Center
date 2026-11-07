@@ -1,13 +1,15 @@
 # ทดสอบ iPhone / Android ก่อนเปิดใช้
 
-สถานะ 6 พฤศจิกายน 2026: เจ้าของมีทั้ง iPhone และ Android; **ยังไม่มีผลทดสอบอุปกรณ์จริง** Chrome mobile viewport / axe บนเครื่องเป็นหลักฐานแยก ไม่ใช้ทำเครื่องหมายผ่านในหน้านี้
+สถานะ 8 พฤศจิกายน 2026: เจ้าของมีทั้ง iPhone และ Android; **ยังไม่มีผลทดสอบอุปกรณ์จริง** Chrome mobile viewport / axe บนเครื่องเป็นหลักฐานแยก ไม่ใช้ทำเครื่องหมายผ่านในหน้านี้
 
-มี [หน้าเว็บ Vercel ออนไลน์](https://happy-victory-task-center.vercel.app/login) แล้ว แต่ยังแสดงเตรียมระบบเพราะ cloud DB / OAuth ไม่ตั้งค่า จึงยังเริ่มกรณี Login / ส่งงานด้านล่างไม่ได้ ดู [สถานะ deployment](vercel-first-deployment.md)
+เจ้าของแจ้งว่าได้ลองมือถือแล้วและขอขยายตัวหนังสือทั้งมือถือ/คอมพิวเตอร์ ปรับ source และตรวจ local layout แล้ว รอ deploy/ตรวจรอบใหม่ ยังไม่ระบุผลรายเครื่อง/เส้นทาง/เวอร์ชัน จึงยังไม่ทำเครื่องหมายผ่านในตาราง acceptance
+
+มี [staging พร้อม Google Login](https://happy-victory-task-center-git-staging-burin.vercel.app/tasks/new?openExternalBrowser=1) แล้ว เชื่อม Neon/test Base และเปิด writes เฉพาะทดสอบ; Admin/Secretary ผ่าน Login และ workflow บน Chrome desktop จริงตาม [สถานะ staging](vercel-staging.md) เริ่มทดสอบมือถือจากลิงก์นี้ได้ ผล desktop ไม่แทนผลโทรศัพท์
 
 ## เตรียมรอบทดสอบ
 
 - ต้องมี HTTPS origin ของ staging ที่ทั้งสองโทรศัพท์เข้าถึงได้ พร้อม OAuth callback ตรง origin และเชื่อม test Base เท่านั้น `localhost:3000` ปัจจุบันเข้าถึงได้เฉพาะคอมพิวเตอร์ ไม่ใช้แทน URL บนโทรศัพท์
-- ยังไม่เปิดพอร์ต public / tunnel หรือเปลี่ยน OAuth origin เพื่อข้ามขั้นเตรียม staging รอเจ้าของเลือกขั้นถัดไปตาม [แผน Deploy](vercel-deployment-plan.md)
+- ใช้ staging origin คงที่ด้านบน ไม่ใช้ public tunnel หรือเปลี่ยน OAuth origin ระหว่างซ้อม และยังไม่แก้ Rich Menu production
 - ระบุ release SHA / build, origin, OS / browser / LINE version, วันที่เวลา Bangkok และบัญชีตามบทบาทโดยใช้ชื่อ TEST-AGENT-A/B / TEST-SECRETARY ในรายงาน
 - เปิด writes เฉพาะ test Base; jobs / email / LINE delivery ปิดไว้ ตั้งชื่องานสมมติ `[DEVICE TEST] <iOS|Android> <รอบ>` ไม่ใส่ข้อมูลลูกค้าจริง
 - เจ้าของเลือกบัญชี / ยืนยัน Google ด้วยตนเอง เก็บภาพผลหลัง callback โดยไม่ถ่าย authorization code / state / cookie / credentials

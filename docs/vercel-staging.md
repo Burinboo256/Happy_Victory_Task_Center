@@ -1,6 +1,6 @@
 # เตรียม backend ของ staging
 
-สถานะ 8 พฤศจิกายน 2026: Neon Free / migrations / variables 17 ตัวของ Preview พร้อมแล้ว ตั้ง PAT/OAuth แยกของ staging, Admin Login จริงกลับ `/tasks/new` และสร้างงานสมมติสำเร็จ เปิด writes เฉพาะ staging/test Base แล้ว ยังไม่ผ่าน acceptance ทั้งทีม
+สถานะ 8 พฤศจิกายน 2026: Neon Free / migrations / variables 17 ตัวของ Preview พร้อมแล้ว ตั้ง PAT/OAuth แยกของ staging, Login จริงครบ Admin/Secretary/Agent A/B และ workflow ผ่านตามขอบเขตด้านล่าง เปิด writes เฉพาะ staging/test Base; ยังไม่รับรอง release หรือสลับ production
 
 ## ทรัพยากร
 
@@ -48,7 +48,7 @@ CI ของ commit `08c7e65` ผ่านแล้ว: [run 42213614773](https:
 
 ## งานที่เหลือก่อนรับรอง staging
 
-1. ทดสอบ Secretary / Agent A/B จริงต่อจาก Admin; ตรวจ Active / ownership / kill switches และ workflow หลัง deploy
+1. ทดสอบ retry/recovery และ concurrency/load บน staging ต่อจาก desktop acceptance ด้านล่าง; ตัวเลข local rehearsal ไม่แทนผล cloud
 2. ซ้อม recovery / load บน staging และ [อุปกรณ์จริง](vercel-device-acceptance.md) ก่อน owner acceptance; backup/restore ที่ผ่านเป็น quarantine local ตามขอบเขตด้านบน
 
 เจ้าของอนุมัติปิด Vercel Authentication ของโปรเจกต์แล้ว ตรวจจากภายนอกไม่มี Vercel session ได้ health 200, configured Login และ Google OAuth 303 ที่ใช้ client/callback ของ staging, PKCE S256 และ HttpOnly cookie; anonymous bootstrap 401 ไม่ส่งข้อมูลผู้ใช้ หลักฐาน `artifacts/vercel/staging-auth-ready.json` ไม่ใช่ผล Login สำเร็จจริง
@@ -62,5 +62,31 @@ CI ของ commit `2c0b9bf` ผ่านใน [run 42377195580](https://githu
 Google Login จริงกลับ `/tasks/new` ได้ UI แสดงสิทธิ์ Admin ตรวจ Users Active/Subject, identity binding และ live session ใน Neon ตรงกัน ขณะ writes ปิดฟอร์มแสดงสถานะอ่านอย่างเดียวและปิดปุ่มส่ง หลังเปิด config/DB switch เฉพาะ staging แล้วฟอร์มเปิดใช้งาน
 
 สร้างงานสมมติ prefix `[STAGING UI TEST]` ผ่าน Chrome/HTTPS ด้วย Admin session จริงให้บัญชี Agent A สำเร็จ ตรวจ task/audit อย่างละ 1 รายการและ creator/owner ถูกต้อง journal `completed` ไม่มี reservation ค้าง หลักฐาน `artifacts/vercel/staging-admin-login.json` และ `staging-ui-create-result.json` ไม่ใช่การรับรอง Secretary/Agent หรือมือถือจริง
+
+## Secretary acceptance บน staging
+
+Google Login จริงสำเร็จด้วย Role Secretary, Active/Subject/session ตรงกัน และตรวจว่า Admin logout เพิกถอน session เดิมแล้ว Secretary ค้นหา/เปิดงานที่ Admin สร้าง เปลี่ยนเป็น In Progress เพิ่มนัดและบันทึกผล Done ผ่านหน้าเว็บจริง
+
+ตรวจ Airtable/Neon: followup 1 รายการ, Assigned To เป็น Secretary, Completed At มีค่า และ Next Follow-up ถูกล้างเมื่อไม่เหลือ Pending ประวัติ status เปิดให้ Agent ส่วนประวัติ followup ทั้งสองรายการเป็น private; operations รวม create/status/followup/resolveFollowup จบ completed 4 รายการ ไม่มี reservations หรือคำขอค้าง มี notification record Pending 1 รายการตาม workflow แต่ dispatch/jobs ยังปิด หลักฐาน `artifacts/vercel/staging-secretary-login.json` และ `staging-secretary-workflow.json` ยังต้องตรวจการซ่อนข้อมูลจาก Agent ผ่านเว็บจริงต่อ
+
+## Agent A acceptance บน staging
+
+Google Login จริงผ่าน ตรวจ Role Agent/Active/session ตรงบัญชี Agent A ค้นหาและเปิดงานที่ Admin สร้างให้ได้ เห็น timeline 2 รายการ (create/status) ไม่เห็นประวัตินัดทั้งสองรายการ ไม่มี manager controls และไม่มีตัวเลือกบันทึกภายใน เปิด URL งาน Agent B โดยตรงแล้วหน้าเว็บปฏิเสธสิทธิ์และไม่แสดงรายละเอียด จากนั้น Back กลับงานตนเองยังอ่านได้ หลักฐาน `artifacts/vercel/staging-agent-a-login.json`, `staging-agent-a-own-view.json` และ `staging-agent-a-ownership.json`
+
+Logout มีขอบเขต session ปัจจุบัน ไม่เพิกถอนทุก browser/profile ของบัญชีเดียวกัน จึงไม่ใช้จำนวน sessions ของบทบาทอื่นเป็นเกณฑ์ว่าปุ่ม Logout ใน browser นี้ทำงานผิด
+
+## Agent B / runtime controls
+
+Agent B Login จริงผ่าน Role/Active/session ถูกต้อง Dashboard มีงานเจ้าของบัญชี 3 รายการ เปิดงานตนเองได้ ไม่มี manager controls เปิด URL งานของ Agent A แล้วถูกปฏิเสธและไม่เห็นรายละเอียด หลักฐาน `artifacts/vercel/staging-agent-b-login.json` และ `staging-agent-b-ownership.json`
+
+ปิด Active ของ Agent B ชั่วคราวบน test Base แล้ว reload session เดิม: เว็บปฏิเสธสิทธิ์และไม่แสดงงาน คืน Active=true แล้ว session เดิมเปิดงานได้โดยไม่ Login ใหม่ เครื่องมือมี automatic restore ภายใน 120 วินาทีและยืนยันคืนค่าแล้ว หลักฐาน `artifacts/vercel/active-revocation/`
+
+ทดสอบ DB write switch ขณะ config ceiling=true: off ทำให้ฟอร์ม/ปุ่มส่งงานปิด เมื่อ on และ reload ฟอร์มกลับมาใช้งานได้ ไม่ต้อง redeploy คืน switch เป็น on แล้วสำหรับ device acceptance; jobs/notifications ยังปิด หลักฐาน `artifacts/vercel/staging-write-switch-off.json` และ `staging-write-switch-on.json` ผล UI นี้ไม่แทนการทดสอบ forged HTTP mutation ระหว่าง maintenance
+
+## ขนาดตัวอักษร
+
+เจ้าของขอขยายทั้งมือถือและคอมพิวเตอร์หลังลองมือถือ เพิ่ม base 14→16px, ชื่องาน 12→16px, เนื้อหารายละเอียด/timeline เป็น 15px, labels 14px, form controls 16px และข้อความประกอบส่วนใหญ่ 12–14px คงขนาดไอคอน/ภาพตกแต่ง เพิ่มพื้นที่ป้ายสถิติและเรียง footer มือถือให้ข้อความไม่ชนกัน
+
+ตรวจ build/TypeScript/lint, browser regression 24 cases ทั้ง desktop/mobile และ QA 21 ภาพที่ 320/390/1440px ไม่มี horizontal overflow; ภาพฟอร์มและ Dashboard ตรวจด้วยตาแล้ว หลังปรับพื้นที่สถิติ/footer ตรวจ accessibility หน้าหลักซ้ำทั้งสอง viewport หลักฐาน `artifacts/vercel/typography/` เป็นข้อมูลสมมติบนเครื่อง ต้องให้เจ้าของตรวจขนาดตัวหนังสือบนมือถือจริงหลัง deploy อีกครั้ง
 
 ยังไม่เปลี่ยน plan Vercel, production Base, Apps Script หรือ Rich Menu production
