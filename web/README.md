@@ -118,6 +118,10 @@ Next dev กรอง incoming request log ของ `/api/auth/google/callback`
 
 วันที่ / timestamp ผิดรูป, Status / Priority ที่ไม่รู้จัก และ links เจ้าของหลายคนคืน `AIRTABLE_DATA` แบบไม่เผย record fields แทนการเดาสถานะหรือแสดงวันที่ผิด Attachments ที่ไม่มี HTTPS URL ใช้งานได้จะไม่ถูกส่งไปหน้าเว็บ หากข้อมูลถูกแก้ตรงใน Airtable จนผิด contract ให้ผู้ดูแลหยุด writes / ตรวจ journal ก่อนแก้ตาม [คู่มือ recovery](../docs/vercel-recovery.md) ไม่แก้สถานะ SQL เพื่อข้าม validation
 
+## ซ้อม backup ของ staging
+
+`npm run rehearse:backup -- --confirm-test-base=appoQzvQwGShlq4OJ` ใช้ direct Neon staging และ Docker PostgreSQL 18.6 สำรองแบบเข้ารหัสและ restore ใน container ที่ไม่มี network/port ตรวจข้อมูลกับ snapshot เดียวกัน และล้าง fixture เฉพาะรอบ ไม่เรียก Airtable หรือ restore ทับฐานข้อมูลที่ระบุจากภายนอก ต้องมี backup encryption key แยกและปิด DB writes/jobs ก่อนรัน ดู [วิธีเตรียม ผลตรวจ และข้อจำกัด](../docs/vercel-backup-rehearsal.md)
+
 ## Deploy
 
 ใช้ [แผนพัฒนา](../docs/vercel-development-plan.md), [แผน Deploy](../docs/vercel-deployment-plan.md) และ [สถานะล่าสุด](../docs/vercel-progress.md) ตั้ง Vercel Root Directory เป็น `web/` เจ้าของอนุญาตและมี [deployment แรก](../docs/vercel-first-deployment.md) แล้วที่ https://happy-victory-task-center.vercel.app หน้าเว็บออนไลน์ แต่ cloud DB / OAuth ยังไม่ตั้งค่า คำสั่ง build / tests ไม่สร้างหรือเชื่อมบริการเหล่านี้เอง

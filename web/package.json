@@ -22,6 +22,7 @@
     "db:migrate": "tsx tools/migrate.ts",
     "diagnose": "tsx tools/diagnose.ts",
     "rehearse:live": "tsx tools/rehearse-live.ts",
+    "rehearse:backup": "tsx tools/rehearse-backup.ts",
     "ops:runtime": "tsx tools/runtime.ts",
     "ops:inspect": "tsx tools/inspect-operation.ts",
     "ops:recover": "tsx tools/recover-operation.ts"

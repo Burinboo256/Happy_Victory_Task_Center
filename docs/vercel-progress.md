@@ -1,6 +1,6 @@
 # สถานะพัฒนา Vercel
 
-อัปเดต: 6 พฤศจิกายน 2026 · โค้ดขึ้น GitHub [`Burinboo256/Happy_Victory_Task_Center`](https://github.com/Burinboo256/Happy_Victory_Task_Center) และ [Vercel](https://happy-victory-task-center.vercel.app) แล้ว CI ผ่านครบ หน้าเว็บยังแสดงเตรียมระบบเพราะ backend cloud ยังไม่ตั้งค่า ยังไม่สลับ production จาก Apps Script ดู [หลักฐาน deployment](vercel-first-deployment.md)
+อัปเดต: 7 พฤศจิกายน 2026 · โค้ดขึ้น GitHub [`Burinboo256/Happy_Victory_Task_Center`](https://github.com/Burinboo256/Happy_Victory_Task_Center) และ [Vercel](https://happy-victory-task-center.vercel.app) แล้ว Neon Free staging / migrations / Preview variables 14 ตัวพร้อมและซ้อม backup/restore ผ่าน; ยังขาด PAT / OAuth ของ staging จึงยังไม่ Login บน cloud และยังไม่สลับ production จาก Apps Script ดู [สถานะ staging](vercel-staging.md)
 
 ## สิ่งที่มีใน source แล้ว
 
@@ -53,18 +53,18 @@ CI ของ initial commit รันครบใน [run 42172256512](https://g
 
 | Milestone | สถานะ / งานคงเหลือ |
 |---|---|
-| M0 | GitHub / CI / Vercel project และ .vercel.app URL พร้อม; Base ทดสอบ / localhost OAuth / PostgreSQL local พร้อม; PostgreSQL cloud / backup / ค่าใช้จ่ายก่อนใช้งานจริงยังต้องสรุป |
+| M0 | GitHub / CI / Vercel / test Base / localhost OAuth พร้อม; เจ้าของเลือก Neon Free staging และมี DB Singapore แล้ว ซ้อม encrypted backup/restore แยกผ่าน; production plan / backup retention / offsite และ cutover ยังต้องสรุป |
 | M1 | โครงแอป, DB และ adapter ผ่าน tests; schema diagnostics / table access กับ Airtable test Base จริงผ่านครบ 5 ตาราง |
 | M2 | Google Login จริงครบ Admin, Secretary, Agent A/B; return-to-form และ Active revocation / restore ผ่าน; สอง Chrome profiles มี session พร้อมกัน ตรวจ cross-owner ทั้งสองทิศทาง และ Agent A logout ไม่กระทบ Agent B ผ่าน |
 | M3 | 5 mutations และ recovery ผ่านตามขอบเขตเดิม; HTTP lost ACK / negative drift / same-key retry ไม่ซ้ำ; สอง profiles สร้างงานต่างเจ้าของซ้อนกันได้ภายใต้ test acknowledgement barrier มี running journals ต่างผู้ใช้ 2 รายการและ task / audit อย่างละ 1 ต่อคำขอ; live HTTP contention บนงานเดียวกันยังไม่ได้ซ้อม |
 | M4 | หน้าหลัก / keyboard / errors และ automated axe scans ผ่านบน Chrome desktop / mobile viewport แล้ว; รายงานเก็บ incomplete results ไว้ ยังต้องตรวจ screen reader และ Safari / Rich Menu บนอุปกรณ์จริง |
-| M5–M6 | Vercel deployment แรก READY แต่ backend cloud / OAuth ยังไม่ตั้ง จึงยังไม่ผ่าน staging acceptance; ระบบเดิมยังเป็น production และยังไม่ cutover |
+| M5–M6 | Preview staging READY, Neon / migrations / variables 14 ตัวพร้อม; backup/restore แยกผ่านตาม [ขอบเขต](vercel-backup-rehearsal.md); ยังรอ PAT / OAuth, mobile access และ staging acceptance ระบบเดิมยังเป็น production และยังไม่ cutover |
 | M7 | LINE linking / delivery worker / scheduler และผู้ให้บริการอีเมลของระบบใหม่ยังไม่พัฒนา ช่องทางส่งจริงปิดไว้ |
 
 ## งานถัดไปบนเครื่อง
 
 1. วัด load / latency กับ Airtable จริงและ staging ต่อจาก local rehearsal 5 คน / 250 งาน; กำหนดเกณฑ์รับรองและ API usage budget ก่อน release
 2. เจ้าของมี iPhone / Android พร้อมแล้ว; ตรวจ screen reader / Safari / LINE Rich Menu ตาม [คู่มืออุปกรณ์จริง](vercel-device-acceptance.md) หลังมี HTTPS origin ที่เข้าถึงจากมือถือ
-3. ตั้ง cloud DB / OAuth / environment หลัง deployment แรก แล้วรับรอง staging ก่อน cutover ตาม [รายการงานที่เหลือ](vercel-first-deployment.md#ขั้นถัดไปให้-login-และส่งงานได้)
+3. ตั้ง PAT / OAuth / mobile access ของ staging ต่อจาก Neon ที่พร้อมแล้ว และรับรอง staging ก่อน cutover ตาม [งานที่เหลือ](vercel-staging.md#งานที่เหลือก่อนรับรอง-staging)
 
 ผล build และ tests ที่ใช้ข้อมูลจำลองไม่ยืนยันว่าพร้อมใช้กับบัญชีจริง ยังไม่ผ่าน release gates ทั้งหมดใน [แผนพัฒนา](vercel-development-plan.md) และ [แผน Deploy](vercel-deployment-plan.md)
