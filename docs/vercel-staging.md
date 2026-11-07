@@ -1,6 +1,6 @@
 # เตรียม backend ของ staging
 
-สถานะ 7 พฤศจิกายน 2026: Neon Free / migrations / variables 14 ตัวของ Preview พร้อมแล้ว ยังไม่ตั้ง Airtable PAT / Google OAuth ของ staging หรือเปิด business writes
+สถานะ 8 พฤศจิกายน 2026: Neon Free / migrations / variables 17 ตัวของ Preview พร้อมแล้ว ตั้ง Airtable PAT / Google OAuth แยกของ staging และ deploy ใหม่แล้ว เริ่ม Google OAuth ได้; ยังรอ Login/acceptance จริงและยังไม่เปิด business writes
 
 ## ทรัพยากร
 
@@ -8,14 +8,14 @@
 |---|---|
 | Vercel project | `happy-victory-task-center` ในทีม `burin`; production branch คง `main` |
 | Staging branch | `staging`; ใช้ Vercel Preview / `APP_ENV=staging` ไม่เปลี่ยน config guard ของ main |
-| HTTPS origin | `https://happy-victory-task-center-git-staging-burin.vercel.app` · ยืนยันจาก READY deployment `dpl_Fr4G71xssiyaF7zVKbHSqhVvph1p` แล้ว |
+| HTTPS origin | `https://happy-victory-task-center-git-staging-burin.vercel.app` · READY Preview `dpl_7vS2tTzZPStGcXnfJTD73UP4apAC` จาก commit `2c0b9bf` |
 | Neon resource | `happy-victory-staging` / `store_e4OhmTNisXUwUUcW` |
 | Neon project | `fragrant-butterfly-75888616` |
 | Plan / region | `free_v3` / Free, payment method ไม่จำเป็น / Singapore `sin1` |
 | Neon Auth / Realtime | ปิด ใช้ Google OIDC ของแอปตามเดิม |
 | PostgreSQL | server version `180006`; migrations 001 / 002 ผ่าน |
 | Binding / flags | `staging` กับ test Base `appoQzvQwGShlq4OJ`; DB writes / jobs ปิด |
-| Function region | ตั้ง `web/vercel.json` บน staging branch เป็น `sin1` ให้ตรง Neon; รอตรวจจาก deployment ใหม่ |
+| Function region | `sin1` ตรง Neon; ยืนยันจาก Builds ของ deployment ใหม่แล้ว |
 
 ใช้ pooled URL สำหรับ runtime และ direct URL สำหรับ migration ตั้ง `sslmode=verify-full` ทั้งคู่ ตรวจ TLSv1.3 / certificate authorized / hostname ตรงที่ client จริงแล้ว ตาราง sessions, OAuth, bindings, operations, resources และ recovery events เริ่มว่าง ไม่มีการคัดลอกจาก local
 
@@ -28,8 +28,8 @@
 | `DATABASE_URL`, `AUTH_SECRET` | ตั้งเป็น sensitive เฉพาะ Preview / branch staging แล้ว |
 | `DATABASE_MIGRATION_URL` | ใช้ CLI ในเครื่องเท่านั้น ไม่ใส่ runtime Vercel |
 | `APP_ENV`, `APP_ORIGIN`, Base / Table IDs | ตั้งเฉพาะ Preview / branch staging แล้ว; ยังไม่มี variables ของ production |
-| `AIRTABLE_TOKEN` | รอ PAT ของ staging จำกัด test Base นี้ |
-| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | รอ client ของ staging แยกจาก localhost / Apps Script |
+| `AIRTABLE_TOKEN` | sensitive เฉพาะ Preview / staging; PAT ใหม่จำกัด test Base นี้ ตรวจอ่านครบ 5 ตารางแล้ว |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | sensitive เฉพาะ Preview / staging; client ใหม่ “Happy Victory Task Center — Vercel Staging” แยกจาก localhost / Apps Script |
 | writes / jobs / notifications | flags เริ่ม false ทั้งหมด |
 
 เคยเชื่อม resource กับ Preview ชั่วคราวด้วย prefix `HVR_STAGING_EXPORT` เพื่อส่งออก connection ไปไฟล์ ignored แล้วถอด auto-connection ออกก่อน push staging ข้อมูล runtime จะ pin ไปยัง DB ที่เตรียมไว้ ไม่ให้ integration สลับ DB / journal ตาม Preview deployments ไม่ส่งออกหรือทับ `web/.env.local`
@@ -48,10 +48,13 @@ CI ของ commit `08c7e65` ผ่านแล้ว: [run 42213614773](https:
 
 ## งานที่เหลือก่อนรับรอง staging
 
-1. ยืนยัน function region / environment ของ deployment ใหม่หลังเพิ่ม manifest; branch / alias / variables แบบ branch-specific พร้อมแล้ว
-2. ตั้ง PAT / OAuth client ที่แยกสำหรับ origin นี้ และตรวจ Audience ผู้ทดสอบ
-3. ตรวจ Deployment Protection ว่า callback / โทรศัพท์เข้าได้ โดยยังใช้ Google / Users authorization ของแอปเสมอ
-4. Redeploy / Login จริง ตรวจ session / Active / ownership / kill switches แล้วเปิด writes เฉพาะ test Base เมื่อตรวจพร้อม
-5. ซ้อม recovery / backup-restore / load และ [อุปกรณ์จริง](vercel-device-acceptance.md) ก่อน owner acceptance
+1. Login จริงครบแต่ละบทบาท ตรวจ callback / session / Active / ownership / kill switches แล้วเปิด writes เฉพาะ test Base เมื่อตรวจพร้อม
+2. ซ้อม recovery / load บน staging และ [อุปกรณ์จริง](vercel-device-acceptance.md) ก่อน owner acceptance; backup/restore ที่ผ่านเป็น quarantine local ตามขอบเขตด้านบน
+
+เจ้าของอนุมัติปิด Vercel Authentication ของโปรเจกต์แล้ว ตรวจจากภายนอกไม่มี Vercel session ได้ health 200, configured Login และ Google OAuth 303 ที่ใช้ client/callback ของ staging, PKCE S256 และ HttpOnly cookie; anonymous bootstrap 401 ไม่ส่งข้อมูลผู้ใช้ หลักฐาน `artifacts/vercel/staging-auth-ready.json` ไม่ใช่ผล Login สำเร็จจริง
+
+Callback: `https://happy-victory-task-center-git-staging-burin.vercel.app/api/auth/google/callback` ตรวจ Audience ผู้ทดสอบเดิมครบ 4 บัญชีแล้ว PAT มีเฉพาะ records read/write จากฟอร์มสร้าง (API whoami ของ PAT ไม่คืน scopes) หลักฐานอ่าน 5 ตาราง `artifacts/vercel/staging-pat-ready.json`; ไม่มีการเขียน records ในการตรวจนี้
+
+CI ของ commit `2c0b9bf` ผ่านใน [run 42377195580](https://github.com/Burinboo256/Happy_Victory_Task_Center/actions/runs/42377195580) ก่อน redeploy credentials
 
 ยังไม่เปลี่ยน plan Vercel, production Base, Apps Script หรือ Rich Menu production
