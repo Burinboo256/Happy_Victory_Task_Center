@@ -4,6 +4,25 @@
 
 ใช้ร่วมกับ [แผนพัฒนา](vercel-development-plan.md) สำหรับ M0–M7 เว็บ Google Apps Script ปัจจุบันยังเป็น production ตาม [deployment.md](deployment.md) ดู [สถานะล่าสุด](vercel-progress.md) และ [คำสั่งที่มีจริงใน web/](../web/README.md) staging ใช้ .vercel.app และ credentials แยกแล้ว ส่วน custom domains, production DB/OAuth และ cutover configuration ยังไม่ตั้งค่า
 
+## ตรวจความพร้อม production วันที่ 8 พฤศจิกายน 2026
+
+ตรวจ Vercel API และ public endpoints แบบอ่านอย่างเดียว เก็บ metadata โดยไม่ส่งออกค่า secrets ใน `artifacts/vercel/production-readiness.json`:
+
+| รายการ | ผลตรวจ / สิ่งที่ต้องทำต่อ |
+|---|---|
+| Project / branch | `happy-victory-task-center`, root `web`, Node `24.x`, production branch `main` |
+| Production configuration | environment variables ของ production มี 0 ตัว; ต้องตั้ง 17 ตัวตามตารางด้านล่างด้วย DB/PAT/OAuth ของ production แยกจาก staging |
+| Public production URL | `/login` และ `/api/health` ได้ 200; `/api/bootstrap` และ `/api/auth/google` ได้ 503 `NOT_CONFIGURED` จึงยัง Login/ใช้งานจริงไม่ได้ |
+| Staging isolation | มี variables เฉพาะ Preview/branch staging 17 ตัว รวม sensitive keys 5 ตัว; ยังไม่คัดลอกค่าเหล่านี้ไป production |
+| Hosting plan | team `burin` เป็น Hobby; รอสรุปงบ Pro ก่อนใช้ระบบงานของทีมจริง |
+| Backup / release acceptance | ยังต้องมี offsite encrypted backup, retention/key recovery, cloud restore และ Airtable backup ที่กู้ได้ รวม cloud failure/load และผลมือถือก่อน cutover |
+
+ข้อเสนองบ hosting เริ่มจาก [Vercel Pro](https://vercel.com/docs/plans/pro-plan): platform fee $20/เดือน รวม deploying seat 1 คนและ usage credit $20; usage ส่วนเกิน/add-ons/seats เพิ่มมีค่าใช้จ่าย ผู้ใช้งานเว็บ 5 คนไม่ใช่ deploying seats โดยอัตโนมัติ ตั้ง spending alerts/ขอบเขต usage เมื่อเจ้าของเลือกแผน ราคานี้ตรวจจากเอกสารวันที่ข้างต้น ไม่รวมภาษีหรือ conversion และไม่ใช่การซื้อหรือรับรองยอดใบแจ้งหนี้
+
+Neon production ต้องแยก project/credentials จาก staging และกำหนด RPO/RTO/retention ก่อนสร้าง เอกสาร [Neon plans](https://neon.com/docs/introduction/plans) ระบุ Free instant restore สูงสุด 6 ชั่วโมง แต่ต้องตรวจสิทธิ์ของ Marketplace plan ที่ provision จริงด้วย ไม่ใช้ข้อมูลแผนทั่วไปแทนหลักฐาน retention ของ resource และไม่ถือว่า PITR แทน offsite backup ได้
+
+ลำดับหลังรับรอง staging: สรุปงบ/backup → เตรียม production DB/OAuth/PAT โดย writes/jobs ปิด → ตรวจ read-only หลายบทบาท → Deploy/test maintenance guard ของ Apps Script → นัด cutover ตามข้อ 5 เจ้าของต้องรับรองผลทดสอบและเลือกแผนก่อนซื้อบริการหรือสลับผู้เขียนหลัก
+
 ## 1. Environment และทรัพยากร
 
 | Environment | ข้อมูลและ credentials | ข้อกำหนด |
