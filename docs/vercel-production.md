@@ -24,4 +24,14 @@
 
 ตรวจ public Login HTML และ linked JS/CSS 10 resources: body 16px, ไม่พบ production secrets ที่ตั้งจริง 6 ค่าใน samples; health 200, anonymous bootstrap 401/no-store, Google initiation 303 กับ production client/callback และ PKCE S256 / Secure HttpOnly cookie ผลตรวจ bundle เฉพาะ samples ไม่ครอบคลุม server artifacts/logs ทุกจุด
 
-ลำดับต่อไป: backup และ restore evidence → Deploy maintenance guard/หยุดผู้เขียนเดิม → เปิด writes ระบบใหม่เพียงระบบเดียวตาม [runbook](vercel-deployment-plan.md#5-cutover-ไป-production) คง Hobby ตามที่เจ้าของเลือก การแจ้งเตือน M7 ยังปิด ยังไม่เปลี่ยน Rich Menu และไม่รับรอง cutover สำเร็จจากผล Login เพียงอย่างเดียว
+Apps Script เดิม Deploy maintenance guard เป็น **เวอร์ชัน 5** เมื่อ 8 พฤศจิกายน 2026 แล้ว โดยคง deployment URL และสิทธิ์เดิม สำเนา source ที่คัดลอกกลับจาก Editor ตรงกับไฟล์ที่ตรวจไว้ (`SHA-256 4d534e387f994eba8c9862a9e5e2c1ff75df9290fa0c4a5a219c10fa2fb123c2`) คำสั่ง `checkLegacyCutover` รายงาน pending/malformed operations และ trigger เป็น 0, email/LINE ปิด แต่ **task writes เดิมยังเปิด** จึงยังไม่ผ่าน `readyToCutover` และยังไม่เปิด Vercel writes
+
+## สำรองก่อน cutover — 9 พฤศจิกายน 2026
+
+- Neon: เก็บ `operational.dump.enc` ด้วย AES-256-GCM และทดสอบกู้คืนใน PostgreSQL 18.6 แยกด้วย Docker `--network=none` ไม่มี published ports ตรวจ hash ข้อมูลครบ 10 ตารางและ constraints ตรง snapshot; ไฟล์ที่แก้ไขเสียหายถูกปฏิเสธ ลบเฉพาะ container ทดสอบที่ตรวจ ownership แล้ว หลักฐาน `production-backup-latest.json`, run `f315014d-44dc-441a-bb31-ae21cc968842` ผลนี้เป็น local restore ไม่ใช่ cloud restore
+- Airtable: ทำสำเนา native ใน Workspace เดิมชื่อ **Happy Victory — Pre-cutover Backup 2026-11-09**, Base `appyQGrRz0AOhAxAH` โดยเปิด Duplicate records/comments สำเนามีครบ 6 ตารางและ Users 4 รายการ ไม่รวม revision history
+- ส่งออก records/linked record IDs ทั้ง 6 ตารางจาก Base จริงเป็น `records.json.enc` ใช้ AES-256-GCM ตรวจถอดรหัสกลับและปฏิเสธไฟล์เสียหายผ่าน จำนวน records: Users 4; ตารางอื่น 0 หลักฐาน `production-airtable-backup.json` โครงสร้างอยู่ใน native duplicate; JSON นี้เพียงอย่างเดียวไม่ใช่ schema backup
+- กุญแจอยู่แยกในไฟล์ส่วนตัวที่ Git ignore ยังไม่ได้อัปโหลดสำเนาหรือกุญแจออกนอกเครื่อง รอเจ้าของเลือกที่เก็บนอกเครื่องและการเก็บกุญแจสำรอง
+- สำเนาเหล่านี้สร้างขณะที่ระบบเดิมยังเขียนได้ จึงต้องตรวจการเปลี่ยนแปลงอีกครั้งหลังพักระบบเดิม ก่อนใช้เป็น baseline สุดท้าย ห้าม restore ทับ Base จริงหรือเปลี่ยน Base ID runtime อัตโนมัติ ต้องตรวจ link IDs, Users/Google bindings และ schema ก่อนเสมอ
+
+ลำดับต่อไป: สำเนานอกเครื่องและแผนกู้กุญแจ → หยุดผู้เขียนเดิมด้วย guard ที่ Deploy แล้ว → ตรวจ baseline สุดท้ายและเปิด writes ระบบใหม่เพียงระบบเดียวตาม [runbook](vercel-deployment-plan.md#5-cutover-ไป-production) คง Hobby ตามที่เจ้าของเลือก การแจ้งเตือน M7 ยังปิด ยังไม่เปลี่ยน Rich Menu และไม่รับรอง cutover สำเร็จจากผล Login เพียงอย่างเดียว
