@@ -49,7 +49,9 @@ npm run test:load -- --users=5 --tasks=250 --delay-ms=60
 
 ## งบ API ที่ต้องยืนยัน
 
-แยก rate limit ต่อวินาทีออกจาก monthly quota: [Airtable ระบุ](https://support.airtable.com/articles/7735693959-managing-api-call-limits-in-airtable) 5 requests/วินาที/Base; Free มี 1,000 และ Team มี 100,000 calls/เดือน/workspace ต้องนับ integration อื่นและทุก Base ใน workspace เดียวกันด้วย ยังไม่ยืนยันแผน / ยอดใช้จริงของ workspace นี้ เครื่องมือควบคุมหน้าจอหยุดเพราะตรวจ URL ปัจจุบันไม่ได้ จึงไม่สรุปว่ามี quota เหลือเพียงพอ
+แยก rate limit ต่อวินาทีออกจาก monthly quota: [Airtable ระบุ](https://support.airtable.com/articles/7735693959-managing-api-call-limits-in-airtable) 5 requests/วินาที/Base; Free มี 1,000 และ Team มี 100,000 calls/เดือน/workspace ต้องนับ integration อื่นและทุก Base ใน workspace เดียวกันด้วย เจ้าของยืนยันวันที่ 8 พฤศจิกายน 2026 ว่าใช้ Free; ยังไม่ทราบยอด Public API calls เดือนนี้ จึงยังไม่รัน live load เพิ่มและไม่สรุปว่ามี quota เหลือเพียงพอ ตรวจยอดได้ที่ Workspace settings → Usage
+
+ตัวอย่างงบขั้นต่ำ: 5 คน × 5 full-list visits/วัน × 22 วัน × 2 calls = 1,100 calls/เดือน ก่อน detail/mutations/OAuth และ integrations อื่น ตัวเลขนี้เป็น scenario ไม่ใช่ยอดใช้งานจริงของทีม และ Secretary/full 250 งานอาจใช้มากกว่า 2 calls ตาม projection ด้านล่าง ต้องตกลง usage budget และแนวทาง production กับเจ้าของ ไม่ซื้อแผนหรือย้ายข้อมูลธุรกิจออกจาก Airtable อัตโนมัติ
 
 สำหรับแบบจำลอง 250 งานกระจาย 5 Agents และ Users ไม่เกิน 100 records: Agent full = 2 calls, context = 1; Secretary full = 5, context = 2 รวม Users GET ที่ตรวจสิทธิ์แล้ว คำนวณ baseline ด้วย `2 × Agent full visits + Agent context visits + 5 × Secretary full visits + 2 × Secretary context visits` ต่อเดือน แล้วเพิ่ม detail, mutations, polling, OAuth, diagnostics และ integrations อื่นตามการใช้งานจริง ไม่ลดการตรวจ Active / Role เพื่อประหยัด quota
 
