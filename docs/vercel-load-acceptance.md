@@ -75,6 +75,8 @@ npm run test:load -- --users=5 --tasks=250 --delay-ms=60
 
 ## หลักฐานก่อน release ที่ยังขาด
 
+เพิ่ม HTTP regression `web/tests/api/contention.spec.ts` วันที่ 8 พฤศจิกายน 2026: ใช้ production build บน localhost, PostgreSQL ทดสอบจริง และ HTTP clients แยกสองตัวที่ใช้ Secretary session เดียวกัน หยุด upstream จำลองหลัง journal บันทึก step เริ่มเขียนเพื่อยืนยันว่าคำขอแรกยัง `running` ขณะส่งคำขอที่สองบนงานเดียวกัน ได้ `409 RESOURCE_BUSY`; ส่ง key เดิมระหว่างนั้นได้ `202 running` หลังปล่อยคำขอแรกสำเร็จ การลองคำขอที่สองด้วย version เก่าได้ `409 VERSION_CONFLICT` แล้วส่ง key ใหม่กับ version ใหม่จึงสำเร็จ ตรวจประวัติอย่างละหนึ่งต่อการแก้จริง, Completed At/version ไม่เปลี่ยนเมื่อ replay คำขอแรก และไม่มี reservation ค้าง กรณีนี้รวมใน API suite 14 tests; ไม่ใช่ Google Login, Vercel หลาย instances หรือ Airtable จริง และไม่ปิด cloud contention/recovery gate
+
 เพิ่ม regression ของ queued mutation ที่จอง slot ก่อนคำขออื่นได้รับ 429 แล้ว: ต้องตรวจ shared cooldown อีกครั้งหลังรอ slot และหยุดก่อนเรียก transport ผลก่อนแก้ส่งออกไป 2 calls; หลังแก้ส่งเพียง call แรก และ mutation ได้ AIRTABLE_BUSY / Retry-After โดยไม่กลายเป็น uncertain write ชุด PostgreSQL ปัจจุบันผ่าน 8 tests; CI ตรวจซ้ำครบแล้วตาม [deployment แรก](vercel-first-deployment.md)
 
 - วัด Airtable จริงกับข้อมูลและขนาดทีมใกล้งานจริง รวม API usage budget ของบัญชีที่ใช้

@@ -1,6 +1,6 @@
 // Loaded by NODE_OPTIONS only in the disposable HTTP suite. No application route imports this file.
 import { randomUUID } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import { repository } from '../fixtures';
 import { schemaFixture } from '../schema-fixture';
 
@@ -40,6 +40,7 @@ globalThis.fetch = async (input, options) => {
     taskOwners?: Record<string, string>;
     failUsers?: boolean;
     schemaMismatch?: boolean;
+    holdTaskPatch?: string;
   };
   if (url.pathname === `/v0/meta/bases/${process.env.AIRTABLE_BASE_ID}/tables`) {
     if (method !== 'GET') throw new Error('Metadata writes are not permitted in diagnostics');
@@ -101,7 +102,17 @@ globalThis.fetch = async (input, options) => {
   }
   const body = JSON.parse(String(options?.body));
   if (method !== 'PATCH') throw new Error('Unexpected test write method');
-  if (id) return Response.json(await h.repo.patch(table, id, body.fields));
+  if (id) {
+    if (table === 'tasks' && control.holdTaskPatch === id) {
+      await writeFile(controlFile + '.held', id);
+      const deadline = Date.now() + 15000;
+      while ((await readFile(controlFile + '.release', 'utf8').catch(() => '')) !== id) {
+        if (Date.now() > deadline) throw new Error('Isolated test patch gate timed out');
+        await new Promise((resolve) => setTimeout(resolve, 25));
+      }
+    }
+    return Response.json(await h.repo.patch(table, id, body.fields));
+  }
   const key = body.performUpsert.fieldsToMergeOn[0],
     fields = body.records[0].fields;
   const result = await h.repo.upsert(table, key, fields);

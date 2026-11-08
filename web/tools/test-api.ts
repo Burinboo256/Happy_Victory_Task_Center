@@ -78,4 +78,6 @@ try {
   else process.exitCode = 1;
   await admin.end();
   await rm(controlFile, { force: true });
+  await rm(controlFile + '.held', { force: true });
+  await rm(controlFile + '.release', { force: true });
 }

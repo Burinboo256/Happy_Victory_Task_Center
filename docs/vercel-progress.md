@@ -33,7 +33,7 @@
 | Integration บน PGlite | 15 ผ่าน | SQL จริงใน embedded engine, signed OIDC doubles, sessions / role changes, journal replay, lost response, recovery ของ status / followup และ maintenance race |
 | PostgreSQL จริงใน Docker | 8 ผ่าน | หลาย connections, คำขอซ้ำ / resource conflict, recovery สองผู้ดูแลพร้อมกัน, shared slots / overload ไม่ต่อคิว rejected requests, queued mutation เคารพ cooldown ที่เกิดใหม่ และ migration CLI idempotency / rollback |
 | Browser E2E | 24 ผ่าน | production build + Chrome desktop / mobile viewport, keyboard / focus / error states และ axe scans ของ 8 หน้าหลัก + Login / errors / mobile menu; ใช้ API doubles เฉพาะ tests |
-| HTTP / Browser ต่อ API จริง | 13 ผ่าน | PostgreSQL จริง, revocation / expiry / kill switch, context / invalid data, diagnostics CLI และ axe บน configured Login; จำลองเฉพาะ Airtable upstream |
+| HTTP / Browser ต่อ API จริง | 14 ผ่าน | PostgreSQL จริง, revocation / expiry / kill switch, context / invalid data, diagnostics CLI และ axe บน configured Login; เพิ่ม same-task status contention / stale retry / completed replay; จำลองเฉพาะ Airtable upstream |
 | Apps Script regression | 61 ผ่าน | รวม guard หยุด business mutations และยังอ่านข้อมูลได้ |
 | npm dependency audit | ไม่พบช่องโหว่หลังติดตั้ง | เปลี่ยนจากชุด ESLint ที่มี advisory เป็น Biome; ไม่มี runtime dependency advisory ค้าง ณ รอบตรวจ |
 
