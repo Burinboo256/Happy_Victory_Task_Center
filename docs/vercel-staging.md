@@ -61,6 +61,16 @@ CI ของ commit `08c7e65` ผ่านแล้ว: [run 42213614773](https:
 
 ขอบเขตนี้พิสูจน์การสลับ routing/config และ maintenance บน staging เท่านั้น ไม่มีการ restore DB, เปลี่ยน schema, ทดสอบ authenticated business workflow หลัง rollback หรือสลับกลับ Apps Script ยังต้องซ้อม production rollback ตาม [runbook](vercel-deployment-plan.md#8-monitoring-และ-rollback) และ Deploy/test maintenance guard ของ Apps Script ก่อน cutover
 
+## คำขอ key ซ้ำบน staging จริง
+
+8 พฤศจิกายน 2026 ทดสอบ HTTPS → Vercel → Neon/Airtable test Base สำเร็จ ใช้ Agent A ที่ Active และ Google Subject ตรงกับ identity binding เดิม ออก session ทดสอบโดยผู้ดูแลอายุ 5 นาทีผ่าน `createSession` แล้วเพิกถอนเฉพาะ session นี้และตรวจว่าไม่มีเหลือ ไม่อ่าน cookie ของ browser หรือแก้ session เดิม ผลนี้ไม่ใช่ Google OAuth acceptance เพิ่มเติม
+
+เริ่ม create งานสมมติ `[STAGING REPLAY TEST]` แล้วอ่าน Neon จนเห็น journal `running` ก่อนส่ง HTTP คำขอที่สองด้วย key/payload เดิม: คำขอที่สองได้ 202/running กับ operation ID เดียวกัน ขณะคำขอแรกได้ 200/completed จากนั้น completed replay ได้ผลเดิม และเปลี่ยน payload ด้วย key เดิมได้ 409/IDEMPOTENCY_CONFLICT ตรวจ Airtable ตาม Request Key/Operation Key พบ task/audit อย่างละ 1, เจ้าของถูกต้อง และไม่มี reservation ค้าง เก็บงานสมมติไว้เป็นหลักฐาน ไม่มีข้อมูลลูกค้าจริง
+
+รอบนี้รวม HTTP 5 คำขอและ direct Airtable verification 3 calls งบ upstream ผ่าน Vercel ประมาณรวมไม่เกิน 18 calls แต่ไม่ได้วัดจำนวนจริงผ่าน Vercel; อย่าใช้ค่า 18 เป็นยอด Usage ที่ยืนยันแล้ว เวลา context 2,192 ms / create 4,430 ms / duplicate-running 1,051 ms / completed replay 680 ms / conflict 377 ms เป็น single sample ต่อขั้นตอน ไม่ใช่ SLA หรือ load acceptance หลักฐาน `artifacts/vercel/staging-replay.json`
+
+ยังไม่ใช่การพิสูจน์ว่า requests อยู่คนละ Function instance, ต่าง key แก้ task เดียวกัน, lost upstream acknowledgement/recovery หรือ 5 ผู้ใช้/250 งานบน cloud การรับรองกรณีเหล่านี้ยังคงค้างและต้องวางงบ API ก่อนซ้อม
+
 ## งบและการเข้าถึง staging
 
 เจ้าของเลือกคง Airtable Free สำหรับ staging ตรวจ Usage จริงแล้ว workspace แสดง Team Trial: รวม 903 / 100,000 calls เดือนนี้ โดย test Base ใช้ 872 และ Base ระบบเดิม 31 เมื่อวางงบตาม Free 1,000 จะเหลือ 97 calls จึงพัก bulk/live load และกันสำรองก่อนทดสอบมือถือเฉพาะจุดตาม [งบ API](vercel-load-acceptance.md#งบ-api-ที่ต้องยืนยัน) ตัวเลขนี้เป็น snapshot ไม่ใช่ตัวจำกัดอัตโนมัติ ไม่เปลี่ยน subscription และไม่ลดการตรวจสิทธิ์หรือ cache Active/Role เพื่อประหยัดโควตา

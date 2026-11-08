@@ -65,6 +65,8 @@ CI ของ initial commit รันครบใน [run 42172256512](https://g
 
 ซ้อม stable staging alias ย้อน `f2eb6a3` → `bd7e5f7` → รุ่นเดิมสำเร็จแล้ว โดยปิด writes ระหว่างสลับ ตรวจว่าไม่มีคำขอค้าง, health/Login/OAuth initiation/anonymous 401 ผ่านทั้งสองรุ่น และ production alias ไม่เปลี่ยน คืน writes=true/jobs=false แล้ว ไม่ใช้ Airtable API หรือทำ business mutations รอบนี้ ดู [ขอบเขตหลักฐาน](vercel-staging.md#ซ้อมย้อน-deployment-บน-staging); ไม่แทนการซ้อมกลับ Apps Script หรือ authenticated workflow หลัง rollback
 
+ทดสอบ create ด้วย key เดียวซ้อนกันบน Vercel/Neon/Airtable staging จริงแล้ว: เห็น running ใน Neon ก่อนส่งคำขอที่สอง ได้ 202/running ระหว่างคำขอแรก, replay หลังเสร็จได้ผลเดิม, payload เปลี่ยนได้ 409 และตรวจ task/audit อย่างละหนึ่ง ไม่มี reservation ค้าง ใช้ session ทดสอบ Agent ที่ผูก Google เดิม อายุ 5 นาทีและเพิกถอนเมื่อจบ ดู [ขอบเขตและงบ](vercel-staging.md#คำขอ-key-ซ้ำบน-staging-จริง); ยังไม่ใช่ cloud failure/recovery หรือ load acceptance
+
 1. วัด load / latency กับ Airtable จริงและ staging ต่อจาก local rehearsal 5 คน / 250 งาน; กำหนดเกณฑ์รับรองและ API usage budget ก่อน release
 2. เจ้าของมี iPhone / Android พร้อมแล้ว; ตรวจ screen reader / Safari / LINE Rich Menu ตาม [คู่มืออุปกรณ์จริง](vercel-device-acceptance.md) หลังมี HTTPS origin ที่เข้าถึงจากมือถือ
 3. รับรอง retry/recovery/load และมือถือของ staging ต่อจาก desktop acceptance ก่อน cutover ตาม [งานที่เหลือ](vercel-staging.md#งานที่เหลือก่อนรับรอง-staging)
