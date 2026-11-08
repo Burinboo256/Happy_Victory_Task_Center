@@ -71,6 +71,14 @@ CI ของ commit `08c7e65` ผ่านแล้ว: [run 42213614773](https:
 
 ยังไม่ใช่การพิสูจน์ว่า requests อยู่คนละ Function instance, ต่าง key แก้ task เดียวกัน, lost upstream acknowledgement/recovery หรือ 5 ผู้ใช้/250 งานบน cloud การรับรองกรณีเหล่านี้ยังคงค้างและต้องวางงบ API ก่อนซ้อม
 
+## การเชื่อมต่อผู้ส่งขาดบน staging
+
+8 พฤศจิกายน 2026 ส่ง create งานสมมติ `[STAGING DISCONNECT TEST]` ผ่าน HTTPS ไป Vercel แล้วตรวจ Neon จน journal `running` ก่อนยกเลิก HTTP ด้วย AbortController ฝั่ง client ยืนยันว่าไม่ได้รับ response (`AbortError`) จากนั้นเฝ้าดู journal ผ่าน SQL โดยไม่ส่ง create ซ้ำจนพบ `completed` invocation ที่ Deploy จริงทำงานต่อจนเสร็จหลัง client disconnect
+
+ส่ง payload/key เดิมอีกครั้งได้ 200/completed กับ operation/task ID เดิม ตรวจ Airtable ตาม key พบ task/audit อย่างละ 1 และ owner ถูกต้อง ไม่มี reservation ค้าง ใช้ Agent A session ที่ออกสำหรับทดสอบอายุ 5 นาทีและเพิกถอนเมื่อจบตามวิธีรอบ replay หลักฐาน `artifacts/vercel/staging-disconnect.json` รอบนี้ HTTP 3 คำขอ, direct verification 3 calls, งบ upstream รวมประมาณไม่เกิน 14 calls แต่ไม่ได้วัดจำนวนจาก Vercel จริง
+
+ผลนี้พิสูจน์ client-side disconnect และ same-key retry ของ create ในหนึ่งกรณี ไม่ได้ตัดเครือข่ายระหว่าง Vercel กับ Airtable, ไม่ได้ทำให้ Function หยุดหรือ journal ค้าง review และไม่ได้รัน operator reconcile จึงยังไม่ปิด gate ของ ambiguous upstream write / stopped invocation recovery หรือการหลุดเครือข่ายบนอุปกรณ์จริง
+
 ## งบและการเข้าถึง staging
 
 เจ้าของเลือกคง Airtable Free สำหรับ staging ตรวจ Usage จริงแล้ว workspace แสดง Team Trial: รวม 903 / 100,000 calls เดือนนี้ โดย test Base ใช้ 872 และ Base ระบบเดิม 31 เมื่อวางงบตาม Free 1,000 จะเหลือ 97 calls จึงพัก bulk/live load และกันสำรองก่อนทดสอบมือถือเฉพาะจุดตาม [งบ API](vercel-load-acceptance.md#งบ-api-ที่ต้องยืนยัน) ตัวเลขนี้เป็น snapshot ไม่ใช่ตัวจำกัดอัตโนมัติ ไม่เปลี่ยน subscription และไม่ลดการตรวจสิทธิ์หรือ cache Active/Role เพื่อประหยัดโควตา

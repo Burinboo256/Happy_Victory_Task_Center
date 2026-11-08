@@ -63,6 +63,8 @@ npm run test:load -- --users=5 --tasks=250 --delay-ms=60
 
 หลัง snapshot นี้ มี [staging replay smoke](vercel-staging.md#คำขอ-key-ซ้ำบน-staging-จริง) หนึ่งรอบ วางงบไม่เกิน 18 calls รวม direct verification 3 calls; ไม่ใช่ยอดที่วัดจาก Vercel จริง จึงห้ามอ้างว่า 97/47 calls ยังเหลือเท่าเดิม ต้องหักงบประมาณรอบนี้และอ่าน Usage ใหม่ก่อน live test เพิ่ม ส่วน rollback rehearsal ไม่เรียก Airtable
 
+รอบ [client disconnect](vercel-staging.md#การเชื่อมต่อผู้ส่งขาดบน-staging) เพิ่มงบประมาณอีก 14 calls รวม direct verification 3 calls งบวางแผนสองรอบรวม 32 จึงเหลือไม่เกิน 15 จาก allowance 47 เดิมก่อนเผื่อการใช้งานอื่น ไม่ใช่ยอด Usage ที่วัดแล้ว พัก live mutation/load เพิ่มเพื่อเก็บงบสำหรับมือถือ และตรวจ Usage ใหม่ก่อนเริ่มรอบถัดไป
+
 ก่อน live test รอบถัดไป อ่าน Usage ใหม่และประมาณ calls รวม login/reads/mutations/retries โดยกันสำรองอย่างน้อย 50 calls สำหรับการตรวจและการใช้งานอื่น ด้วย snapshot นี้จึงเหลืองบทดสอบไม่เกิน 47 calls ตามแผน ไม่ใช่ตัวจำกัดที่ระบบบังคับอัตโนมัติ คงการพัก bulk/live load 250 งาน ใช้ synthetic load สำหรับงานหนัก และทดสอบมือถือเฉพาะกรณีที่ยังขาด หยุดรอบทดสอบหากประมาณการเกินงบหรือพบ 429; ไม่รัว retry เพื่อใช้ grace period และไม่ลดการตรวจ Active/Role
 
 ตัวอย่างงบขั้นต่ำ: 5 คน × 5 full-list visits/วัน × 22 วัน × 2 calls = 1,100 calls/เดือน ก่อน detail/mutations/OAuth และ integrations อื่น ตัวเลขนี้เป็น scenario ไม่ใช่ยอดใช้งานจริงของทีม และ Secretary/full 250 งานอาจใช้มากกว่า 2 calls ตาม projection ด้านล่าง ต้องตกลง usage budget และแนวทาง production กับเจ้าของ ไม่ซื้อแผนหรือย้ายข้อมูลธุรกิจออกจาก Airtable อัตโนมัติ

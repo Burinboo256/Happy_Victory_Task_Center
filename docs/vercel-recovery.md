@@ -6,6 +6,8 @@
 
 ซ้อม CLI กับ HTTP session ของ Agent A จริงเพิ่มเติมแล้ว: คำตอบ create หายหลัง Airtable ยอมรับ → review; เปลี่ยนชื่อ task สมมติโดยตรงแล้ว reconcile คง review / reservation; คืนข้อมูลแล้ว reconcile เป็น pending จากนั้นผู้ใช้เดิมกดส่งฟอร์มเดิมและจบ completed โดยมี task / audit อย่างละ 1 ไม่ส่ง upsert task ซ้ำ หลักฐาน `artifacts/vercel/live-http-result-a62025c4.json` และ [สถานะ local acceptance](vercel-local-acceptance.md)
 
+8 พฤศจิกายน 2026 ซ้อม [client disconnect บน Vercel staging](vercel-staging.md#การเชื่อมต่อผู้ส่งขาดบน-staging) จริงแล้ว: ยกเลิก HTTP หลัง Neon journal running, ฝั่ง Vercel ทำงานจน completed และ retry key เดิมได้ผลเดิม ตรวจ task/audit อย่างละหนึ่งและไม่มี reservation ค้าง กรณีนี้ไม่เข้าสู่ review และไม่ใช้ operator reconcile จึงเป็นหลักฐานแยกจาก stopped invocation / lost upstream acknowledgement ที่ซ้อมบนเครื่องด้านบน
+
 ## หลักการ
 
 เซิร์ฟเวอร์บันทึก write intent ก่อนเรียก Airtable ทุก business step หากการเชื่อมต่อขาดหลังส่ง จะเก็บ `review` และจอง resource ต่อ ไม่สรุปว่ารายการหายแล้วเขียนซ้ำ
