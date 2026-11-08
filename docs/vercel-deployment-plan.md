@@ -6,6 +6,8 @@
 
 ## ตรวจความพร้อม production วันที่ 8 พฤศจิกายน 2026
 
+ตารางต่อไปนี้เป็น snapshot ก่อน provisioning ปัจจุบันเจ้าของอนุญาตดำเนินการ production หลังตรวจมือถือแล้ว และเตรียม Neon/OAuth/PAT/variables ครบตาม [สถานะ production](vercel-production.md) ยังต้อง deploy/read-only acceptance และ cutover
+
 ตรวจ Vercel API และ public endpoints แบบอ่านอย่างเดียว เก็บ metadata โดยไม่ส่งออกค่า secrets ใน `artifacts/vercel/production-readiness.json`:
 
 | รายการ | ผลตรวจ / สิ่งที่ต้องทำต่อ |

@@ -2,6 +2,8 @@
 
 สถานะ 8 พฤศจิกายน 2026: เจ้าของมีทั้ง iPhone และ Android; **ยังไม่มีผลทดสอบอุปกรณ์จริงแยกรายกรณี** Chrome mobile viewport / axe บนเครื่องเป็นหลักฐานแยก ไม่ใช้ทำเครื่องหมายผ่านในหน้านี้
 
+เจ้าของยืนยันเพิ่มเติมหลังขยายตัวหนังสือว่าได้ตรวจบนมือถือแล้ว เรียบร้อยดี และอนุญาตดำเนินการ production บันทึกเป็น owner acceptance ของการใช้งานมือถือโดยรวม ยังไม่มี OS/browser/LINE versions หรือผล VoiceOver/TalkBack และผลแยกรายเส้นทาง จึงไม่อ้างว่าตารางทดสอบทุกกรณีด้านล่างมีหลักฐานครบ
+
 เจ้าของแจ้งว่าได้ลองมือถือแล้วและขอขยายตัวหนังสือทั้งมือถือ/คอมพิวเตอร์ ปรับและ deploy release `bd7e5f7` แล้ว ตรวจ public CSS และฟอร์ม staging บน Chrome desktop พบตัวอักษรขนาดใหม่ตาม [หลักฐาน](vercel-staging.md#ขนาดตัวอักษร) ยังไม่ระบุผลรายเครื่อง/เส้นทาง/เวอร์ชัน จึงยังไม่ทำเครื่องหมายผ่านในตาราง acceptance
 
 มี [staging พร้อม Google Login](https://happy-victory-task-center-git-staging-burin.vercel.app/tasks/new?openExternalBrowser=1) แล้ว เชื่อม Neon/test Base และเปิด writes เฉพาะทดสอบ; Admin/Secretary ผ่าน Login และ workflow บน Chrome desktop จริงตาม [สถานะ staging](vercel-staging.md) เริ่มทดสอบมือถือจากลิงก์นี้ได้ ผล desktop ไม่แทนผลโทรศัพท์

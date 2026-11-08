@@ -63,6 +63,8 @@ CI ของ initial commit รันครบใน [run 42172256512](https://g
 
 ## งานถัดไปบนเครื่อง
 
+เจ้าของตรวจมือถือหลังขยายตัวหนังสือแล้วและอนุญาตดำเนินการ production เตรียม Neon Free แยกใน `sin1`, migrations/TLS, OAuth/PAT ใหม่ และ Production variables 17 ตัวแล้ว คง writes/jobs/notifications ปิด ดู [สถานะ production](vercel-production.md) อยู่ระหว่าง read-only deployment และเตรียม cutover ไม่ใช่การเปิดผู้เขียนหลักแล้ว
+
 ซ้อม stable staging alias ย้อน `f2eb6a3` → `bd7e5f7` → รุ่นเดิมสำเร็จแล้ว โดยปิด writes ระหว่างสลับ ตรวจว่าไม่มีคำขอค้าง, health/Login/OAuth initiation/anonymous 401 ผ่านทั้งสองรุ่น และ production alias ไม่เปลี่ยน คืน writes=true/jobs=false แล้ว ไม่ใช้ Airtable API หรือทำ business mutations รอบนี้ ดู [ขอบเขตหลักฐาน](vercel-staging.md#ซ้อมย้อน-deployment-บน-staging); ไม่แทนการซ้อมกลับ Apps Script หรือ authenticated workflow หลัง rollback
 
 ทดสอบ create ด้วย key เดียวซ้อนกันบน Vercel/Neon/Airtable staging จริงแล้ว: เห็น running ใน Neon ก่อนส่งคำขอที่สอง ได้ 202/running ระหว่างคำขอแรก, replay หลังเสร็จได้ผลเดิม, payload เปลี่ยนได้ 409 และตรวจ task/audit อย่างละหนึ่ง ไม่มี reservation ค้าง ใช้ session ทดสอบ Agent ที่ผูก Google เดิม อายุ 5 นาทีและเพิกถอนเมื่อจบ ดู [ขอบเขตและงบ](vercel-staging.md#คำขอ-key-ซ้ำบน-staging-จริง); ยังไม่ใช่ cloud failure/recovery หรือ load acceptance
