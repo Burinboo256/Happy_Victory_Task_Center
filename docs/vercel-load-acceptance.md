@@ -49,7 +49,19 @@ npm run test:load -- --users=5 --tasks=250 --delay-ms=60
 
 ## งบ API ที่ต้องยืนยัน
 
-แยก rate limit ต่อวินาทีออกจาก monthly quota: [Airtable ระบุ](https://support.airtable.com/articles/7735693959-managing-api-call-limits-in-airtable) 5 requests/วินาที/Base; Free มี 1,000 และ Team มี 100,000 calls/เดือน/workspace ต้องนับ integration อื่นและทุก Base ใน workspace เดียวกันด้วย เจ้าของยืนยันวันที่ 8 พฤศจิกายน 2026 ว่าใช้ Free; ยังไม่ทราบยอด Public API calls เดือนนี้ จึงยังไม่รัน live load เพิ่มและไม่สรุปว่ามี quota เหลือเพียงพอ ตรวจยอดได้ที่ Workspace settings → Usage
+แยก rate limit ต่อวินาทีออกจาก monthly quota: [Airtable ระบุ](https://support.airtable.com/articles/7735693959-managing-api-call-limits-in-airtable) 5 requests/วินาที/Base; Free มี 1,000 และ Team มี 100,000 calls/เดือน/workspace ต้องนับ integration อื่นและทุก Base ใน workspace เดียวกันด้วย เจ้าของเลือกคง Free สำหรับ staging; ไม่ซื้อแผนหรือเปลี่ยน subscription
+
+ตรวจ Workspace settings → Usage วันที่ 8 พฤศจิกายน 2026 แล้ว: workspace ที่มี test Base `appoQzvQwGShlq4OJ` แสดง **Team Trial** ไม่ใช่ Free ในขณะตรวจ หน้าจอระบุ trial สิ้นสุด `6/30/2028` และเปลี่ยนเป็น Free อัตโนมัติ วันที่นี้เป็นค่าที่ UI แสดง ไม่ใช่การรับรองสิทธิ์ trial ในอนาคต
+
+| ยอดเดือนนี้ ณ เวลาตรวจ | Public API calls |
+|---|---:|
+| รวม workspace / เพดานที่ UI แสดง | 903 / 100,000 |
+| Base ทดสอบ Local Test | 872 |
+| Base ระบบเดิมใน workspace เดียวกัน | 31 |
+
+งบระยะยาวยังยึด Free ตามที่เจ้าของเลือก: เทียบยอด 903 กับเพดาน 1,000 จะเหลือ **97 calls** ไม่ใช่ยอดคงเหลือจริงของ Team Trial ใช้เป็นงบวางแผนแบบเผื่อไว้เท่านั้น ยอด Usage อาจอัปเดตล่าช้าและการใช้งานอื่นยังเพิ่มได้ หลักฐาน snapshot อยู่ที่ `artifacts/vercel/airtable-usage.json`
+
+ก่อน live test รอบถัดไป อ่าน Usage ใหม่และประมาณ calls รวม login/reads/mutations/retries โดยกันสำรองอย่างน้อย 50 calls สำหรับการตรวจและการใช้งานอื่น ด้วย snapshot นี้จึงเหลืองบทดสอบไม่เกิน 47 calls ตามแผน ไม่ใช่ตัวจำกัดที่ระบบบังคับอัตโนมัติ คงการพัก bulk/live load 250 งาน ใช้ synthetic load สำหรับงานหนัก และทดสอบมือถือเฉพาะกรณีที่ยังขาด หยุดรอบทดสอบหากประมาณการเกินงบหรือพบ 429; ไม่รัว retry เพื่อใช้ grace period และไม่ลดการตรวจ Active/Role
 
 ตัวอย่างงบขั้นต่ำ: 5 คน × 5 full-list visits/วัน × 22 วัน × 2 calls = 1,100 calls/เดือน ก่อน detail/mutations/OAuth และ integrations อื่น ตัวเลขนี้เป็น scenario ไม่ใช่ยอดใช้งานจริงของทีม และ Secretary/full 250 งานอาจใช้มากกว่า 2 calls ตาม projection ด้านล่าง ต้องตกลง usage budget และแนวทาง production กับเจ้าของ ไม่ซื้อแผนหรือย้ายข้อมูลธุรกิจออกจาก Airtable อัตโนมัติ
 

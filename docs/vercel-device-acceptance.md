@@ -1,8 +1,8 @@
 # ทดสอบ iPhone / Android ก่อนเปิดใช้
 
-สถานะ 8 พฤศจิกายน 2026: เจ้าของมีทั้ง iPhone และ Android; **ยังไม่มีผลทดสอบอุปกรณ์จริง** Chrome mobile viewport / axe บนเครื่องเป็นหลักฐานแยก ไม่ใช้ทำเครื่องหมายผ่านในหน้านี้
+สถานะ 8 พฤศจิกายน 2026: เจ้าของมีทั้ง iPhone และ Android; **ยังไม่มีผลทดสอบอุปกรณ์จริงแยกรายกรณี** Chrome mobile viewport / axe บนเครื่องเป็นหลักฐานแยก ไม่ใช้ทำเครื่องหมายผ่านในหน้านี้
 
-เจ้าของแจ้งว่าได้ลองมือถือแล้วและขอขยายตัวหนังสือทั้งมือถือ/คอมพิวเตอร์ ปรับ source และตรวจ local layout แล้ว รอ deploy/ตรวจรอบใหม่ ยังไม่ระบุผลรายเครื่อง/เส้นทาง/เวอร์ชัน จึงยังไม่ทำเครื่องหมายผ่านในตาราง acceptance
+เจ้าของแจ้งว่าได้ลองมือถือแล้วและขอขยายตัวหนังสือทั้งมือถือ/คอมพิวเตอร์ ปรับและ deploy release `bd7e5f7` แล้ว ตรวจ public CSS และฟอร์ม staging บน Chrome desktop พบตัวอักษรขนาดใหม่ตาม [หลักฐาน](vercel-staging.md#ขนาดตัวอักษร) ยังไม่ระบุผลรายเครื่อง/เส้นทาง/เวอร์ชัน จึงยังไม่ทำเครื่องหมายผ่านในตาราง acceptance
 
 มี [staging พร้อม Google Login](https://happy-victory-task-center-git-staging-burin.vercel.app/tasks/new?openExternalBrowser=1) แล้ว เชื่อม Neon/test Base และเปิด writes เฉพาะทดสอบ; Admin/Secretary ผ่าน Login และ workflow บน Chrome desktop จริงตาม [สถานะ staging](vercel-staging.md) เริ่มทดสอบมือถือจากลิงก์นี้ได้ ผล desktop ไม่แทนผลโทรศัพท์
 
@@ -13,6 +13,7 @@
 - ระบุ release SHA / build, origin, OS / browser / LINE version, วันที่เวลา Bangkok และบัญชีตามบทบาทโดยใช้ชื่อ TEST-AGENT-A/B / TEST-SECRETARY ในรายงาน
 - เปิด writes เฉพาะ test Base; jobs / email / LINE delivery ปิดไว้ ตั้งชื่องานสมมติ `[DEVICE TEST] <iOS|Android> <รอบ>` ไม่ใส่ข้อมูลลูกค้าจริง
 - เจ้าของเลือกบัญชี / ยืนยัน Google ด้วยตนเอง เก็บภาพผลหลัง callback โดยไม่ถ่าย authorization code / state / cookie / credentials
+- ตรวจ [งบ API ปัจจุบัน](vercel-load-acceptance.md#งบ-api-ที่ต้องยืนยัน) ก่อนเริ่ม แยกรอบตรวจขนาดตัวหนังสือ/keyboard จากรอบส่งงานและ recovery ไม่สร้างงานซ้ำเพื่อทดสอบรูปลักษณ์ และไม่ถือว่างบทดสอบที่เหลือเพียงพอสำหรับทุกกรณีด้านล่าง
 
 ## เส้นทางที่ต้องผ่านทั้งสองเครื่อง
 

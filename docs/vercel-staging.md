@@ -51,7 +51,7 @@ CI ของ commit `08c7e65` ผ่านแล้ว: [run 42213614773](https:
 1. ทดสอบ retry/recovery และ concurrency/load บน staging ต่อจาก desktop acceptance ด้านล่าง; ตัวเลข local rehearsal ไม่แทนผล cloud
 2. ซ้อม recovery / load บน staging และ [อุปกรณ์จริง](vercel-device-acceptance.md) ก่อน owner acceptance; backup/restore ที่ผ่านเป็น quarantine local ตามขอบเขตด้านบน
 
-เจ้าของยืนยัน Airtable Free แล้ว ยังรอยอดใช้เดือนนี้และการเลือกแนวทาง production ตาม [งบ API](vercel-load-acceptance.md#งบ-api-ที่ต้องยืนยัน) ยังไม่รัน live load เพิ่มระหว่างรอ ไม่ลดการตรวจสิทธิ์หรือ cache Active/Role เพื่อประหยัดโควตา
+เจ้าของเลือกคง Airtable Free สำหรับ staging ตรวจ Usage จริงแล้ว workspace แสดง Team Trial: รวม 903 / 100,000 calls เดือนนี้ โดย test Base ใช้ 872 และ Base ระบบเดิม 31 เมื่อวางงบตาม Free 1,000 จะเหลือ 97 calls จึงพัก bulk/live load และกันสำรองก่อนทดสอบมือถือเฉพาะจุดตาม [งบ API](vercel-load-acceptance.md#งบ-api-ที่ต้องยืนยัน) ตัวเลขนี้เป็น snapshot ไม่ใช่ตัวจำกัดอัตโนมัติ ไม่เปลี่ยน subscription และไม่ลดการตรวจสิทธิ์หรือ cache Active/Role เพื่อประหยัดโควตา
 
 เจ้าของอนุมัติปิด Vercel Authentication ของโปรเจกต์แล้ว ตรวจจากภายนอกไม่มี Vercel session ได้ health 200, configured Login และ Google OAuth 303 ที่ใช้ client/callback ของ staging, PKCE S256 และ HttpOnly cookie; anonymous bootstrap 401 ไม่ส่งข้อมูลผู้ใช้ หลักฐาน `artifacts/vercel/staging-auth-ready.json` ไม่ใช่ผล Login สำเร็จจริง
 
