@@ -51,6 +51,18 @@ CI ของ commit `08c7e65` ผ่านแล้ว: [run 42213614773](https:
 1. ทดสอบ retry/recovery และ concurrency/load บน staging ต่อจาก desktop acceptance ด้านล่าง; ตัวเลข local rehearsal ไม่แทนผล cloud
 2. ซ้อม recovery / load บน staging และ [อุปกรณ์จริง](vercel-device-acceptance.md) ก่อน owner acceptance; backup/restore ที่ผ่านเป็น quarantine local ตามขอบเขตด้านบน
 
+## ซ้อมย้อน deployment บน staging
+
+8 พฤศจิกายน 2026 ซ้อมสำเร็จเฉพาะ stable staging alias: `f2eb6a3` (`dpl_5pBjYa1otoVzP5USeJYJzs5umZKe`) → `bd7e5f7` (`dpl_GNmYvnK5A7jyZdA59ki4y4nwzU9y`) → `f2eb6a3` ตรวจทั้งสอง deployment เป็น READY / Preview / branch staging ใน project เดียวกัน ก่อนเริ่ม Neon ผูก test Base ถูกต้อง ไม่มี pending/running/review operations หรือ reservations
+
+ปิด DB task writes และยืนยันปิดแล้วก่อนสลับด้วย `vercel alias set <deployment-url> happy-victory-task-center-git-staging-burin.vercel.app --scope burin` ตรวจ alias ผ่าน API หลังสลับทุกครั้ง ทั้งเวอร์ชันก่อนหน้าและเวอร์ชันคืนค่าตอบ health 200, anonymous bootstrap 401/no-store, Login พร้อม และ Google redirect 303 ใช้ staging client/callback เดิมพร้อม PKCE S256 ไม่ติดตาม redirect เข้า Google
+
+คืน alias เดิมและตรวจ probes ผ่านก่อนเปิด writes คืนเป็น true; jobs คง false ตรวจ alias production ก่อน/ระหว่าง/หลังแล้วไม่เปลี่ยน ไม่ส่ง business mutation หรือเรียก Airtable API หลักฐาน `artifacts/vercel/staging-rollback.json` หากคืน alias ไม่สำเร็จต้องคง writes ปิดไว้และตรวจสถานะจริงก่อนทำต่อ
+
+ขอบเขตนี้พิสูจน์การสลับ routing/config และ maintenance บน staging เท่านั้น ไม่มีการ restore DB, เปลี่ยน schema, ทดสอบ authenticated business workflow หลัง rollback หรือสลับกลับ Apps Script ยังต้องซ้อม production rollback ตาม [runbook](vercel-deployment-plan.md#8-monitoring-และ-rollback) และ Deploy/test maintenance guard ของ Apps Script ก่อน cutover
+
+## งบและการเข้าถึง staging
+
 เจ้าของเลือกคง Airtable Free สำหรับ staging ตรวจ Usage จริงแล้ว workspace แสดง Team Trial: รวม 903 / 100,000 calls เดือนนี้ โดย test Base ใช้ 872 และ Base ระบบเดิม 31 เมื่อวางงบตาม Free 1,000 จะเหลือ 97 calls จึงพัก bulk/live load และกันสำรองก่อนทดสอบมือถือเฉพาะจุดตาม [งบ API](vercel-load-acceptance.md#งบ-api-ที่ต้องยืนยัน) ตัวเลขนี้เป็น snapshot ไม่ใช่ตัวจำกัดอัตโนมัติ ไม่เปลี่ยน subscription และไม่ลดการตรวจสิทธิ์หรือ cache Active/Role เพื่อประหยัดโควตา
 
 เจ้าของอนุมัติปิด Vercel Authentication ของโปรเจกต์แล้ว ตรวจจากภายนอกไม่มี Vercel session ได้ health 200, configured Login และ Google OAuth 303 ที่ใช้ client/callback ของ staging, PKCE S256 และ HttpOnly cookie; anonymous bootstrap 401 ไม่ส่งข้อมูลผู้ใช้ หลักฐาน `artifacts/vercel/staging-auth-ready.json` ไม่ใช่ผล Login สำเร็จจริง
