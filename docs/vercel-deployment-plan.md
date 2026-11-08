@@ -16,14 +16,14 @@
 | Production configuration | environment variables ของ production มี 0 ตัว; ต้องตั้ง 17 ตัวตามตารางด้านล่างด้วย DB/PAT/OAuth ของ production แยกจาก staging |
 | Public production URL | `/login` และ `/api/health` ได้ 200; `/api/bootstrap` และ `/api/auth/google` ได้ 503 `NOT_CONFIGURED` จึงยัง Login/ใช้งานจริงไม่ได้ |
 | Staging isolation | มี variables เฉพาะ Preview/branch staging 17 ตัว รวม sensitive keys 5 ตัว; ยังไม่คัดลอกค่าเหล่านี้ไป production |
-| Hosting plan | team `burin` เป็น Hobby; รอสรุปงบ Pro ก่อนใช้ระบบงานของทีมจริง |
+| Hosting plan | team `burin` เป็น Hobby; หลัง snapshot เจ้าของเลือกคง Hobby สำหรับ Hobby project จึงไม่มีการอัปเกรดเสียเงิน |
 | Backup / release acceptance | ยังต้องมี offsite encrypted backup, retention/key recovery, cloud restore และ Airtable backup ที่กู้ได้ รวม cloud failure/load และผลมือถือก่อน cutover |
 
 ข้อเสนองบ hosting เริ่มจาก [Vercel Pro](https://vercel.com/docs/plans/pro-plan): platform fee $20/เดือน รวม deploying seat 1 คนและ usage credit $20; usage ส่วนเกิน/add-ons/seats เพิ่มมีค่าใช้จ่าย ผู้ใช้งานเว็บ 5 คนไม่ใช่ deploying seats โดยอัตโนมัติ ตั้ง spending alerts/ขอบเขต usage เมื่อเจ้าของเลือกแผน ราคานี้ตรวจจากเอกสารวันที่ข้างต้น ไม่รวมภาษีหรือ conversion และไม่ใช่การซื้อหรือรับรองยอดใบแจ้งหนี้
 
 Neon production ต้องแยก project/credentials จาก staging และกำหนด RPO/RTO/retention ก่อนสร้าง เอกสาร [Neon plans](https://neon.com/docs/introduction/plans) ระบุ Free instant restore สูงสุด 6 ชั่วโมง แต่ต้องตรวจสิทธิ์ของ Marketplace plan ที่ provision จริงด้วย ไม่ใช้ข้อมูลแผนทั่วไปแทนหลักฐาน retention ของ resource และไม่ถือว่า PITR แทน offsite backup ได้
 
-ลำดับหลังรับรอง staging: สรุปงบ/backup → เตรียม production DB/OAuth/PAT โดย writes/jobs ปิด → ตรวจ read-only หลายบทบาท → Deploy/test maintenance guard ของ Apps Script → นัด cutover ตามข้อ 5 เจ้าของต้องรับรองผลทดสอบและเลือกแผนก่อนซื้อบริการหรือสลับผู้เขียนหลัก
+ลำดับหลังรับรอง staging: สรุปงบ/backup → เตรียม production DB/OAuth/PAT โดย writes/jobs ปิด → ตรวจ read-only หลายบทบาท → Deploy/test maintenance guard ของ Apps Script → cutover ตามข้อ 5 เจ้าของยืนยันมือถือและเลือก Hobby แล้ว ราคา Pro ข้างต้นเป็นข้อมูลประกอบ ไม่ใช่แผนที่อนุมัติให้ซื้อ
 
 ## 1. Environment และทรัพยากร
 
@@ -33,7 +33,7 @@ Neon production ต้องแยก project/credentials จาก staging แ�
 | Preview / Staging | test Base / DB แยกจาก production; staging origin คงที่ | branch previews อื่นไม่ Login จริงจนตั้ง callback ถูกต้อง |
 | Production | Base เดิม + PostgreSQL production + OAuth production | ใช้ URL คงที่และเปิดเขียนหลังผ่าน cutover เท่านั้น |
 
-เลือก Vercel team / plan และงบก่อน provisioning: [Hobby จำกัดงานส่วนตัวที่ไม่ใช่เชิงพาณิชย์](https://vercel.com/docs/plans/hobby) จึงวางแผน Pro สำหรับระบบทำงานของทีม ตรวจราคาและโควตาอีกครั้งก่อนซื้อ รวมงบ PostgreSQL, Airtable, อีเมล และ LINE แยกกัน
+เจ้าของเลือกคง Vercel Hobby สำหรับ Hobby project วันที่ 8 พฤศจิกายน 2026 ตาม [ข้อกำหนดแผน Hobby](https://vercel.com/docs/plans/hobby) ไม่ได้อนุมัติซื้อ Pro รวมงบ PostgreSQL, Airtable, อีเมล และ LINE แยกกัน การแจ้งเตือน M7 ยังปิด
 
 ตั้ง Vercel Root Directory เป็น `web`, Framework เป็น Next.js, Node.js `24.x` และบันทึก region ที่เลือกให้ใกล้ PostgreSQL รองรับ Git deployment หลังสร้าง repository / remote แล้ว ตรึง dependencies ด้วย lockfile
 
@@ -98,6 +98,8 @@ https://tasks.example.com/tasks/new?openExternalBrowser=1
 ## 5. Cutover ไป Production
 
 **Prerequisite:** maintenance guard `ENABLE_TASK_WRITES=false` เพิ่มใน source `apps-script/Code.gs` และผ่าน regression test บนเครื่องแล้ว แต่ยังไม่ได้ Deploy ไป Apps Script จริง ต้องนำรุ่นที่มี guard ขึ้นและทดสอบก่อนวันสลับ ให้ property นี้ปฏิเสธ create / status / comment / followup / resolveFollowup ฝั่งเซิร์ฟเวอร์ เมื่อยังไม่ตั้ง property จะคงพฤติกรรมเดิม การซ่อนปุ่มหรือบอกผู้ใช้ให้หยุดอย่างเดียวไม่เพียงพอ
+
+เพิ่ม `apps-script/Maintenance.gs` สำหรับ Run menu ของเจ้าของ: `checkLegacyCutover` อ่านสถานะ และ `pauseLegacyWritesForVercel` ปิด writes/email/LINE ภายใน ScriptLock เดียวกับ API พร้อมรายงานเฉพาะ flags, pending/malformed journal counts และ trigger count ต้องเรียกจาก Google identity ที่ตรงเจ้าของตาม `requireEditor_`; ไม่ลบ journal/trigger หรือแก้ credentials `readyToCutover` ผ่านเมื่อไม่มีคำขอค้างหรือ trigger และทุกช่องทางปิด ยังต้อง Deploy source นี้ไป Apps Script และตรวจ deployment version จริงก่อนใช้ผลรายงานเป็นหลักฐาน cutover
 
 | ลำดับ | ผู้รับผิดชอบ | การดำเนินการ / หลักฐาน |
 |---|---|---|

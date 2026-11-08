@@ -58,7 +58,7 @@ test('all pages of Airtable records are fetched, offset is encoded and 429 waits
   h.ctx.UrlFetchApp.fetch=(url)=>{urls.push(url);n++;return {getResponseCode:()=>n===2?429:200,getContentText:()=>JSON.stringify(n===1?{records:[{id:'first'}],offset:'a/b+c'}:{records:[{id:'second'}]})};};
   const records=h.ctx.listAll_('tasks');assert.equal(records.length,2);assert.match(urls[1],/offset=a%2Fb%2Bc/);assert.ok(sleeps.includes(30000));
 });
-test('only explicitly designed RPC and guarded setup functions are exposed',()=>{const functions=[...source.matchAll(/^function (\w+)\(/gm)].map(m=>m[1]).filter(n=>!n.endsWith('_'));assert.deepEqual(functions.sort(),['api','completeGoogleLogin','doGet','logout','startGoogleLogin','startLineLink','completeLineLink','initializeProject','checkDeployment'].sort());});
+test('only explicitly designed RPC and guarded setup functions are exposed',()=>{const functions=[...source.matchAll(/^function (\w+)\(/gm)].map(m=>m[1]).filter(n=>!n.endsWith('_'));assert.deepEqual(functions.sort(),['api','completeGoogleLogin','doGet','logout','startGoogleLogin','startLineLink','completeLineLink','initializeProject','checkDeployment','checkLegacyCutover','pauseLegacyWritesForVercel'].sort());});
 test('templates escape script-breaking markup',()=>{const h=harness();assert.ok(!h.ctx.jsonForHtml_({x:'</script><script>alert(1)</script>'}).includes('<'));});
 test('migration maintenance blocks every task mutation before writing while reads remain available',()=>{
   const h=harness();h.properties.set('ENABLE_TASK_WRITES','false');
