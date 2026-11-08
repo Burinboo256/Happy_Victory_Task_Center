@@ -1,6 +1,6 @@
 # แผนพัฒนา Web App บน Vercel
 
-วันที่: 5 พฤศจิกายน 2026 · อัปเดต 6 พฤศจิกายน 2026: พัฒนาและทดสอบบนเครื่องแล้ว เจ้าของอนุญาต GitHub / Vercel และมี [deployment แรก](vercel-first-deployment.md) ออนไลน์ แต่ยังไม่ตั้ง backend cloud หรือสลับ production ดู [หลักฐานและงานคงเหลือ](vercel-progress.md)
+วันที่: 5 พฤศจิกายน 2026 · อัปเดต 8 พฤศจิกายน 2026: พัฒนาและทดสอบบนเครื่องแล้ว มี GitHub/CI และ [staging](vercel-staging.md) ที่เชื่อม Neon/Airtable/OAuth แยกและ Login จริงครบ 4 บัญชี ยังต้องรับรอง cloud retry/recovery/load และอุปกรณ์จริงก่อนสลับ production ดู [หลักฐานและงานคงเหลือ](vercel-progress.md)
 
 ## 1. เป้าหมายและขอบเขต
 

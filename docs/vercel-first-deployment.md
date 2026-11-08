@@ -2,6 +2,8 @@
 
 6 พฤศจิกายน 2026 · เจ้าของอนุญาตนำโค้ดขึ้น GitHub และ Vercel แล้ว **หน้าเว็บออนไลน์ แต่ backend ยังไม่ตั้งค่า** Google Apps Script ยังเป็นระบบใช้งานจริง
 
+หน้านี้เป็นหลักฐาน deployment แรกของ main ณ วันที่ข้างต้น ปัจจุบัน staging เชื่อม backend และ Login จริงได้แล้วตาม [สถานะ staging](vercel-staging.md) ส่วน main ยังไม่เปิด backend production และ Apps Script ยังเป็นระบบใช้งานจริง
+
 ## ทรัพยากรและหลักฐาน
 
 | รายการ | ค่าที่ตรวจแล้ว |

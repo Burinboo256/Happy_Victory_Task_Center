@@ -8,7 +8,7 @@
 |---|---|
 | Vercel project | `happy-victory-task-center` ในทีม `burin`; production branch คง `main` |
 | Staging branch | `staging`; ใช้ Vercel Preview / `APP_ENV=staging` ไม่เปลี่ยน config guard ของ main |
-| HTTPS origin | `https://happy-victory-task-center-git-staging-burin.vercel.app` · READY Preview `dpl_G3zB1BYNGaTXdn1TpaTRfLoj1orR` จาก commit `2c0b9bf`; รอบแรกที่ตั้ง credentials คือ `dpl_7vS2tTzZPStGcXnfJTD73UP4apAC` |
+| HTTPS origin | `https://happy-victory-task-center-git-staging-burin.vercel.app` · typography release `bd7e5f7` READY ใน `dpl_GNmYvnK5A7jyZdA59ki4y4nwzU9y`; รอบเปิด writes คือ `dpl_G3zB1BYNGaTXdn1TpaTRfLoj1orR` |
 | Neon resource | `happy-victory-staging` / `store_e4OhmTNisXUwUUcW` |
 | Neon project | `fragrant-butterfly-75888616` |
 | Plan / region | `free_v3` / Free, payment method ไม่จำเป็น / Singapore `sin1` |
@@ -88,5 +88,7 @@ Agent B Login จริงผ่าน Role/Active/session ถูกต้อง
 เจ้าของขอขยายทั้งมือถือและคอมพิวเตอร์หลังลองมือถือ เพิ่ม base 14→16px, ชื่องาน 12→16px, เนื้อหารายละเอียด/timeline เป็น 15px, labels 14px, form controls 16px และข้อความประกอบส่วนใหญ่ 12–14px คงขนาดไอคอน/ภาพตกแต่ง เพิ่มพื้นที่ป้ายสถิติและเรียง footer มือถือให้ข้อความไม่ชนกัน
 
 ตรวจ build/TypeScript/lint, browser regression 24 cases ทั้ง desktop/mobile และ QA 21 ภาพที่ 320/390/1440px ไม่มี horizontal overflow; ภาพฟอร์มและ Dashboard ตรวจด้วยตาแล้ว หลังปรับพื้นที่สถิติ/footer ตรวจ accessibility หน้าหลักซ้ำทั้งสอง viewport หลักฐาน `artifacts/vercel/typography/` เป็นข้อมูลสมมติบนเครื่อง ต้องให้เจ้าของตรวจขนาดตัวหนังสือบนมือถือจริงหลัง deploy อีกครั้ง
+
+CI ของ typography release `bd7e5f7` ผ่านครบใน [run 42431860198](https://github.com/Burinboo256/Happy_Victory_Task_Center/actions/runs/42431860198) รวม unit/integration/PostgreSQL/browser/API/load จำลอง และ Apps Script regression ตรวจ public Login HTML กับ JS/CSS ที่ลิงก์มา 10 resources จาก origin จริง: body 16px, ไม่พบค่า server secrets ที่ตั้งจริง 5 ค่าใน samples, health 200 และ anonymous bootstrap 401 หลักฐาน `artifacts/vercel/staging-typography-ready.json` ไม่ใช่การสแกน server artifacts หรือทุก authenticated response
 
 ยังไม่เปลี่ยน plan Vercel, production Base, Apps Script หรือ Rich Menu production
