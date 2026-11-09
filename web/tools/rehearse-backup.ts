@@ -112,6 +112,8 @@ const tables = [
   'hvr_resources',
   'hvr_runtime',
   'hvr_sessions',
+  'hvr_workflow_history',
+  'hvr_workflows',
 ];
 const digestQuery = (schema: string, table: string) =>
   `SELECT COALESCE(jsonb_agg(to_jsonb(t) ORDER BY to_jsonb(t)::text),'[]'::jsonb)::text FROM "${schema}"."${table}" t`;

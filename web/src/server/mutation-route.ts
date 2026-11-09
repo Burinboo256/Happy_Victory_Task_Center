@@ -7,6 +7,7 @@ import { Journal } from './operations/journal';
 import { mutate, validateMutation, type Action } from './services/mutations';
 import { ownTask } from './services/reads';
 import { requireTaskReady } from './operations/task-ready';
+import { requireWorkflowComplete } from './services/onboarding';
 
 export function mutationRoute(
   request: Request,
@@ -32,7 +33,11 @@ export function mutationRoute(
       action,
       data,
       resource,
-      (steps) => mutate(c.repo, c.user, action, data, steps),
+      async (steps) => {
+        if (action === 'status' && 'status' in data && data.status === 'Completed')
+          await requireWorkflowComplete(c.db, c.config, c.repo, c.user, parameters.id);
+        return mutate(c.repo, c.user, action, data, steps);
+      },
     );
     if (outcome.result?.id) await ownTask(c.repo, c.user, outcome.result.id);
     return json(

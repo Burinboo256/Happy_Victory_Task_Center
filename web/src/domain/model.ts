@@ -51,6 +51,7 @@ export interface PublicUser {
   active: boolean;
 }
 export interface TaskSummary {
+  workflowSummary?: string;
   id: string;
   code: string;
   title: string;
@@ -100,6 +101,7 @@ export interface Bootstrap {
   writesEnabled: boolean;
 }
 export interface Detail {
+  workflow?: import('./onboarding').WorkflowView;
   task: Task;
   updates: TaskUpdate[];
   followups: Followup[];

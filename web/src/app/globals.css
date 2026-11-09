@@ -1015,7 +1015,7 @@ progress::-webkit-progress-value {
 .success-message {
   background: #edf6f1;
   border: 1px solid #d8eadd;
-  color: #4c7e68;
+  color: #35664f;
   padding: 13px 16px;
   border-radius: 9px;
   margin-bottom: 20px;
@@ -1509,4 +1509,27 @@ progress::-webkit-progress-value {
   .sidebar {
     transition: none;
   }
+}
+/* New-agent workflow: readable stacked sections on mobile, with the existing form controls. */
+.workflow { margin: 28px 0; min-width: 0; overflow-wrap: anywhere; }
+.workflow h4 { margin: 0 0 14px; font-size: 18px; }
+.workflow-progress { font-weight: 600; }
+.workflow-stages { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.workflow-stages li { padding: 10px; background: #f4f1f3; border-radius: 8px; }
+.workflow-stages li.done { background: #e9f4ed; color: #245a35; }
+.workflow-step { border-top: 1px solid #e7dfe3; padding-top: 22px; margin-top: 12px; min-width: 0; }
+.workflow .workflow-item { border: 1px solid #e7dfe3; border-radius: 10px; padding: 16px; margin: 12px 0; min-width: 0; }
+.workflow-item legend { padding: 0 6px; font-weight: 600; font-size: 16px; }
+.workflow .check-label { margin: 14px 0; }
+.workflow-history { margin-top: 20px; }
+.workflow-history summary { cursor: pointer; font-weight: 600; }
+.workflow-history p { border-bottom: 1px solid #eee; padding-bottom: 12px; }
+.settings-panel { padding: 24px; }
+.workflow-template-row { display: flex; align-items: end; gap: 10px; margin-bottom: 14px; }
+.workflow-template-row label { flex: 1; min-width: 0; }
+@media (max-width: 760px) {
+  .workflow-stages { grid-template-columns: 1fr; }
+  .workflow .workflow-item { padding: 12px; }
+  .workflow-template-row { flex-direction: column; align-items: stretch; }
+  .settings-panel { padding: 16px; }
 }

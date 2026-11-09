@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { Brand } from './brand';
+import { OnboardingPanel, OnboardingSettings } from './onboarding';
 import {
   isManager,
   isOpen,
@@ -492,6 +493,7 @@ export function Workspace({
             <Link className="task-row" key={t.id} href={'/tasks/' + t.id}>
               <span className="task-title">
                 <strong>{t.title}</strong>
+                {t.workflowSummary && <small>{t.workflowSummary}</small>}
                 <small>
                   {t.code} · {t.category}
                 </small>
@@ -721,6 +723,16 @@ export function Workspace({
                   ↗ {a.name}
                 </a>
               ))}
+            {detail.workflow && (
+              <OnboardingPanel
+                key={`${task.id}:${detail.workflow.version}:${detail.workflow.templateVersion}`}
+                view={detail.workflow}
+                taskId={task.id}
+                editable={manager && isOpen(task) && data.writesEnabled}
+                busy={busy}
+                submit={submit}
+              />
+            )}
             {manager && (
               <>
                 <h3>อัปเดตสถานะงาน</h3>
@@ -735,7 +747,15 @@ export function Workspace({
                       สถานะ
                       <select name="status" defaultValue={task.status} key={task.version}>
                         {statuses.map((s) => (
-                          <option key={s} value={s}>
+                          <option
+                            key={s}
+                            value={s}
+                            disabled={
+                              s === 'Completed' &&
+                              !!detail.workflow &&
+                              !detail.workflow.summary.complete
+                            }
+                          >
                             {statusNames[s]}
                           </option>
                         ))}
@@ -892,6 +912,14 @@ export function Workspace({
               </article>
             ))}
           </div>
+          {data.user.role === 'Admin' && (
+            <OnboardingSettings
+              key={data.syncedAt}
+              request={request}
+              submit={submit}
+              disabled={busy || !data.writesEnabled}
+            />
+          )}
         </section>
       ) : (
         <>
