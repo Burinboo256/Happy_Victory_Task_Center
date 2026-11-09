@@ -353,32 +353,36 @@ export function Workspace({
   const following = (task: TaskSummary) =>
     isOpen(task) && !!task.followupDate && task.followupDate <= data.today;
   const openTasks = data.tasks.filter(isOpen),
+    newTasks = data.tasks.filter((t) => t.status === 'New'),
+    pendingTasks = openTasks.filter((t) => t.status !== 'New'),
     followups = data.tasks.filter(following),
     completed = data.tasks.filter((t) => t.status === 'Completed');
-  const rows = data.tasks
-    .filter(
-      (t) =>
-        (page === 'inbox'
-          ? t.status === 'New'
-          : page === 'followups'
-            ? isOpen(t) && !!t.followupDate
-            : page === 'history'
-              ? !isOpen(t)
-              : true) &&
-        (status === 'all' ||
-          (status === 'open'
-            ? isOpen(t)
-            : status === 'late'
-              ? late(t)
-              : status === 'follow'
-                ? following(t)
-                : t.status === status)) &&
-        (agent === 'all' || t.agentId === agent) &&
-        (priority === 'all' || t.priority === priority) &&
-        `${t.code} ${t.title} ${t.description} ${userName(t.agentId)}`
-          .toLowerCase()
-          .includes(search.toLowerCase()),
-    )
+  const matchesStatus = (task: TaskSummary, filter: string) =>
+    filter === 'all' ||
+    (filter === 'open'
+      ? isOpen(task) && task.status !== 'New'
+      : filter === 'late'
+        ? late(task)
+        : filter === 'follow'
+          ? following(task)
+          : task.status === filter);
+  const scopedTasks = data.tasks.filter(
+    (t) =>
+      (page === 'inbox'
+        ? t.status === 'New'
+        : page === 'followups'
+          ? isOpen(t) && !!t.followupDate
+          : page === 'history'
+            ? !isOpen(t)
+            : true) &&
+      (agent === 'all' || t.agentId === agent) &&
+      (priority === 'all' || t.priority === priority) &&
+      `${t.code} ${t.title} ${t.description} ${userName(t.agentId)}`
+        .toLowerCase()
+        .includes(search.toLowerCase()),
+  );
+  const rows = scopedTasks
+    .filter((t) => matchesStatus(t, status))
     .sort((a, b) =>
       page === 'followups'
         ? a.followupDate.localeCompare(b.followupDate)
@@ -419,10 +423,13 @@ export function Workspace({
       <div className="tabbar">
         {[
           ['all', 'ทั้งหมด'],
+          ['New', 'งานเข้าใหม่'],
           ['open', 'คงค้าง'],
-          ['In Progress', 'กำลังดำเนินการ'],
-          ['Waiting', 'รอข้อมูล'],
           ['Completed', 'เสร็จสิ้น'],
+          ['Cancelled', 'ยกเลิก'],
+          ...(['In Progress', 'Waiting', 'On Hold'].includes(status)
+            ? [[status, statusNames[status as Task['status']]]]
+            : []),
           ...(['late', 'follow'].includes(status)
             ? [[status, status === 'late' ? 'เกินกำหนด' : 'ต้องติดตามวันนี้']]
             : []),
@@ -437,7 +444,10 @@ export function Workspace({
               setPageIndex(0);
             }}
           >
-            {label}
+            {label}{' '}
+            <span className="tab-count">
+              {scopedTasks.filter((t) => matchesStatus(t, key)).length}
+            </span>
           </button>
         ))}
       </div>
@@ -547,7 +557,8 @@ export function Workspace({
   const stats = (
     <div className="stats">
       {[
-        { label: 'งานคงค้าง', count: openTasks.length, symbol: '▤', filter: 'open' },
+        { label: 'งานเข้าใหม่', count: newTasks.length, symbol: '↙', filter: 'New' },
+        { label: 'งานคงค้าง', count: pendingTasks.length, symbol: '▤', filter: 'open' },
         { label: 'ต้องติดตามวันนี้', count: followups.length, symbol: '◷', filter: 'follow' },
         {
           label: 'งานเกินกำหนด',
@@ -932,14 +943,14 @@ export function Workspace({
               {data.users
                 .filter((u) => u.role === 'Agent')
                 .map((u) => {
-                  const n = openTasks.filter((t) => t.agentId === u.id).length;
+                  const n = pendingTasks.filter((t) => t.agentId === u.id).length;
                   return (
                     <div className="report-row" key={u.id}>
                       <span>{u.name}</span>
                       <progress
                         aria-label={'งานคงค้างของ ' + u.name}
                         value={n}
-                        max={Math.max(openTasks.length, 1)}
+                        max={Math.max(pendingTasks.length, 1)}
                       />
                       <strong>{n} งาน</strong>
                     </div>
