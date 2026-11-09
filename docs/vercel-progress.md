@@ -1,6 +1,6 @@
 # สถานะพัฒนา Vercel
 
-อัปเดต: 8 พฤศจิกายน 2026 · โค้ดขึ้น GitHub [`Burinboo256/Happy_Victory_Task_Center`](https://github.com/Burinboo256/Happy_Victory_Task_Center) และ [Vercel](https://happy-victory-task-center.vercel.app) แล้ว Neon Free staging / migrations / variables 17 ตัวพร้อม ซ้อม backup/restore ผ่าน ตั้ง PAT/OAuth แยก Login จริงครบ 4 บัญชีและ desktop workflow/ownership/Active/write switch ผ่านตามขอบเขตที่ระบุ เจ้าของลองมือถือแล้วขอเพิ่มขนาดตัวหนังสือทั้งสองหน้าจอ; ยังไม่รับรองมือถือครบหรือสลับ production ดู [สถานะ staging](vercel-staging.md)
+อัปเดต: 9 พฤศจิกายน 2026 · [Vercel Production](https://happy-victory-task-center.vercel.app) เปิดรับงานแล้ว หลังพัก Apps Script เดิม ตรวจ baseline และทดสอบ Admin สร้างงานจริงสำเร็จ พร้อม task/audit อย่างละหนึ่งและไม่มี operation ค้าง คง Hobby / Neon Free และปิด jobs/notifications ดู [สถานะ production และขอบเขตการตรวจ](vercel-production.md) รายละเอียดด้านล่างเป็นผลพัฒนาและ staging ซึ่งบางหัวข้อยังรอตรวจเพิ่มเติม
 
 ## สิ่งที่มีใน source แล้ว
 
@@ -63,7 +63,7 @@ CI ของ initial commit รันครบใน [run 42172256512](https://g
 
 ## งานถัดไปบนเครื่อง
 
-เจ้าของตรวจมือถือหลังขยายตัวหนังสือแล้วและอนุญาตดำเนินการ production เตรียม Neon Free แยกใน `sin1`, migrations/TLS, OAuth/PAT ใหม่ และ Production variables 17 ตัวแล้ว คง writes/jobs/notifications ปิด ดู [สถานะ production](vercel-production.md) อยู่ระหว่าง read-only deployment และเตรียม cutover ไม่ใช่การเปิดผู้เขียนหลักแล้ว
+เจ้าของตรวจมือถือหลังขยายตัวหนังสือแล้วและอนุญาตดำเนินการ production เตรียม Neon Free แยกใน `sin1`, migrations/TLS, OAuth/PAT ใหม่ และ Production variables 17 ตัวแล้ว วันที่ 9 พฤศจิกายนเปิด writes และทดสอบบันทึกผ่านเว็บสำเร็จ ส่วน jobs/notifications ยังปิด ดู [สถานะ production](vercel-production.md) สำหรับสถานะล่าสุด; ตาราง milestone ข้างต้นเป็นผลก่อน cutover และไม่แทนขอบเขตการตรวจ production
 
 ซ้อม stable staging alias ย้อน `f2eb6a3` → `bd7e5f7` → รุ่นเดิมสำเร็จแล้ว โดยปิด writes ระหว่างสลับ ตรวจว่าไม่มีคำขอค้าง, health/Login/OAuth initiation/anonymous 401 ผ่านทั้งสองรุ่น และ production alias ไม่เปลี่ยน คืน writes=true/jobs=false แล้ว ไม่ใช้ Airtable API หรือทำ business mutations รอบนี้ ดู [ขอบเขตหลักฐาน](vercel-staging.md#ซ้อมย้อน-deployment-บน-staging); ไม่แทนการซ้อมกลับ Apps Script หรือ authenticated workflow หลัง rollback
 
