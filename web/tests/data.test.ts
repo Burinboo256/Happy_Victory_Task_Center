@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { repository, rid } from './fixtures';
-import { taskDto, taskSummaryDto, followupDto, updateDto } from '../src/server/airtable/dto';
+import { taskDto, taskSummaryDto, followupDto, updateDto, userDto } from '../src/server/airtable/dto';
 import { day, timestamp } from '../src/server/airtable/values';
 import { bootstrap } from '../src/server/services/reads';
 
@@ -92,4 +92,24 @@ test('context bootstrap skips task listing and invalid unrelated records cannot 
   await bootstrap(h.repo, h.secretary, 'context');
   assert.deepEqual(h.calls, ['list:users']);
   await assert.rejects(bootstrap(h.repo, h.secretary), /ข้อมูลบางรายการไม่ถูกต้อง/);
+});
+
+test('unfinished directory rows do not block manager pages or become authorized users', async () => {
+  const h = repository();
+  const unfinished = [
+    { id: rid(90), fields: {} },
+    { id: rid(91), fields: { 'Full Name': 'Draft user', Active: true, Role: 'Unknown' } },
+  ];
+  h.tables.users.push(...unfinished);
+  h.tables.users[2].fields.Active = false;
+  for (const role of ['Admin', 'Secretary'] as const) {
+    for (const scope of ['full', 'context'] as const) {
+      const result = await bootstrap(h.repo, { ...h.secretary, role }, scope);
+      assert.deepEqual(result.users.map((user) => user.id), [rid(1), rid(2), rid(3)]);
+      assert.equal(result.users[2].active, false);
+      assert.equal(result.tasks.length, scope === 'full' ? 2 : 0);
+      assert.ok(result.users.every((user) => !('email' in user) && !('sub' in user)));
+    }
+  }
+  for (const row of unfinished) assert.throws(() => userDto(row), /ไม่มีสิทธิ์/);
 });

@@ -36,6 +36,12 @@ Apps Script เดิม Deploy maintenance guard เป็น **เวอร์
 
 ## ผลเปิดรับงานและการพักระบบ
 
+### แถว Users ที่ยังตั้งค่าไม่ครบ
+
+พบกรณี Admin Login สำเร็จแต่หน้าเว็บแสดง “คุณไม่มีสิทธิ์ดำเนินการนี้” เมื่อมีแถว Users อื่นที่ไม่มี Role การโหลดรายชื่อทีมจะข้ามแถวที่ไม่มี Role ที่ระบบรองรับ เพื่อไม่ให้กระทบผู้ใช้ที่มีสิทธิ์ การตรวจ Role/Active/Google Subject ของผู้ที่ Login ยังคงเดิม ไม่แก้หรือลบข้อมูล Airtable และยังแสดงผู้ใช้ที่มี Role ถูกต้องแต่ Active=false สำหรับประวัติงาน มี regression test ครอบคลุม Admin/Secretary ทั้งหน้ารวมและฟอร์มส่งงาน
+
+### หลักฐานเปิดระบบ
+
 อัปเดต `TASK_WRITES_ENABLED=true` เฉพาะ Production แล้ว redeploy รอ READY และตรวจ alias ก่อนเปิด `hvr_runtime.task_writes` ไม่เปลี่ยน Preview/staging หรือ flags อื่น ทดสอบผ่าน Chrome Admin session ของเจ้าของ: สร้างงาน `[PRODUCTION SMOKE]` หมายเลข `HVR-00001` ให้ Agent A แล้วเปิดรายละเอียดได้ ตรวจ Airtable พบ task และ Created audit อย่างละ 1 รายการ ผู้สร้าง/เจ้าของตรงกัน; Neon journal เป็น completed ไม่มี unfinished operations หรือ reservations หลักฐาน `production-smoke-result.json` งานทดสอบยังเก็บไว้โดยไม่มีข้อมูลลูกค้า
 
 ลิงก์ส่งงานสำหรับ LINE Rich Menu: `https://happy-victory-task-center.vercel.app/tasks/new?openExternalBrowser=1` ยังไม่ได้แก้ Rich Menu ใน LINE OA บัญชี Secretary และ Agent A/B ผ่าน staging แล้ว แต่ยังไม่ได้ทดสอบ Login/workflow ครบทุกบัญชีบน production การทดสอบนี้ไม่แทน load test หรือการแจ้งเตือน M7

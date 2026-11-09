@@ -1,4 +1,4 @@
-import { categories, isManager, todayBangkok, type User } from '../../domain/model';
+import { categories, isManager, roles, todayBangkok, type User } from '../../domain/model';
 import { formulaValue, recordId, type AirtableRepository } from '../airtable/client';
 import {
   taskDto,
@@ -36,7 +36,11 @@ export async function bootstrap(
     )
     .map(taskSummaryDto);
   const users = isManager(user)
-    ? (await repo.list('users', undefined, publicUserFields)).map(userDto).map(publicUser)
+    ? (await repo.list('users', undefined, publicUserFields))
+        // Airtable draft rows are not directory entries. Authentication still validates userDto.
+        .filter((record) => roles.includes(record.fields.Role as User['role']))
+        .map(userDto)
+        .map(publicUser)
     : [publicUser(user)];
   return {
     user: { id: user.id, name: user.name, email: user.email, role: user.role },
