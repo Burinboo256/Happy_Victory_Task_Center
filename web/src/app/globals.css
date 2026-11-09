@@ -1542,3 +1542,45 @@ progress::-webkit-progress-value {
   .workflow-template-row { flex-direction: column; align-items: stretch; }
   .settings-panel { padding: 16px; }
 }
+/* Category colors are shared by task lists, detail badges and calendar events.
+   Priority is a separate explicit label; red is reserved for urgent emphasis. */
+.category-documents { --category-ink: #1d4ed8; --category-bg: #eff6ff; }
+.category-service { --category-ink: #047857; --category-bg: #ecfdf5; }
+.category-appointment { --category-ink: #7e22ce; --category-bg: #faf5ff; }
+.category-finance { --category-ink: #92400e; --category-bg: #fffbeb; }
+.category-general { --category-ink: #475569; --category-bg: #f1f5f9; }
+.category-new-agent { --category-ink: #a21caf; --category-bg: #fdf4ff; }
+.category-badge, .category-key {
+  color: var(--category-ink);
+  background: var(--category-bg);
+  border: 1px solid var(--category-ink);
+  border-left-width: 5px;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-block;
+}
+.category-badge { margin-top: 6px; }
+.category-controls { padding: 12px 20px; border-bottom: 1px solid var(--line); }
+.category-controls p, .calendar-priority-filter p { font-size: 14px; color: var(--muted); margin: 0 0 10px; }
+.category-legend { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 3px; border: 0; min-width: 0; }
+.category-key { min-height: 42px; cursor: pointer; }
+.category-key[aria-pressed="true"] { outline: 2px solid var(--category-ink); outline-offset: 2px; text-decoration: underline; text-underline-offset: 3px; }
+.task-row[class*="category-"] { border-left: 5px solid var(--category-ink); padding-left: 12px; margin-top: 8px; }
+.followup-item[class*="category-"] { border-left: 5px solid var(--category-ink); }
+.priority.priority-urgent { background: #b91c1c; color: #fff; padding: 4px 8px; border-radius: 5px; font-weight: 700; display: inline-block; }
+.priority.priority-high { background: #ffedd5; color: #9a3412; padding: 4px 8px; border-radius: 5px; font-weight: 700; display: inline-block; }
+.priority.priority-urgent::before, .priority.priority-high::before { content: none; }
+.urgency-urgent { outline: 2px solid #b91c1c; outline-offset: -2px; }
+.task-row.urgency-urgent, .followup-item.urgency-urgent { background: #fff7f7; border-radius: 6px; }
+.calendar-priority-filter { padding: 14px 20px; }
+.calendar-priority-filter label { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 12px; }
+.calendar-priority-filter select { padding: 9px; border: 1px solid var(--line); border-radius: 6px; background: white; color: var(--ink); font: inherit; }
+.calendar-scroll { overflow-x: auto; max-width: 100%; }
+.calendar-scroll .calendar-grid { min-width: 840px; }
+.calendar-day a.calendar-event { background: var(--category-bg); color: var(--category-ink); border-left: 5px solid var(--category-ink); padding: 8px; font-size: 14px; }
+.calendar-event strong { display: block; margin: 6px 0; font-size: 14px; }
+.calendar-event-category, .calendar-event-date-kind { display: block; font-size: 12px; }
+.calendar-event .priority { margin: 4px 0; }
+.calendar-event .priority-normal, .calendar-event .priority-low { color: #334155; }

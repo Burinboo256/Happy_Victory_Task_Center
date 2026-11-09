@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { Brand } from './brand';
+import { CategoryBadge, PriorityBadge, categoryClass } from './task-appearance';
 import { OnboardingPanel, OnboardingSettings } from './onboarding';
 import {
   isManager,
@@ -119,6 +120,7 @@ export function Workspace({
     [message, setMessage] = useState(''),
     [menu, setMenu] = useState(false);
   const [search, setSearch] = useState(''),
+    [category, setCategory] = useState('all'),
     [status, setStatus] = useState(initialStatus),
     [agent, setAgent] = useState('all'),
     [priority, setPriority] = useState('all');
@@ -377,6 +379,7 @@ export function Workspace({
             : true) &&
       (agent === 'all' || t.agentId === agent) &&
       (priority === 'all' || t.priority === priority) &&
+      (category === 'all' || t.category === category) &&
       `${t.code} ${t.title} ${t.description} ${userName(t.agentId)}`
         .toLowerCase()
         .includes(search.toLowerCase()),
@@ -385,13 +388,51 @@ export function Workspace({
     .filter((t) => matchesStatus(t, status))
     .sort((a, b) =>
       page === 'followups'
-        ? a.followupDate.localeCompare(b.followupDate)
-        : Number(late(b)) - Number(late(a)) ||
+        ? a.followupDate.localeCompare(b.followupDate) ||
+          priorities.indexOf(b.priority) - priorities.indexOf(a.priority)
+        : Number(isOpen(b) && b.priority === 'Urgent') -
+            Number(isOpen(a) && a.priority === 'Urgent') ||
+          Number(late(b)) - Number(late(a)) ||
           (a.dueDate || '9999').localeCompare(b.dueDate || '9999'),
     );
   const pageCount = Math.max(1, Math.ceil(rows.length / 7)),
     currentPage = Math.min(pageIndex, pageCount - 1);
   const visibleRows = rows.slice(currentPage * 7, (currentPage + 1) * 7);
+  const categoryLegend = (
+    <div className="category-controls">
+      <p>
+        สีตามประเภทงาน · กดสีเพื่อกรองงาน <span className="priority priority-urgent">! ด่วนมาก</span> =
+        ควรทำก่อน
+      </p>
+      <fieldset className="category-legend" aria-label="กรองประเภทงานตามสี">
+        <button
+          type="button"
+          className="category-key category-general"
+          aria-pressed={category === 'all'}
+          onClick={() => {
+            setCategory('all');
+            setPageIndex(0);
+          }}
+        >
+          ทุกประเภท
+        </button>
+        {data.categories.map((name) => (
+          <button
+            key={name}
+            type="button"
+            className={'category-key ' + categoryClass(name)}
+            aria-pressed={category === name}
+            onClick={() => {
+              setCategory(name);
+              setPageIndex(0);
+            }}
+          >
+            {name}
+          </button>
+        ))}
+      </fieldset>
+    </div>
+  );
   const list = (
     <section className="panel">
       <div className="panel-title">
@@ -451,6 +492,7 @@ export function Workspace({
           </button>
         ))}
       </div>
+      {categoryLegend}
       <div className="filters">
         <input
           aria-label="ค้นหางาน"
@@ -500,19 +542,24 @@ export function Workspace({
       {rows.length ? (
         <div className={'task-list ' + viewMode}>
           {visibleRows.map((t) => (
-            <Link className="task-row" key={t.id} href={'/tasks/' + t.id}>
+            <Link
+              className={
+                'task-row ' +
+                categoryClass(t.category) +
+                (isOpen(t) && t.priority === 'Urgent' ? ' urgency-urgent' : '')
+              }
+              key={t.id}
+              href={'/tasks/' + t.id}
+            >
               <span className="task-title">
                 <strong>{t.title}</strong>
                 {t.workflowSummary && <small>{t.workflowSummary}</small>}
-                <small>
-                  {t.code} · {t.category}
-                </small>
+                <small>{t.code}</small>
+                <CategoryBadge category={t.category} />
               </span>
               {manager && <span className="task-agent">{userName(t.agentId)}</span>}
               <Badge status={t.status} />
-              <span className={'priority priority-' + t.priority.toLowerCase()}>
-                {priorityNames[t.priority]}
-              </span>
+              <PriorityBadge priority={t.priority} />
               <span className={late(t) ? 'late' : 'task-date'}>
                 {fmtDate(page === 'followups' ? t.followupDate : t.dueDate)}
               </span>
@@ -692,7 +739,9 @@ export function Workspace({
               </div>
               <div>
                 <dt>ความเร่งด่วน</dt>
-                <dd>{priorityNames[task.priority]}</dd>
+                <dd>
+                  <PriorityBadge priority={task.priority} />
+                </dd>
               </div>
               <div>
                 <dt>กำหนดส่ง</dt>
@@ -704,7 +753,9 @@ export function Workspace({
               </div>
               <div>
                 <dt>ประเภทงาน</dt>
-                <dd>{task.category}</dd>
+                <dd>
+                  <CategoryBadge category={task.category} />
+                </dd>
               </div>
               <div>
                 <dt>วันที่ส่งงาน</dt>
@@ -1011,33 +1062,80 @@ export function Workspace({
               ›
             </button>
           </div>
-          <div className="calendar-grid">
-            {['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'].map((day) => (
-              <div className="calendar-label" key={day}>
-                {day}
-              </div>
-            ))}
-            {Array.from({ length: blanks }, (_, i) =>
-              new Date(Date.UTC(year, m - 1, i - blanks + 1)).toISOString(),
-            ).map((date) => (
-              <div className="calendar-day blank" key={date} />
-            ))}
-            {Array.from({ length: days }, (_, i) => {
-              const date = month + '-' + String(i + 1).padStart(2, '0');
-              return (
-                <div className={'calendar-day' + (date === data.today ? ' today' : '')} key={date}>
-                  <strong>{i + 1}</strong>
-                  {openTasks
-                    .filter((t) => t.dueDate === date || t.followupDate === date)
-                    .map((t) => (
-                      <Link href={'/tasks/' + t.id} key={t.id}>
-                        {t.title}
-                      </Link>
-                    ))}
-                </div>
-              );
-            })}
+          {categoryLegend}
+          <div className="calendar-priority-filter">
+            <label>
+              ความเร่งด่วนในปฏิทิน
+              <select value={priority} onChange={(e) => setPriority(e.target.value)}>
+                <option value="all">ทุกความเร่งด่วน</option>
+                {priorities.map((p) => (
+                  <option key={p} value={p}>
+                    {priorityNames[p]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <p>แถบสีและชื่อบอกประเภทงาน · ป้ายแดงและกรอบแดงบอกงานด่วนมาก · เลื่อนปฏิทินซ้าย–ขวาได้</p>
           </div>
+          <section className="calendar-scroll" aria-label="ปฏิทินงานรายเดือน เลื่อนซ้ายขวา">
+            <div className="calendar-grid">
+              {['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'].map((day) => (
+                <div className="calendar-label" key={day}>
+                  {day}
+                </div>
+              ))}
+              {Array.from({ length: blanks }, (_, i) =>
+                new Date(Date.UTC(year, m - 1, i - blanks + 1)).toISOString(),
+              ).map((date) => (
+                <div className="calendar-day blank" key={date} />
+              ))}
+              {Array.from({ length: days }, (_, i) => {
+                const date = month + '-' + String(i + 1).padStart(2, '0');
+                return (
+                  <div
+                    className={'calendar-day' + (date === data.today ? ' today' : '')}
+                    key={date}
+                  >
+                    <strong>{i + 1}</strong>
+                    {openTasks
+                      .filter(
+                        (t) =>
+                          (t.dueDate === date || t.followupDate === date) &&
+                          (category === 'all' || t.category === category) &&
+                          (priority === 'all' || t.priority === priority),
+                      )
+                      .sort(
+                        (a, b) =>
+                          priorities.indexOf(b.priority) - priorities.indexOf(a.priority) ||
+                          a.title.localeCompare(b.title),
+                      )
+                      .map((t) => (
+                        <Link
+                          className={
+                            'calendar-event ' +
+                            categoryClass(t.category) +
+                            (t.priority === 'Urgent' ? ' urgency-urgent' : '')
+                          }
+                          href={'/tasks/' + t.id}
+                          key={t.id}
+                        >
+                          <span className="calendar-event-category">
+                            {t.category || 'ไม่ระบุประเภท'}
+                          </span>
+                          <strong>{t.title}</strong>
+                          <PriorityBadge priority={t.priority} />
+                          <span className="calendar-event-date-kind">
+                            {t.dueDate === date ? 'กำหนดส่ง' : ''}
+                            {t.dueDate === date && t.followupDate === date ? ' · ' : ''}
+                            {t.followupDate === date ? 'นัดติดตาม' : ''}
+                          </span>
+                        </Link>
+                      ))}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
         </section>
       );
     }
@@ -1059,8 +1157,17 @@ export function Workspace({
               </div>
               {followups.length ? (
                 followups.slice(0, 4).map((t) => (
-                  <Link className="followup-item" key={t.id} href={'/tasks/' + t.id}>
+                  <Link
+                    className={
+                      'followup-item ' +
+                      categoryClass(t.category) +
+                      (t.priority === 'Urgent' ? ' urgency-urgent' : '')
+                    }
+                    key={t.id}
+                    href={'/tasks/' + t.id}
+                  >
                     <strong>{t.title}</strong>
+                    <CategoryBadge category={t.category} /> <PriorityBadge priority={t.priority} />
                     <small>
                       {t.code} · {fmtDate(t.followupDate)}
                     </small>
