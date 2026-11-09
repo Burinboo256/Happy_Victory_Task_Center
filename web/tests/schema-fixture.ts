@@ -17,7 +17,8 @@ export function schemaFixture() {
   };
   const tables = {
     users: make(config.AIRTABLE_USERS_TABLE, 'User ID', {
-      singleLineText: ['User ID', 'Full Name', 'Google Subject', 'LINE User ID'],
+      singleLineText: ['User ID', 'Full Name', 'Agent Code', 'Google Subject', 'LINE User ID'],
+      phoneNumber: ['Phone'],
       email: ['Email'],
       singleSelect: ['Role'],
       checkbox: ['Active', 'LINE Notifications'],

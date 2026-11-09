@@ -20,16 +20,22 @@ export async function GET(request: Request) {
     );
     const result = await finishGoogle(c.db, c.repo, c.config, new URL(request.url), binding);
     const response = NextResponse.redirect(new URL(result.returnTo, c.config.APP_ORIGIN), 303);
-    response.cookies.set(
-      cookieName(c.config, 'session'),
-      result.token,
-      cookieOptions(c.config, 21600),
-    );
+    if (result.kind === 'login')
+      response.cookies.set(
+        cookieName(c.config, 'session'),
+        result.token,
+        cookieOptions(c.config, 21600),
+      );
     response.cookies.set(cookieName(c.config, 'oauth'), '', cookieOptions(c.config, 0));
     response.headers.set('Cache-Control', 'private, no-store');
     return response;
   } catch (error) {
-    const login = new URL('/login?error=google', c.config.APP_ORIGIN);
+    const login = new URL(
+      error instanceof GoogleLoginError && error.registration
+        ? '/register?error=google'
+        : '/login?error=google',
+      c.config.APP_ORIGIN,
+    );
     if (error instanceof GoogleLoginError) login.searchParams.set('returnTo', error.returnTo);
     const response = NextResponse.redirect(login, 303);
     response.cookies.set(cookieName(c.config, 'oauth'), '', cookieOptions(c.config, 0));

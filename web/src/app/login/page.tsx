@@ -69,9 +69,12 @@ export default async function Login({
             <p>
               สำหรับ Agent และเลขาฯ ที่ได้รับอนุญาตเท่านั้น
               <br />
-              ใช้บัญชี Google ที่ผู้ดูแลลงทะเบียนไว้ในระบบ
+              ใช้บัญชี Google ที่ผู้ดูแลอนุมัติแล้ว
             </p>
           </div>
+          <p>
+            <a href="/register">ยังไม่มีบัญชี? ลงทะเบียนตัวแทน</a>
+          </p>
           <div className="login-bottom">
             ทุกงานสำคัญ ทุกความคืบหน้ามีค่า <span aria-hidden="true">✦</span>
           </div>

@@ -54,7 +54,13 @@ try {
   const code = await new Promise<number | null>((done, reject) => {
     const child = spawn(
       process.execPath,
-      ['node_modules/@playwright/test/cli.js', 'test', '--config', 'playwright.api.config.ts'],
+      [
+        'node_modules/@playwright/test/cli.js',
+        'test',
+        '--config',
+        'playwright.api.config.ts',
+        ...process.argv.slice(2),
+      ],
       {
         env: {
           ...env,

@@ -256,6 +256,63 @@ p {
   width: 100%;
   max-width: 390px;
 }
+.registration-page {
+  min-height: 100dvh;
+  padding: 32px 20px;
+  display: grid;
+  place-items: center;
+}
+.registration-card {
+  width: 100%;
+  max-width: 520px;
+  padding: 32px;
+  background: var(--white, #fff);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+}
+.registration-card h1 {
+  font-size: 28px;
+  line-height: 1.4;
+  margin: 28px 0 12px;
+}
+.registration-card p {
+  line-height: 1.7;
+}
+.registration-form {
+  display: grid;
+  gap: 10px;
+}
+.registration-form label {
+  margin-top: 12px;
+  font-weight: 600;
+}
+.registration-form input {
+  width: 100%;
+  min-height: 48px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font: inherit;
+}
+.registration-form small {
+  color: var(--muted);
+  font-size: 14px;
+}
+.registration-form .google-button {
+  margin-top: 0;
+  white-space: normal;
+}
+.registration-login {
+  margin-top: 24px;
+}
+.registration-card .form-error {
+  color: #953d47;
+}
+@media (max-width: 480px) {
+  .registration-card {
+    padding: 24px 18px;
+  }
+}
 .login-card h2 {
   font-size: 28px;
   margin: 12px 0 10px;

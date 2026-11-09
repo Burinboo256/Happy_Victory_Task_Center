@@ -24,6 +24,7 @@ test('Google flow verifies signed JWT, PKCE, nonce, audience and expiry; state i
     config.GOOGLE_CLIENT_SECRET,
   );
   oidc.enableNonRepudiationChecks(client);
+  let signup = false;
   let nonce = '',
     mode = '',
     tokenCalls = 0;
@@ -31,7 +32,11 @@ test('Google flow verifies signed JWT, PKCE, nonce, audience and expiry; state i
     const url = String(input);
     if (url.endsWith('/jwks')) return Response.json({ keys: [jwk] });
     if (url.endsWith('/userinfo'))
-      return Response.json({ sub: 'agent-a', email: 'agent-a@gmail.com', email_verified: true });
+      return Response.json(
+        signup
+          ? { sub: 'new-agent', email: 'new-agent@gmail.com', email_verified: true }
+          : { sub: 'agent-a', email: 'agent-a@gmail.com', email_verified: true },
+      );
     assert.ok(url.endsWith('/token'));
     tokenCalls++;
     const body = new URLSearchParams(String(options?.body));
@@ -44,7 +49,7 @@ test('Google flow verifies signed JWT, PKCE, nonce, audience and expiry; state i
     const payload = Buffer.from(
       JSON.stringify({
         iss: 'https://accounts.google.com',
-        sub: 'agent-a',
+        sub: signup ? 'new-agent' : 'agent-a',
         aud: mode === 'audience' ? 'wrong-client' : config.GOOGLE_CLIENT_ID,
         iat: now,
         exp: mode === 'expired' ? now - 3600 : now + 3600,
@@ -87,6 +92,31 @@ test('Google flow verifies signed JWT, PKCE, nonce, audience and expiry; state i
       );
     }
     assert.equal((await db.query('SELECT * FROM hvr_sessions')).rows.length, 1);
+    mode = '';
+    signup = true;
+    const registration = await startGoogle(db, config, '/', getClient, {
+      fullName: 'New Agent',
+      agentCode: '1234',
+      phone: '0812345678',
+    });
+    nonce = registration.url.searchParams.get('nonce') || '';
+    callback.searchParams.set('state', registration.url.searchParams.get('state') || '');
+    const registered = await finishGoogle(
+      db,
+      h.repo,
+      config,
+      callback,
+      registration.binding,
+      getClient,
+    );
+    assert.equal(registered.kind, 'registration');
+    assert.equal(registered.returnTo, '/register?status=pending');
+    assert.equal(registered.token, '');
+    assert.equal(h.tables.users.at(-1)?.fields.Active, false);
+    assert.equal((await db.query('SELECT * FROM hvr_sessions')).rows.length, 1);
+    await assert.rejects(
+      finishGoogle(db, h.repo, config, callback, registration.binding, getClient),
+    );
   } finally {
     await engine.close();
   }

@@ -1,5 +1,7 @@
 # สถานะ production
 
+หน้าลงทะเบียนตัวแทน `/register` และวิธีเปิด Active รายคนใน Airtable อธิบายไว้ใน [คู่มือลงทะเบียน](agent-registration.md) ต้องมี migration 003 และฟิลด์ Users `Agent Code` / `Phone` ก่อนใช้รุ่นลงทะเบียน
+
 9 พฤศจิกายน 2026: เปิดรับงานบน Vercel Production แล้ว หลังพักการเขียนงานของ Apps Script เดิม ตรวจ baseline และทดสอบสร้างงานผ่าน Admin Google session จริงสำเร็จ คง Vercel Hobby / Neon Free ตามที่เจ้าของเลือก โดย jobs และการแจ้งเตือนยังปิด
 
 | รายการ | ผลตรวจ |

@@ -25,6 +25,8 @@ export const schemaContract: Record<Table, { primary: string; fields: Record<str
     fields: {
       'User ID': field('singleLineText'),
       'Full Name': field('singleLineText'),
+      'Agent Code': field('singleLineText'),
+      Phone: field('phoneNumber'),
       Email: field('email'),
       'Google Subject': field('singleLineText'),
       Role: select(roles),

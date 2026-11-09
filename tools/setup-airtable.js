@@ -13,7 +13,7 @@ const computed = (name, type, setup, primary = false) => ({ name, type, setup, p
 const link = (name, table) => ({ name, type: 'multipleRecordLinks', linkedTable: table });
 const schema = [
   { name: 'Users', fields: [
-    text('User ID'), text('Full Name'), { name: 'Email', type: 'email' }, text('Google Subject'),
+    text('User ID'), text('Full Name'), text('Agent Code'), { name: 'Phone', type: 'phoneNumber' }, { name: 'Email', type: 'email' }, text('Google Subject'),
     select('Role', ['Agent', 'Secretary', 'Admin']), check('Active'),
     computed('Record ID', 'formula', 'RECORD_ID()'), computed('Created At', 'createdTime', 'Created time; include time'),
     datetime('Last Login'), text('LINE User ID'), check('LINE Notifications'),

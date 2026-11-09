@@ -108,6 +108,7 @@ const tables = [
   'hvr_operations',
   'hvr_rate_limits',
   'hvr_recovery_events',
+  'hvr_registrations',
   'hvr_resources',
   'hvr_runtime',
   'hvr_sessions',
@@ -231,7 +232,7 @@ try {
       [randomBytes(32).toString('hex'), user, subject, randomBytes(32).toString('hex')],
     );
     await seed.query(
-      "INSERT INTO hvr_oauth VALUES ('staging',$1,$2,$3,$4,'/tasks/new',clock_timestamp()+interval '10 minutes')",
+      "INSERT INTO hvr_oauth(environment,state_hash,binding_hash,verifier,nonce,return_to,expires_at) VALUES ('staging',$1,$2,$3,$4,'/tasks/new',clock_timestamp()+interval '10 minutes')",
       Array.from({ length: 4 }, () => randomBytes(32).toString('hex')),
     );
     const reviewId = randomUUID(),

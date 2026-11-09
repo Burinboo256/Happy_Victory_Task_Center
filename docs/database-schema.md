@@ -12,6 +12,8 @@ PAT ใช้ scopes `data.records:read` และ `data.records:write` เฉ�
 |---|---|---|
 | User ID | Single line text, Primary | รหัสไม่ซ้ำ เช่น SEC001, AG001 |
 | Full Name | Single line text | ชื่อแสดงในเว็บ |
+| Agent Code | Single line text | รหัสตัวแทนจากฟอร์มลงทะเบียน ให้ผู้ดูแลตรวจสอบก่อนอนุมัติ |
+| Phone | Phone number | เบอร์โทรที่ผู้สมัครกรอก ไม่ได้ยืนยันด้วย SMS |
 | Email | Email | อีเมลบัญชี Google ที่ได้รับอนุญาต ห้ามซ้ำ |
 | Google Subject | Single line text | Google `sub` ไม่ซ้ำ; Gmail / Workspace ผูกครั้งแรกได้อัตโนมัติ |
 | Role | Single select | `Agent`, `Secretary`, `Admin` |
