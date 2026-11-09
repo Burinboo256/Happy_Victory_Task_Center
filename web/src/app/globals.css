@@ -1584,3 +1584,13 @@ progress::-webkit-progress-value {
 .calendar-event-category, .calendar-event-date-kind { display: block; font-size: 12px; }
 .calendar-event .priority { margin: 4px 0; }
 .calendar-event .priority-normal, .calendar-event .priority-low { color: #334155; }
+.line-settings { margin-top: 32px; padding-top: 24px; border-top: 1px solid #dbe2ea; }
+.line-settings fieldset { border: 0; padding: 0; margin: 16px 0; min-width: 0; }
+.line-settings legend { font-weight: 700; margin-bottom: 12px; }
+.line-settings p { margin: 12px 0; }
+.line-link-code { background: #f0fdf4; padding: 16px; border: 1px solid #86efac; border-radius: 12px; margin: 16px 0; }
+.line-link-code code { display: block; overflow-wrap: anywhere; font-size: 16px; color: #14532d; }
+.line-deliveries { padding-left: 20px; overflow-wrap: anywhere; }
+.line-deliveries li { padding: 10px 0; border-bottom: 1px solid #e2e8f0; }
+.line-deliveries small { display: block; }
+.line-settings a { text-decoration: underline; text-underline-offset: 3px; }

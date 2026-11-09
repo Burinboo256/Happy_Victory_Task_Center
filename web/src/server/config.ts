@@ -26,6 +26,11 @@ const schema = z.object({
   JOBS_ENABLED: flag,
   ENABLE_EMAIL_NOTIFICATIONS: flag,
   ENABLE_LINE_NOTIFICATIONS: flag,
+  LINE_CHANNEL_ACCESS_TOKEN: z.string().min(20).optional(),
+  LINE_CHANNEL_SECRET: z.string().min(16).optional(),
+  LINE_OA_ID: z.string().regex(/^@[a-zA-Z0-9._-]+$/).optional(),
+  LINE_BOT_USER_ID: z.string().regex(/^U[a-f0-9]{32}$/).optional(),
+  CRON_SECRET: z.string().min(32).optional(),
 });
 export type Config = z.infer<typeof schema>;
 export const productionBase = 'appDS1Ji5cqIohPq3';

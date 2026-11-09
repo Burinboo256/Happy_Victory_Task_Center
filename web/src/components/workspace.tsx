@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { Brand } from './brand';
 import { CategoryBadge, PriorityBadge, categoryClass } from './task-appearance';
 import { OnboardingPanel, OnboardingSettings } from './onboarding';
+import { LineSettings } from './line-settings';
 import {
   isManager,
   isOpen,
@@ -982,6 +983,7 @@ export function Workspace({
               disabled={busy || !data.writesEnabled}
             />
           )}
+          <LineSettings data={data} request={request} />
         </section>
       ) : (
         <>

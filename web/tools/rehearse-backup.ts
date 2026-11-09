@@ -114,12 +114,16 @@ const tables = [
   'hvr_sessions',
   'hvr_workflow_history',
   'hvr_workflows',
+  'hvr_line_settings',
+  'hvr_line_links',
+  'hvr_line_accounts',
+  'hvr_line_deliveries',
 ];
 const digestQuery = (schema: string, table: string) =>
-  `SELECT COALESCE(jsonb_agg(to_jsonb(t) ORDER BY to_jsonb(t)::text),'[]'::jsonb)::text FROM "${schema}"."${table}" t`;
+  `SELECT COALESCE(jsonb_agg(to_jsonb(t) ORDER BY to_jsonb(t)::text COLLATE "C"),'[]'::jsonb)::text FROM "${schema}"."${table}" t`;
 const objectsQuery = (
   schema: string,
-) => `SELECT COALESCE(jsonb_agg(x ORDER BY x::text),'[]'::jsonb)::text FROM (
+) => `SELECT COALESCE(jsonb_agg(x ORDER BY x::text COLLATE "C"),'[]'::jsonb)::text FROM (
   SELECT c.relname AS table_name,k.conname,k.contype,pg_get_constraintdef(k.oid) AS definition
   FROM pg_constraint k JOIN pg_class c ON c.oid=k.conrelid JOIN pg_namespace n ON n.oid=c.relnamespace
   WHERE n.nspname='${schema}' AND c.relname LIKE 'hvr_%') x`;
