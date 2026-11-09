@@ -46,6 +46,7 @@ test('Agent opens mobile form directly and creates only after completed response
     expect(headers['x-csrf-token']).toBe(data.csrfToken);
     expect(body.agentId).toBeUndefined();
     expect(body.status).toBeUndefined();
+    expect(body.category).toBe('ตัวแทนใหม่');
     key = headers['idempotency-key'];
     expect(key).toMatch(/^[a-f0-9-]{36}$/);
     submissions++;
@@ -55,6 +56,7 @@ test('Agent opens mobile form directly and creates only after completed response
   });
   await page.goto('/tasks/new');
   await expect(page.getByRole('heading', { name: 'รายละเอียดงานใหม่' })).toBeVisible();
+  await page.locator('select[name="category"]').selectOption('ตัวแทนใหม่');
   await expect(page.getByLabel('Agent เจ้าของงาน')).toHaveCount(0);
   await page.getByLabel('ชื่องาน').fill('ติดตามเอกสารทดสอบ');
   await page.getByLabel('รายละเอียดงาน').fill('ข้อมูลสมมติสำหรับทดสอบฟอร์มบนมือถือ');

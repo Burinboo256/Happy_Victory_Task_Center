@@ -11,7 +11,14 @@ export const statuses = [
 export type Status = (typeof statuses)[number];
 export const priorities = ['Low', 'Normal', 'High', 'Urgent'] as const;
 export type Priority = (typeof priorities)[number];
-export const categories = ['เอกสารกรมธรรม์', 'บริการลูกค้า', 'นัดหมาย', 'การเงิน', 'งานทั่วไป'] as const;
+export const categories = [
+  'เอกสารกรมธรรม์',
+  'บริการลูกค้า',
+  'นัดหมาย',
+  'การเงิน',
+  'งานทั่วไป',
+  'ตัวแทนใหม่',
+] as const;
 export const statusNames: Record<Status, string> = {
   New: 'งานเข้าใหม่',
   'In Progress': 'กำลังดำเนินการ',

@@ -23,7 +23,7 @@ const schema = [
     computed('Sequence', 'autoNumber', 'Autonumber'), text('Task Title'), long('Description'),
     link('Agent', 'Users'), computed('Agent Record ID', 'multipleLookupValues', 'Agent -> Record ID'),
     link('Assigned Secretary', 'Users'),
-    select('Category', ['เอกสารกรมธรรม์', 'บริการลูกค้า', 'นัดหมาย', 'การเงิน', 'งานทั่วไป']),
+    select('Category', ['เอกสารกรมธรรม์', 'บริการลูกค้า', 'นัดหมาย', 'การเงิน', 'งานทั่วไป', 'ตัวแทนใหม่']),
     select('Status', ['New', 'In Progress', 'Waiting', 'On Hold', 'Completed', 'Cancelled']),
     select('Priority', ['Low', 'Normal', 'High', 'Urgent']), date('Due Date'), date('Next Follow-up'),
     computed('Created At', 'createdTime', 'Created time; include time'),
