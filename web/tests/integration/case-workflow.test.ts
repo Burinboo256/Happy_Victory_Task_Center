@@ -37,6 +37,22 @@ test('all four checklists preserve mandatory items, conditional reasons, dates a
   s.fields.submittedDate = '2026-02-30';
   assert.throws(() => validateCaseState(s));
 });
+
+test('new Agent optional items need no hidden reason while required items and other categories retain their rules', () => {
+  const agent = newCaseState('ตัวแทนใหม่');
+  agent.items['continue-1'].status = 'na';
+  agent.items['develop-1'].status = 'na';
+  assert.doesNotThrow(() => validateCaseState(agent));
+  agent.items['prepare-1'].status = 'na';
+  assert.throws(() => validateCaseState(agent));
+  for (const [category, id] of [['ตัวแทนเก่า', 'retain-4'], ['ลูกค้าใหม่', 'application-9'], ['ลูกค้าเก่า', 'renewal-5']]) {
+    const state = newCaseState(category);
+    state.items[id].status = 'na';
+    assert.throws(() => validateCaseState(state));
+    state.items[id].notes = 'Not applicable to this case';
+    assert.doesNotThrow(() => validateCaseState(state));
+  }
+});
 test('new Agent closes after required registration steps, continues optional work after closing, keeps legacy history and rejects stale/cross-role writes', async () => {
   const { db, engine } = await database(),
     h = repository();
