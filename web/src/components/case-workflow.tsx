@@ -29,6 +29,10 @@ export function CaseWorkflowPanel({
     [error, setError] = useState('');
   const definition = caseDefinitions[view.category],
     summary = state ? caseSummary(state) : view.summary;
+  // Keep the stored field shape compatible with existing workflows and history.
+  const fields = definition.fields
+    .filter((f) => view.category !== 'ตัวแทนใหม่' || f.id !== 'examResult')
+    .map((f) => (f.id === 'trainingResult' ? { ...f, options: ['ผ่าน', 'ไม่ผ่าน'] } : f));
   const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => {
     const first = view.summary.sections.find((section) => section.done < section.total);
     return first ? { [first.id]: true } : {};
@@ -91,9 +95,15 @@ export function CaseWorkflowPanel({
             <fieldset disabled={!editable || busy}>
               <details className="workflow-step" open>
                 <summary>ข้อมูลประกอบเคส</summary>
-                <fieldset disabled={closed}>
-                  <div className="form-grid">
-                    {definition.fields.map((f) => (
+                <fieldset disabled={closed} className="case-fields-container">
+                  <div
+                    className={
+                      view.category === 'ตัวแทนใหม่'
+                        ? 'case-fields new-agent-case-fields'
+                        : 'form-grid'
+                    }
+                  >
+                    {fields.map((f) => (
                       <label key={f.id} htmlFor={'case-field-' + taskId + '-' + f.id}>
                         {f.label}
                         {f.options ? (
@@ -103,7 +113,14 @@ export function CaseWorkflowPanel({
                             value={state.fields[f.id]}
                             onChange={(e) => field(f.id, e.target.value)}
                           >
-                            <option value="">เลือกประเภท</option>
+                            <option value="">
+                              {f.id === 'trainingResult' ? 'เลือกผลการอบรม' : 'เลือกประเภท'}
+                            </option>
+                            {state.fields[f.id] && !f.options.includes(state.fields[f.id]) && (
+                              <option value={state.fields[f.id]} disabled>
+                                ค่าเดิม: {state.fields[f.id]}
+                              </option>
+                            )}
                             {f.options.map((v) => (
                               <option key={v}>{v}</option>
                             ))}

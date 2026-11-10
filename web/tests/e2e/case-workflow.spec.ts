@@ -17,6 +17,10 @@ for (const category of Object.keys(caseDefinitions)) {
     const h = repository();
     h.tables.tasks[0].fields.Category = category;
     const state = newCaseState(category);
+    if (category === 'ตัวแทนใหม่') {
+      state.fields.examResult = 'Historical exam result';
+      state.fields.trainingResult = 'Historical training result';
+    }
     const definition = caseDefinitions[category];
     const first = definition.sections[0].items[0];
     state.items[first.id].notes = 'Previously saved private note';
@@ -52,8 +56,31 @@ for (const category of Object.keys(caseDefinitions)) {
     await page.goto('/tasks/' + rid(11));
     const panel = page.getByRole('region', { name: 'ขั้นตอนงาน ' + category });
     await expect(panel).toBeVisible();
-    if (category === 'ตัวแทนใหม่')
+    if (category === 'ตัวแทนใหม่') {
       await panel.getByLabel('ประเภทสมัครอบรม/สอบ', { exact: true }).selectOption('สอบอย่างเดียว');
+      await expect(panel.getByLabel('ผลสอบ / ผลสอบเดิม', { exact: true })).toHaveCount(0);
+      const result = panel.getByRole('combobox', { name: 'ผลการอบรม', exact: true });
+      await expect(result).toHaveValue('Historical training result');
+      await result.selectOption('ผ่าน');
+      if (info.project.name === 'desktop') {
+        const rows = await panel
+          .locator('.new-agent-case-fields > label')
+          .evaluateAll(
+            (labels) =>
+              [...new Set(labels.map((label) => Math.round(label.getBoundingClientRect().top)))]
+                .length,
+          );
+        expect(rows).toBe(2);
+      }
+      await mkdir(resolve('../artifacts/vercel/case-workflows'), { recursive: true });
+      await panel
+        .locator('.case-fields-container')
+        .screenshot({
+          path: resolve(
+            '../artifacts/vercel/case-workflows/case-fields-' + info.project.name + '.png',
+          ),
+        });
+    }
     const label = first.label;
     await panel.getByRole('checkbox', { name: 'เสร็จแล้ว: ' + label, exact: true }).check();
     await expect(panel.locator('textarea')).toHaveCount(0);
@@ -73,6 +100,11 @@ for (const category of Object.keys(caseDefinitions)) {
     ).toContainText('20');
     expect(state.items[first.id].followupDate).toBe('2026-11-20');
     expect(state.items[first.id].notes).toBe('Previously saved private note');
+    if (category === 'ตัวแทนใหม่') {
+      expect(state.fields.trainingResult).toBe('ผ่าน');
+      expect(state.fields.examResult).toBe('Historical exam result');
+      await panel.getByRole('combobox', { name: 'ผลการอบรม', exact: true }).selectOption('ไม่ผ่าน');
+    }
     await expect(page.locator('select[name="status"] option[value="Completed"]')).toHaveAttribute(
       'disabled',
       '',
@@ -92,6 +124,7 @@ for (const category of Object.keys(caseDefinitions)) {
     ).toHaveAttribute('aria-pressed', 'true');
     expect(state.items[optional.id].status).toBe('na');
     expect(state.items[optional.id].notes).toBe('');
+    if (category === 'ตัวแทนใหม่') expect(state.fields.trainingResult).toBe('ไม่ผ่าน');
     await scanAccessibility(page, info, 'case-workflow-' + category);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,

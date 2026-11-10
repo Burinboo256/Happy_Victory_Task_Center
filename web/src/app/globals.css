@@ -1556,6 +1556,15 @@ progress::-webkit-progress-value {
 .case-workflow legend { white-space: normal; overflow-wrap: anywhere; max-width: 100%; }
 /* Clip rounded panel edges without creating a scroll container that traps the save bar. */
 .panel:has(.case-workflow) { overflow: clip; }
+.case-fields-container { container-type: inline-size; }
+.new-agent-case-fields { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; padding: 8px 0; }
+.case-workflow .new-agent-case-fields label { margin: 0; min-width: 0; justify-content: flex-end; }
+@container (max-width: 720px) {
+  .new-agent-case-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@container (max-width: 440px) {
+  .new-agent-case-fields { grid-template-columns: minmax(0, 1fr); }
+}
 .case-next { background: #f5f1fa; border-left: 4px solid #785392; border-radius: 8px; padding: 16px; margin: 18px 0; }
 .case-next p { margin: 6px 0; }
 .case-next time { display: block; font-weight: 700; margin-bottom: 8px; }
