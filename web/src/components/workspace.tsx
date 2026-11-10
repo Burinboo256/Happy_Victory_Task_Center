@@ -425,9 +425,7 @@ export function Workspace({
         >
           ทุกประเภท
         </button>
-        {[
-          ...new Set([...data.categories, ...data.tasks.map((t) => t.category).filter(Boolean)]),
-        ].map((name) => (
+        {data.categories.map((name) => (
           <button
             key={name}
             type="button"

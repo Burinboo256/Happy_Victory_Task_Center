@@ -58,7 +58,7 @@ export function taskSummaryDto(record: RecordData): TaskSummary {
     title: text(f['Task Title']),
     description: text(f.Description),
     agentId: singleLink(f.Agent, true),
-    category: text(f.Category) || 'งานทั่วไป',
+    category: text(f.Category) || 'ไม่ระบุประเภท',
     status: f.Status as Task['status'],
     priority: f.Priority as Task['priority'],
     dueDate: day(f['Due Date']),

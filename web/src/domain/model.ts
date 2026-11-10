@@ -19,7 +19,6 @@ export const categories = [
   'วันเกิดตัวแทนและลูกค้า',
   'งานเคลม',
 ] as const;
-export const legacyCategories = ['เอกสารกรมธรรม์', 'บริการลูกค้า', 'นัดหมาย', 'การเงิน', 'งานทั่วไป'] as const;
 export const statusNames: Record<Status, string> = {
   New: 'งานเข้าใหม่',
   'In Progress': 'กำลังดำเนินการ',

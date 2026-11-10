@@ -6,6 +6,26 @@ import { bootstrap } from '../../src/server/services/reads';
 import { repository, rid } from '../fixtures';
 import { scanAccessibility } from '../support/accessibility';
 
+test('retired and empty categories do not return as filters and existing tasks remain accessible', async ({
+  page,
+}) => {
+  const h = repository();
+  h.tables.tasks[0].fields.Category = '';
+  const data = {
+    ...(await bootstrap(h.repo, h.secretary)),
+    csrfToken: 'a'.repeat(64),
+    writesEnabled: true,
+  };
+  await page.route('**/api/bootstrap*', (route) => route.fulfill({ json: data }));
+  await page.goto('/tasks');
+  const legend = page.getByRole('group', { name: 'กรองประเภทงานตามสี' });
+  await expect(legend.getByRole('button')).toHaveText(['ทุกประเภท', ...categories]);
+  const existingTask = page.locator(`.task-row[href="/tasks/${h.tables.tasks[0].id}"]`);
+  await expect(existingTask).toContainText('ไม่ระบุประเภท');
+  await page.goto('/calendar');
+  await expect(legend.getByRole('button')).toHaveText(['ทุกประเภท', ...categories]);
+});
+
 test('category colors match across lists and calendar, urgent work stands out and filters preserve task links', async ({
   page,
 }, info) => {

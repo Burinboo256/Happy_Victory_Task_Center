@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { roles, statuses, priorities, categories, legacyCategories } from '../../domain/model';
+import { roles, statuses, priorities, categories } from '../../domain/model';
 import type { Config } from '../config';
 import type { Table } from './client';
 import { AppError } from '../errors';
@@ -48,7 +48,7 @@ export const schemaContract: Record<Table, { primary: string; fields: Record<str
       Agent: link('users'),
       'Agent Record ID': lookup('Agent', 'users'),
       'Assigned Secretary': link('users'),
-      Category: select([...categories,...legacyCategories]),
+      Category: select(categories),
       Status: select(statuses),
       Priority: select(priorities),
       'Due Date': field('date'),

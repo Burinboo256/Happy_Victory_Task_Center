@@ -88,7 +88,7 @@ export function schemaFixture() {
   select('users', 'Role', ['Agent', 'Secretary', 'Admin']);
   select('tasks', 'Status', ['New', 'In Progress', 'Waiting', 'On Hold', 'Completed', 'Cancelled']);
   select('tasks', 'Priority', ['Low', 'Normal', 'High', 'Urgent']);
-  select('tasks', 'Category', ['เอกสารกรมธรรม์', 'บริการลูกค้า', 'นัดหมาย', 'การเงิน', 'งานทั่วไป', 'ตัวแทนใหม่', 'ตัวแทนเก่า', 'ลูกค้าใหม่', 'ลูกค้าเก่า', 'วันเกิดตัวแทนและลูกค้า', 'งานเคลม']);
+  select('tasks', 'Category', ['ตัวแทนใหม่', 'ตัวแทนเก่า', 'ลูกค้าใหม่', 'ลูกค้าเก่า', 'วันเกิดตัวแทนและลูกค้า', 'งานเคลม']);
   select('updates', 'Update Type', ['Created', 'Comment', 'Status', 'Follow-up']);
   select('followups', 'Follow-up Status', ['Pending', 'Done', 'Skipped']);
   select('notifications', 'Channel', ['Email', 'LINE']);
