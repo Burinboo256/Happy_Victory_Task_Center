@@ -98,7 +98,7 @@ export async function readWorkflow(
   };
 }
 // One statement atomically saves state and audit. The operation key makes a lost response safe to replay.
-async function save(
+export async function saveWorkflowRecord(
   db: Sql,
   config: Environment,
   resource: string,
@@ -200,7 +200,7 @@ export async function saveWorkflow(
         })[key],
     );
   if (state.documentsConfirmed !== previous.documentsConfirmed) changed.push('ยืนยันเอกสารครบ');
-  await save(
+  await saveWorkflowRecord(
     db,
     config,
     'task:' + id,
@@ -234,7 +234,7 @@ export async function saveTemplate(
   const template = templateSchema.parse(input.template);
   if (current.template.modules.some((m) => !template.modules.some((n) => n.id === m.id)))
     throw new AppError(422, 'MODULE_HISTORY', 'เปลี่ยนชื่อหรือเพิ่ม Module ได้ แต่ไม่ลบ Module ที่มีประวัติ');
-  await save(
+  await saveWorkflowRecord(
     db,
     config,
     'template',

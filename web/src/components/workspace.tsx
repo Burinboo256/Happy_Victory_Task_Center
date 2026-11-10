@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { Brand } from './brand';
 import { CategoryBadge, PriorityBadge, categoryClass } from './task-appearance';
 import { OnboardingPanel, OnboardingSettings } from './onboarding';
+import { CaseWorkflowPanel } from './case-workflow';
 import { LineSettings } from './line-settings';
 import {
   isManager,
@@ -359,7 +360,9 @@ export function Workspace({
     userName = (id: string) => data.users.find((u) => u.id === id)?.name || 'Agent';
   const late = (task: TaskSummary) => isOpen(task) && !!task.dueDate && task.dueDate < data.today;
   const following = (task: TaskSummary) =>
-    isOpen(task) && !!task.followupDate && task.followupDate <= data.today;
+    (isOpen(task) || task.continuingFollowup) &&
+    !!task.followupDate &&
+    task.followupDate <= data.today;
   const openTasks = data.tasks.filter(isOpen),
     newTasks = data.tasks.filter((t) => t.status === 'New'),
     pendingTasks = openTasks.filter((t) => t.status !== 'New'),
@@ -379,7 +382,7 @@ export function Workspace({
       (page === 'inbox'
         ? t.status === 'New'
         : page === 'followups'
-          ? isOpen(t) && !!t.followupDate
+          ? (isOpen(t) || t.continuingFollowup) && !!t.followupDate
           : page === 'history'
             ? !isOpen(t)
             : true) &&
@@ -422,7 +425,9 @@ export function Workspace({
         >
           ทุกประเภท
         </button>
-        {data.categories.map((name) => (
+        {[
+          ...new Set([...data.categories, ...data.tasks.map((t) => t.category).filter(Boolean)]),
+        ].map((name) => (
           <button
             key={name}
             type="button"
@@ -797,15 +802,29 @@ export function Workspace({
                   ↗ {a.name}
                 </a>
               ))}
-            {detail.workflow && (
-              <OnboardingPanel
-                key={`${task.id}:${detail.workflow.version}:${detail.workflow.templateVersion}`}
-                view={detail.workflow}
+            {detail.caseWorkflow && (
+              <CaseWorkflowPanel
+                key={`${task.id}:case:${detail.caseWorkflow.version}`}
+                view={detail.caseWorkflow}
                 taskId={task.id}
-                editable={manager && isOpen(task) && data.writesEnabled}
+                editable={manager && task.status !== 'Cancelled' && data.writesEnabled}
+                closed={task.status === 'Completed'}
                 busy={busy}
                 submit={submit}
               />
+            )}
+            {detail.workflow && (
+              <details open={!detail.caseWorkflow || undefined}>
+                <summary>ประวัติ Workflow ตัวแทนใหม่เดิม</summary>
+                <OnboardingPanel
+                  key={`${task.id}:${detail.workflow.version}:${detail.workflow.templateVersion}`}
+                  view={detail.workflow}
+                  taskId={task.id}
+                  editable={!detail.caseWorkflow && manager && isOpen(task) && data.writesEnabled}
+                  busy={busy}
+                  submit={submit}
+                />
+              </details>
             )}
             {manager && (
               <>
@@ -826,8 +845,9 @@ export function Workspace({
                             value={s}
                             disabled={
                               s === 'Completed' &&
-                              !!detail.workflow &&
-                              !detail.workflow.summary.complete
+                              (detail.caseWorkflow
+                                ? !detail.caseWorkflow.summary.complete
+                                : !!detail.workflow && !detail.workflow.summary.complete)
                             }
                           >
                             {statusNames[s]}
@@ -987,12 +1007,16 @@ export function Workspace({
             ))}
           </div>
           {data.user.role === 'Admin' && (
-            <OnboardingSettings
-              key={data.syncedAt}
-              request={request}
-              submit={submit}
-              disabled={busy || !data.writesEnabled}
-            />
+            <details>
+              <summary>ตั้งค่า Workflow รุ่นเดิม (เก็บไว้สำหรับประวัติ)</summary>
+              <p>งานใหม่ใช้ขั้นตอนตาม 6 ประเภทงาน การตั้งค่าด้านล่างใช้กับประวัติ Workflow เดิมเท่านั้น</p>
+              <OnboardingSettings
+                key={data.syncedAt}
+                request={request}
+                submit={submit}
+                disabled={busy || !data.writesEnabled}
+              />
+            </details>
           )}
           <LineSettings data={data} request={request} />
         </section>

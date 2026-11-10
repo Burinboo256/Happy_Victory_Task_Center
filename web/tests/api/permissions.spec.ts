@@ -60,7 +60,7 @@ test('actual create, replay, Secretary update and private comment round trip thr
   const payload = {
     title: 'งานทดสอบ HTTP',
     description: 'Synthetic API integration',
-    category: 'งานทั่วไป',
+    category: 'วันเกิดตัวแทนและลูกค้า',
     priority: 'Normal',
     dueDate: '2026-11-06',
     agentId: rid(3),
@@ -87,6 +87,26 @@ test('actual create, replay, Secretary update and private comment round trip thr
     'X-CSRF-Token': manager.csrfToken,
     'Idempotency-Key': randomUUID(),
   };
+  const incomplete = await page.request.post('/api/tasks/' + result.id + '/status', {
+    headers: { ...managerHeaders, 'Idempotency-Key': randomUUID() },
+    data: { status: 'Completed', version: own.task.version },
+  });
+  expect(incomplete.status()).toBe(409);
+  const caseView = (await (await page.request.get('/api/tasks/' + result.id)).json()).caseWorkflow;
+  for (const item of Object.values(caseView.state.items) as { status: string; notes: string }[]) {
+    item.status = 'done';
+    item.notes = 'PRIVATE-CHECKLIST-NOTE';
+  }
+  caseView.state.fields.birthdayDate = '2026-11-10';
+  caseView.state.fields.greetingDate = '2026-11-10';
+  expect(
+    (
+      await page.request.post('/api/tasks/' + result.id + '/workflow', {
+        headers: { ...managerHeaders, 'Idempotency-Key': randomUUID() },
+        data: { version: caseView.version, state: caseView.state },
+      })
+    ).status(),
+  ).toBe(200);
   const updated = await page.request.post('/api/tasks/' + result.id + '/status', {
     headers: managerHeaders,
     data: { status: 'Completed', version: own.task.version, message: 'ดำเนินการแล้ว' },
@@ -101,6 +121,8 @@ test('actual create, replay, Secretary update and private comment round trip thr
   const after = await (await page.request.get('/api/tasks/' + result.id)).json();
   expect(after.task.status).toBe('Completed');
   expect(JSON.stringify(after)).not.toContain('PRIVATE-HTTP-NOTE');
+  expect(JSON.stringify(after)).not.toContain('PRIVATE-CHECKLIST-NOTE');
+  expect(after.caseWorkflow.state).toBeUndefined();
   expect(after.followups).toEqual([]);
 });
 
@@ -114,7 +136,7 @@ test('actual ambiguous write returns review and persists its idempotency key', a
   const payload = {
     title: 'TEST_UNCERTAIN',
     description: 'Synthetic failure',
-    category: 'งานทั่วไป',
+    category: 'วันเกิดตัวแทนและลูกค้า',
     priority: 'Normal',
     dueDate: '2026-11-06',
   };

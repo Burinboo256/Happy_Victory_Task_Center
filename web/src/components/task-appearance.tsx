@@ -7,6 +7,11 @@ const categoryClasses: Record<string, string> = {
   การเงิน: 'category-finance',
   งานทั่วไป: 'category-general',
   ตัวแทนใหม่: 'category-new-agent',
+  ตัวแทนเก่า: 'category-finance',
+  ลูกค้าใหม่: 'category-documents',
+  ลูกค้าเก่า: 'category-service',
+  วันเกิดตัวแทนและลูกค้า: 'category-appointment',
+  งานเคลม: 'category-claim',
 };
 export const categoryClass = (category: string) => categoryClasses[category] || 'category-general';
 export function CategoryBadge({ category }: { category: string }) {

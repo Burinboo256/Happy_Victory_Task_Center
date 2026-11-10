@@ -143,7 +143,7 @@ test('only the opted-in owner receives a real Completed transition; retries/repe
       payload = {
         title: 'New task',
         description: 'private',
-        category: 'งานทั่วไป',
+        category: 'วันเกิดตัวแทนและลูกค้า',
         priority: 'Normal',
         dueDate: '2026-11-12',
       };

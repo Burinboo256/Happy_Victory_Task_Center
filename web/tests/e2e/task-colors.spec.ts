@@ -30,7 +30,7 @@ test('category colors match across lists and calendar, urgent work stands out an
   await page.route('**/api/bootstrap*', (r) => r.fulfill({ json: data }));
   await page.goto('/tasks');
   await expect(page.locator('.task-row')).toHaveCount(6);
-  await expect(page.locator('.task-row').first()).toContainText('งานสี บริการลูกค้า');
+  await expect(page.locator('.task-row').first()).toContainText('งานสี ตัวแทนเก่า');
   await expect(page.locator('.task-row').first().locator('.priority-urgent')).toHaveText(
     '! ด่วนมาก',
   );
@@ -46,9 +46,9 @@ test('category colors match across lists and calendar, urgent work stands out an
     );
   expect(new Set(Object.values(listColors)).size).toBe(6);
   const legend = page.getByRole('group', { name: 'กรองประเภทงานตามสี' });
-  await legend.getByRole('button', { name: 'การเงิน', exact: true }).click();
+  await legend.getByRole('button', { name: 'ลูกค้าเก่า', exact: true }).click();
   await expect(page.locator('.task-row')).toHaveCount(1);
-  await expect(page.locator('.task-row')).toContainText('งานสี การเงิน');
+  await expect(page.locator('.task-row')).toContainText('งานสี ลูกค้าเก่า');
   await legend.getByRole('button', { name: 'ทุกประเภท', exact: true }).click();
   await scanAccessibility(page, info, 'category-colors-list');
   await mkdir(resolve('../artifacts/vercel/task-colors'), { recursive: true });

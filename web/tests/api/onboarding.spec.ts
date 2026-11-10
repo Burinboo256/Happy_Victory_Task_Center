@@ -1,6 +1,6 @@
-import { test, expect, type Page } from '@playwright/test';
+﻿import { test, expect, type Page } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
-import { blankTracking, type Onboarding } from '../../src/domain/onboarding';
+import { caseDefinitions, type CaseState } from '../../src/domain/case-workflow';
 const origin = 'http://127.0.0.1:4181';
 async function login(page: Page, role: 'AGENT' | 'OTHER' | 'SECRETARY') {
   const token = process.env['HVR_TEST_' + role + '_TOKEN'];
@@ -12,7 +12,7 @@ async function login(page: Page, role: 'AGENT' | 'OTHER' | 'SECRETARY') {
     ]);
   return (await page.request.get('/api/bootstrap')).json();
 }
-test('new-agent HTTP workflow protects roles, CSRF, histories, optimistic versions and completion through real routes', async ({
+test('case workflow HTTP enforces ownership, CSRF, exact checklist, replay, stale writes and close/continue rules', async ({
   page,
 }) => {
   const agent = await login(page, 'AGENT');
@@ -24,7 +24,7 @@ test('new-agent HTTP workflow protects roles, CSRF, histories, optimistic versio
   const created = await page.request.post('/api/tasks', {
     headers: headers(agent.csrfToken),
     data: {
-      title: 'NEW AGENT WORKFLOW TEST',
+      title: 'SIX CATEGORY WORKFLOW TEST',
       description: 'Synthetic only',
       category: 'ตัวแทนใหม่',
       priority: 'Normal',
@@ -36,31 +36,24 @@ test('new-agent HTTP workflow protects roles, CSRF, histories, optimistic versio
     endpoint = '/api/tasks/' + id;
   expect(
     (
-      await page.request.post(endpoint + '/onboarding', {
+      await page.request.post(endpoint + '/workflow', {
         headers: headers(agent.csrfToken),
         data: {},
       })
     ).status(),
   ).toBe(403);
-  expect((await page.request.get('/api/onboarding-template')).status()).toBe(403);
   let response = await (await page.request.get(endpoint)).json();
-  expect(response.workflow.state).toBeUndefined();
+  expect(response.caseWorkflow.state).toBeUndefined();
+  await login(page, 'OTHER');
+  expect((await page.request.get(endpoint)).status()).toBe(403);
   const manager = await login(page, 'SECRETARY');
-  expect(
-    (
-      await page.request.post('/api/onboarding-template', {
-        headers: headers(manager.csrfToken),
-        data: {},
-      })
-    ).status(),
-  ).toBe(403);
   response = await (await page.request.get(endpoint)).json();
-  const state: Onboarding = response.workflow.state;
-  const payload = { version: 0, templateVersion: response.workflow.templateVersion, state };
+  const state: CaseState = response.caseWorkflow.state;
+  const payload = { version: 0, state };
   expect(
     (
-      await page.request.post(endpoint + '/onboarding', {
-        headers: { Origin: origin },
+      await page.request.post(endpoint + '/workflow', {
+        headers: { Origin: origin, 'Idempotency-Key': randomUUID() },
         data: payload,
       })
     ).status(),
@@ -73,49 +66,38 @@ test('new-agent HTTP workflow protects roles, CSRF, histories, optimistic versio
       })
     ).status(),
   ).toBe(409);
-  state.notice = { date: '2026-11-01', acknowledged: true, ...blankTracking() };
-  state.training = {
-    date: '2026-11-02',
-    status: 'attended',
-    combined: true,
-    place: 'Test',
-    ...blankTracking(),
-  };
-  state.exams = [
-    { id: randomUUID(), date: '2026-11-02', status: 'failed', ...blankTracking() },
-    { id: randomUUID(), date: '2026-11-03', status: 'passed', ...blankTracking() },
-  ];
-  state.documentsConfirmed = true;
-  state.issue = {
-    code: 'TEST-NEW-01',
-    submittedDate: '2026-11-04',
-    issuedDate: '2026-11-05',
-    notes: 'PRIVATE-WORKFLOW-NOTE',
-    followupDate: '',
-  };
-  state.modules = state.modules.map((m, i) => ({
-    ...m,
-    status: i === 3 ? 'booked' : 'completed',
-    date: '2026-11-06',
-  }));
+  const invalid = structuredClone(payload);
+  delete invalid.state.items['prepare-1'];
+  expect(
+    (
+      await page.request.post(endpoint + '/workflow', {
+        headers: headers(manager.csrfToken),
+        data: invalid,
+      })
+    ).status(),
+  ).toBe(422);
+  for (const item of caseDefinitions['ตัวแทนใหม่'].sections
+    .flatMap((s) => s.items)
+    .filter((i) => i.required))
+    state.items[item.id].status = 'done';
+  state.fields.applicationMode = 'อบรมพร้อมสอบ';
+  state.fields.agentCode = 'SYNTHETIC-001';
+  state.items['continue-1'].notes = 'PRIVATE-WORKFLOW-NOTE';
+  state.items['continue-1'].followupDate = '2026-11-20';
   const saveHeaders = headers(manager.csrfToken);
-  const saved = await page.request.post(endpoint + '/onboarding', {
+  const saved = await page.request.post(endpoint + '/workflow', {
     headers: saveHeaders,
     data: payload,
   });
   expect(saved.status()).toBe(200);
-  expect((await saved.json()).state).toBe('completed');
+  expect(
+    await (
+      await page.request.post(endpoint + '/workflow', { headers: saveHeaders, data: payload })
+    ).json(),
+  ).toEqual(await saved.json());
   expect(
     (
-      await page.request.post(endpoint + '/onboarding', { headers: saveHeaders, data: payload })
-    ).status(),
-  ).toBe(200);
-  response = await (await page.request.get(endpoint)).json();
-  expect(response.workflow.version).toBe(1);
-  expect(response.workflow.history).toHaveLength(1);
-  expect(
-    (
-      await page.request.post(endpoint + '/onboarding', {
+      await page.request.post(endpoint + '/workflow', {
         headers: headers(manager.csrfToken),
         data: payload,
       })
@@ -123,43 +105,34 @@ test('new-agent HTTP workflow protects roles, CSRF, histories, optimistic versio
   ).toBe(409);
   expect(
     (
-      await page.request.post(endpoint + '/onboarding', {
-        headers: headers(manager.csrfToken),
-        data: { ...payload, version: 1, state: { ...state, modules: state.modules.slice(0, 3) } },
-      })
-    ).status(),
-  ).toBe(422);
-  expect(
-    (
       await page.request.post(endpoint + '/status', {
         headers: headers(manager.csrfToken),
         data: { status: 'Completed', version: response.task.version },
+      })
+    ).status(),
+  ).toBe(200);
+  state.items['continue-1'].status = 'done';
+  expect(
+    (
+      await page.request.post(endpoint + '/workflow', {
+        headers: headers(manager.csrfToken),
+        data: { version: 1, state },
+      })
+    ).status(),
+  ).toBe(200);
+  state.items['prepare-1'].status = 'pending';
+  expect(
+    (
+      await page.request.post(endpoint + '/workflow', {
+        headers: headers(manager.csrfToken),
+        data: { version: 2, state },
       })
     ).status(),
   ).toBe(409);
-  state.modules[3].status = 'completed';
-  expect(
-    (
-      await page.request.post(endpoint + '/onboarding', {
-        headers: headers(manager.csrfToken),
-        data: { ...payload, version: 1 },
-      })
-    ).status(),
-  ).toBe(200);
-  expect(
-    (
-      await page.request.post(endpoint + '/status', {
-        headers: headers(manager.csrfToken),
-        data: { status: 'Completed', version: response.task.version },
-      })
-    ).status(),
-  ).toBe(200);
   await login(page, 'AGENT');
   response = await (await page.request.get(endpoint)).json();
-  expect(response.workflow.summary.complete).toBe(true);
-  expect(response.workflow.summary.modulesDone).toBe(4);
+  expect(response.task.status).toBe('Completed');
+  expect(response.caseWorkflow.state).toBeUndefined();
+  expect(response.caseWorkflow.history).toBeUndefined();
   expect(JSON.stringify(response)).not.toContain('PRIVATE-WORKFLOW-NOTE');
-  expect(response.workflow.state).toBeUndefined();
-  await login(page, 'OTHER');
-  expect((await page.request.get(endpoint)).status()).toBe(403);
 });

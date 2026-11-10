@@ -12,13 +12,14 @@ export type Status = (typeof statuses)[number];
 export const priorities = ['Low', 'Normal', 'High', 'Urgent'] as const;
 export type Priority = (typeof priorities)[number];
 export const categories = [
-  'เอกสารกรมธรรม์',
-  'บริการลูกค้า',
-  'นัดหมาย',
-  'การเงิน',
-  'งานทั่วไป',
   'ตัวแทนใหม่',
+  'ตัวแทนเก่า',
+  'ลูกค้าใหม่',
+  'ลูกค้าเก่า',
+  'วันเกิดตัวแทนและลูกค้า',
+  'งานเคลม',
 ] as const;
+export const legacyCategories = ['เอกสารกรมธรรม์', 'บริการลูกค้า', 'นัดหมาย', 'การเงิน', 'งานทั่วไป'] as const;
 export const statusNames: Record<Status, string> = {
   New: 'งานเข้าใหม่',
   'In Progress': 'กำลังดำเนินการ',
@@ -51,6 +52,7 @@ export interface PublicUser {
   active: boolean;
 }
 export interface TaskSummary {
+  continuingFollowup?: boolean;
   workflowSummary?: string;
   id: string;
   code: string;
@@ -101,6 +103,7 @@ export interface Bootstrap {
   writesEnabled: boolean;
 }
 export interface Detail {
+  caseWorkflow?: import('./case-workflow').CaseView;
   workflow?: import('./onboarding').WorkflowView;
   task: Task;
   updates: TaskUpdate[];

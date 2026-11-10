@@ -105,6 +105,7 @@ test('Admin edits module names and default documents from team settings', async 
     return r.fulfill({ json: { state: 'completed', id: 'template' } });
   });
   await page.goto('/team');
+  await page.getByText('ตั้งค่า Workflow รุ่นเดิม (เก็บไว้สำหรับประวัติ)', { exact: true }).click();
   await page.getByLabel('Module 1', { exact: true }).fill('ชื่ออบรมจริง');
   await page.getByRole('button', { name: '+ เพิ่มเอกสารมาตรฐาน' }).click();
   await page.getByLabel('เอกสาร 1', { exact: true }).fill('เอกสารตัวอย่าง');
