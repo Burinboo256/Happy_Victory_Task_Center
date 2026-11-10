@@ -28,9 +28,26 @@ const schema = z.object({
   ENABLE_LINE_NOTIFICATIONS: flag,
   LINE_CHANNEL_ACCESS_TOKEN: z.string().min(20).optional(),
   LINE_CHANNEL_SECRET: z.string().min(16).optional(),
-  LINE_OA_ID: z.string().regex(/^@[a-zA-Z0-9._-]+$/).optional(),
-  LINE_BOT_USER_ID: z.string().regex(/^U[a-f0-9]{32}$/).optional(),
+  LINE_OA_ID: z
+    .string()
+    .regex(/^@[a-zA-Z0-9._-]+$/)
+    .optional(),
+  LINE_BOT_USER_ID: z
+    .string()
+    .regex(/^U[a-f0-9]{32}$/)
+    .optional(),
   CRON_SECRET: z.string().min(32).optional(),
+  AI_LINE_ENABLED: flag,
+  AI_LINE_CHANNEL_ACCESS_TOKEN: z.string().min(20).optional(),
+  AI_LINE_CHANNEL_SECRET: z.string().min(16).optional(),
+  AI_LINE_OA_ID: z
+    .string()
+    .regex(/^@[a-zA-Z0-9._-]+$/)
+    .optional(),
+  AI_LINE_BOT_USER_ID: z
+    .string()
+    .regex(/^U[a-f0-9]{32}$/)
+    .optional(),
 });
 export type Config = z.infer<typeof schema>;
 export const productionBase = 'appDS1Ji5cqIohPq3';

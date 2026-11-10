@@ -9,6 +9,7 @@ import { OnboardingPanel } from './onboarding';
 import { CaseWorkflowPanel } from './case-workflow';
 import { TaskEditPanel } from './task-edit';
 import { LineSettings } from './line-settings';
+import { AiLineSettings } from './ai-line-settings';
 import {
   isManager,
   isOpen,
@@ -642,6 +643,7 @@ export function Workspace({
     if (page === 'notifications')
       return (
         <div className="panel line-settings-panel">
+          <AiLineSettings data={data} request={request} />
           <LineSettings data={data} request={request} />
         </div>
       );
@@ -1032,6 +1034,7 @@ export function Workspace({
               </article>
             ))}
           </div>
+          <AiLineSettings data={data} request={request} />
           <LineSettings data={data} request={request} />
         </section>
       ) : (
