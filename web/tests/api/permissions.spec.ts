@@ -16,6 +16,86 @@ async function login(page: Page, role: 'AGENT' | 'OTHER' | 'SECRETARY') {
   expect(response.headers()['cache-control']).toContain('no-store');
   return response.json();
 }
+
+test('task edit enforces CSRF, manager role, version and new owner access through the real API', async ({
+  page,
+}) => {
+  const agent = await login(page, 'AGENT');
+  const headers = {
+    Origin: origin,
+    'X-CSRF-Token': agent.csrfToken,
+    'Idempotency-Key': randomUUID(),
+  };
+  const created = await page.request.post('/api/tasks', {
+    headers,
+    data: {
+      title: 'Editable task',
+      description: 'Synthetic',
+      category: 'ลูกค้าเก่า',
+      priority: 'Normal',
+      dueDate: '2026-12-01',
+    },
+  });
+  expect(created.status()).toBe(200);
+  const { id } = await created.json();
+  const initial = await (await page.request.get('/api/tasks/' + id)).json();
+  const edit = {
+    version: initial.task.version,
+    title: 'Reassigned task',
+    description: 'Updated synthetic details',
+    agentId: rid(3),
+    priority: 'Urgent',
+    dueDate: '2026-12-15',
+  };
+  const url = '/api/tasks/' + id + '/edit';
+  expect(
+    (
+      await page.request.post(url, {
+        headers: { ...headers, 'Idempotency-Key': randomUUID() },
+        data: edit,
+      })
+    ).status(),
+  ).toBe(403);
+  const manager = await login(page, 'SECRETARY');
+  expect(
+    (
+      await page.request.post(url, {
+        headers: { Origin: origin, 'Idempotency-Key': randomUUID() },
+        data: edit,
+      })
+    ).status(),
+  ).toBe(403);
+  const editHeaders = {
+    Origin: origin,
+    'X-CSRF-Token': manager.csrfToken,
+    'Idempotency-Key': randomUUID(),
+  };
+  const response = await page.request.post(url, { headers: editHeaders, data: edit });
+  expect(response.status()).toBe(200);
+  expect(await (await page.request.post(url, { headers: editHeaders, data: edit })).json()).toEqual(
+    await response.json(),
+  );
+  expect(
+    (
+      await page.request.post(url, {
+        headers: { ...editHeaders, 'Idempotency-Key': randomUUID() },
+        data: { ...edit, title: 'Stale edit' },
+      })
+    ).status(),
+  ).toBe(409);
+  await login(page, 'AGENT');
+  expect((await page.request.get('/api/tasks/' + id)).status()).toBe(403);
+  await login(page, 'OTHER');
+  const transferred = await (await page.request.get('/api/tasks/' + id)).json();
+  expect(transferred.task.title).toBe(edit.title);
+  expect(transferred.task.agentId).toBe(rid(3));
+  expect(transferred.task.status).toBe('New');
+  expect(
+    transferred.updates.filter((update: { message: string }) =>
+      update.message.startsWith('แก้ไขข้อมูลงาน:'),
+    ),
+  ).toHaveLength(1);
+});
 test('browser submits the real form through the API and PostgreSQL journal', async ({ page }) => {
   await login(page, 'AGENT');
   await page.goto('/tasks/new');

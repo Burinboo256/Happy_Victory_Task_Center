@@ -31,6 +31,17 @@ const schemas = {
     status: z.enum(statuses),
     message: message(2000).default(''),
   }),
+  edit: z
+    .object({
+      id,
+      version: z.string().min(1),
+      title: message(180).min(1),
+      description: message(5000).min(1),
+      agentId: id,
+      priority: z.enum(priorities),
+      dueDate: day,
+    })
+    .strict(),
   comment: z.object({ id, message: message(3000).min(1), visible: z.boolean().default(true) }),
   followup: z.object({ id, date: day, notes: message(2000).default('') }),
   resolveFollowup: z.object({
@@ -42,7 +53,7 @@ const schemas = {
 };
 export type Action = keyof typeof schemas;
 export function validateMutation(action: Action, input: unknown, user: User) {
-  if (['status', 'followup', 'resolveFollowup'].includes(action) && !isManager(user))
+  if (['edit', 'status', 'followup', 'resolveFollowup'].includes(action) && !isManager(user))
     throw forbidden();
   return schemas[action].parse(input);
 }
@@ -171,6 +182,54 @@ export async function mutate(
     return { id: task.id };
   }
   if (!isManager(user)) throw forbidden();
+  if (action === 'edit') {
+    const data = schemas.edit.parse(input);
+    const original = await steps.run(
+      'snapshot',
+      async () => {
+        const task = await ownTask(repo, user, data.id);
+        if (task.version !== data.version)
+          throw new AppError(409, 'VERSION_CONFLICT', 'งานนี้มีการแก้ไขแล้ว กรุณาโหลดรายละเอียดใหม่');
+        return task;
+      },
+      false,
+    );
+    // Keep an existing inactive owner when editing other fields; new owners must be active Agents.
+    if (data.agentId !== original.agentId) {
+      const owner = userDto(await repo.get('users', data.agentId));
+      if (!owner.active || owner.role !== 'Agent')
+        throw new AppError(422, 'AGENT_INACTIVE', 'กรุณาเลือก Agent ที่เปิดใช้งาน');
+    }
+    const labels = {
+      title: 'ชื่องาน',
+      description: 'รายละเอียดงาน',
+      agentId: 'Agent เจ้าของงาน',
+      priority: 'ความเร่งด่วน',
+      dueDate: 'กำหนดส่ง',
+    } as const;
+    const changed = (Object.keys(labels) as (keyof typeof labels)[]).filter(
+      (key) => data[key] !== original[key],
+    );
+    if (!changed.length) return { id: data.id };
+    await patchStep(steps, 'patch', repo, 'tasks', data.id, {
+      'Task Title': data.title,
+      Description: data.description,
+      Agent: [data.agentId],
+      Priority: data.priority,
+      'Due Date': data.dueDate,
+    });
+    await audit(
+      steps,
+      repo,
+      user,
+      data.id,
+      steps.key + ':audit',
+      'Comment',
+      'แก้ไขข้อมูลงาน: ' + changed.map((key) => labels[key]).join(', '),
+      true,
+    );
+    return { id: data.id };
+  }
   if (action === 'status') {
     const data = schemas.status.parse(input);
     const snapshot = await steps.run(

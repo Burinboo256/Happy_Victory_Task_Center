@@ -7,6 +7,7 @@ import { Brand } from './brand';
 import { CategoryBadge, PriorityBadge, categoryClass } from './task-appearance';
 import { OnboardingPanel } from './onboarding';
 import { CaseWorkflowPanel } from './case-workflow';
+import { TaskEditPanel } from './task-edit';
 import { LineSettings } from './line-settings';
 import {
   isManager,
@@ -746,6 +747,16 @@ export function Workspace({
             <Badge status={task.status} />
           </div>
           <div className="detail-body">
+            {manager && (
+              <TaskEditPanel
+                key={task.id + ':edit:' + task.version}
+                task={task}
+                users={data.users}
+                busy={busy}
+                enabled={data.writesEnabled}
+                submit={submit}
+              />
+            )}
             <p className="detail-description">{task.description}</p>
             <dl className="detail-grid">
               <div>

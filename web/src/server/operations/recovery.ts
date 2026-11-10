@@ -53,7 +53,9 @@ function inScope(op: Operation, name: string, intent: WriteIntent) {
       name === 'task' && op.action === 'create'
         ? ['tasks', 'Request Key', key]
         : name === 'audit' &&
-            ['create', 'comment', 'status', 'followup', 'resolveFollowup'].includes(op.action)
+            ['create', 'comment', 'edit', 'status', 'followup', 'resolveFollowup'].includes(
+              op.action,
+            )
           ? ['updates', 'Operation Key', key + ':audit']
           : name === 'followup' && op.action === 'followup'
             ? ['followups', 'Operation Key', key]
@@ -74,6 +76,19 @@ function inScope(op: Operation, name: string, intent: WriteIntent) {
     return true;
   }
   if (intent.kind !== 'patch') return false;
+  if (name === 'patch' && op.action === 'edit')
+    return (
+      intent.table === 'tasks' &&
+      intent.recordId === op.payload.id &&
+      canonical(intent.fields) ===
+        canonical({
+          'Task Title': op.payload.title,
+          Description: op.payload.description,
+          Agent: [op.payload.agentId],
+          Priority: op.payload.priority,
+          'Due Date': op.payload.dueDate,
+        })
+    );
   if (name === 'patch' && op.action === 'status')
     return (
       intent.table === 'tasks' &&

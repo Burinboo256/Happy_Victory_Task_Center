@@ -68,8 +68,84 @@ test('forged Agent owner and initial status are ignored; Agent comments are alwa
 });
 test('manager routes reject Agent even with forged payload role', () => {
   const h = repository();
-  for (const action of ['status', 'followup', 'resolveFollowup'] as const)
+  for (const action of ['edit', 'status', 'followup', 'resolveFollowup'] as const)
     assert.throws(() => validateMutation(action, { role: 'Admin' }, h.agent));
+});
+
+test('managers edit task metadata and transfer ownership without changing workflow or status', async () => {
+  const h = repository();
+  const payload = {
+    id: rid(11),
+    version: 'v1',
+    title: 'Updated title',
+    description: 'Updated description',
+    agentId: h.other.id,
+    priority: 'Urgent',
+    dueDate: '2026-12-15',
+  };
+  await assert.rejects(mutate(h.repo, h.agent, 'edit', payload, steps()), /ไม่มีสิทธิ์/);
+  await assert.rejects(
+    mutate(h.repo, h.secretary, 'edit', { ...payload, version: 'stale' }, steps()),
+    /แก้ไขแล้ว/,
+  );
+  await assert.rejects(
+    mutate(h.repo, h.secretary, 'edit', { ...payload, agentId: h.secretary.id }, steps()),
+    /Agent ที่เปิดใช้งาน/,
+  );
+  h.tables.users[2].fields.Active = false;
+  await assert.rejects(mutate(h.repo, h.secretary, 'edit', payload, steps()), /Agent ที่เปิดใช้งาน/);
+  assert.equal(h.calls.includes('patch:tasks'), false);
+  h.tables.users[2].fields.Active = true;
+  await mutate(
+    h.repo,
+    h.secretary,
+    'edit',
+    validateMutation('edit', payload, h.secretary),
+    steps(),
+  );
+  await assert.rejects(detail(h.repo, h.agent, rid(11)), /ไม่มีสิทธิ์/);
+  const result = await detail(h.repo, h.other, rid(11));
+  assert.equal(result.task.title, payload.title);
+  assert.equal(result.task.description, payload.description);
+  assert.equal(result.task.priority, 'Urgent');
+  assert.equal(result.task.dueDate, payload.dueDate);
+  assert.equal(result.task.status, 'New');
+  assert.equal(result.task.category, 'งานทั่วไป');
+  assert.equal(h.tables.updates.length, 1);
+  assert.match(result.updates[0].message, /แก้ไขข้อมูลงาน.*Agent เจ้าของงาน/);
+  assert.equal(h.tables.notifications.length, 0);
+  for (const bad of [
+    { title: ' ' },
+    { description: '' },
+    { dueDate: '2026-02-30' },
+    { priority: 'invalid' },
+    { status: 'Completed' },
+  ])
+    assert.throws(() => validateMutation('edit', { ...payload, ...bad }, h.secretary));
+});
+
+test('Admin can correct a closed task while retaining its inactive owner', async () => {
+  const h = repository();
+  h.tables.users[1].fields.Active = false;
+  h.tables.tasks[0].fields.Status = 'Completed';
+  h.tables.tasks[0].fields['Completed At'] = '2026-11-01T03:00:00Z';
+  await mutate(
+    h.repo,
+    { ...h.secretary, role: 'Admin' },
+    'edit',
+    {
+      id: rid(11),
+      version: 'v1',
+      title: 'Correction',
+      description: 'Corrected',
+      agentId: h.agent.id,
+      priority: 'Normal',
+      dueDate: '2026-12-15',
+    },
+    steps(),
+  );
+  assert.equal(h.tables.tasks[0].fields.Status, 'Completed');
+  assert.equal(h.tables.tasks[0].fields['Completed At'], '2026-11-01T03:00:00Z');
 });
 test('stale status is rejected and repeated Completed preserves original timestamp', async () => {
   const h = repository();

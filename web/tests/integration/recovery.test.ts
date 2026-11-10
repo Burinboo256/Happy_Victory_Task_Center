@@ -23,6 +23,61 @@ const input = (id: string) => ({
   evidence: 'TEST/recovery',
 });
 
+for (const failure of ['patch', 'audit']) {
+  test(`task edit recovers an accepted ${failure} without repeating the write or audit`, async () => {
+    const { db, engine } = await database(),
+      h = repository();
+    try {
+      const patch = h.repo.patch,
+        upsert = h.repo.upsert;
+      h.repo.patch = async (...args) => {
+        const record = await patch(...args);
+        if (failure === 'patch') throw new UncertainWrite();
+        return record;
+      };
+      h.repo.upsert = async (...args) => {
+        const record = await upsert(...args);
+        if (failure === 'audit') throw new UncertainWrite();
+        return record;
+      };
+      const payload = {
+        id: rid(11),
+        version: 'v1',
+        title: 'Edited',
+        description: 'Synthetic edit',
+        agentId: h.other.id,
+        priority: 'High',
+        dueDate: '2026-12-15',
+      };
+      const key = randomUUID();
+      const run = () =>
+        new Journal(db, config).execute(
+          h.secretary.id,
+          key,
+          'edit',
+          payload,
+          'task:' + rid(11),
+          (steps) => mutate(h.repo, h.secretary, 'edit', payload, steps),
+        );
+      const first = await run();
+      assert.equal(first.state, 'review');
+      await db.query('UPDATE hvr_runtime SET task_writes=false');
+      assert.equal(
+        (await new OperationRecovery(db, config, h.repo).run(input(first.operationId))).state,
+        'pending',
+      );
+      await db.query('UPDATE hvr_runtime SET task_writes=true');
+      assert.equal((await run()).state, 'completed');
+      assert.equal((await run()).state, 'completed');
+      assert.equal(h.calls.filter((call) => call === 'patch:tasks').length, 1);
+      assert.equal(h.calls.filter((call) => call === 'upsert:updates').length, 1);
+      assert.deepEqual(h.tables.tasks[0].fields.Agent, [h.other.id]);
+    } finally {
+      await engine.close();
+    }
+  });
+}
+
 test('accepted create with lost response is proven by key and fields, then resumes without duplicate writes', async () => {
   const { db, engine } = await database(),
     h = repository();
