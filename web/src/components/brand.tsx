@@ -6,7 +6,7 @@ export function Brand() {
       </span>
       <div>
         <strong>Happy Victory</strong>
-        <small>RINLYN TASK CENTER</small>
+        <small>RINLYN Secretary</small>
       </div>
     </div>
   );

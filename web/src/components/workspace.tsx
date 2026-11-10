@@ -1409,7 +1409,7 @@ export function Workspace({
           {content()}
           <footer className="footer">
             <span>
-              <strong>Happy Victory Rinlyn</strong> Task Center
+              <strong>Happy Victory</strong> RINLYN Secretary
             </span>
             <span>
               <i />

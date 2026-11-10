@@ -4,7 +4,7 @@ import './globals.css';
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: { default: 'Happy Victory Rinlyn Task Center', template: '%s · Happy Victory' },
+  title: { default: 'Happy Victory RINLYN Secretary', template: '%s · Happy Victory' },
   description: 'พื้นที่ทำงานร่วมกันสำหรับ Agent และทีมเลขาฯ Happy Victory Rinlyn',
   robots: { index: false, follow: false },
 };
