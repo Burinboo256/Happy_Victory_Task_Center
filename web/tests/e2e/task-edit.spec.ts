@@ -40,6 +40,16 @@ test('manager can cancel, retain a failed draft and save all five task fields', 
     return r.fulfill({ json: { ...result, state: 'completed' } });
   });
   await page.goto('/tasks/' + rid(11));
+  await expect(
+    page.locator('.panel-title').getByRole('button', { name: 'แก้ไขข้อมูลงาน', exact: true }),
+  ).toBeVisible();
+  await mkdir(resolve('../artifacts/vercel/task-edit'), { recursive: true });
+  await page
+    .locator('.panel-title')
+    .filter({ hasText: 'เอกสารทดสอบ A' })
+    .screenshot({
+      path: resolve('../artifacts/vercel/task-edit/header-' + info.project.name + '.png'),
+    });
   await page.getByRole('button', { name: 'แก้ไขข้อมูลงาน', exact: true }).click();
   let editor = page.getByRole('region', { name: 'แก้ไขข้อมูลงาน', exact: true });
   await editor.getByLabel('ชื่องาน').fill('Discard this draft');

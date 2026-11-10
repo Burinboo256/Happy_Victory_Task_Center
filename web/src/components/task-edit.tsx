@@ -8,32 +8,22 @@ export function TaskEditPanel({
   busy,
   enabled,
   submit,
+  onCancel,
 }: {
   task: Task;
   users: PublicUser[];
   busy: boolean;
   enabled: boolean;
+  onCancel: () => void;
   submit: (
     event: FormEvent<HTMLFormElement>,
     endpoint: string,
     fixed?: Record<string, unknown>,
   ) => Promise<void>;
 }) {
-  const [editing, setEditing] = useState(false);
   const [agentId, setAgentId] = useState(task.agentId);
   const eligible = users.filter((user) => user.active && user.role === 'Agent');
   const current = users.find((user) => user.id === task.agentId);
-  if (!editing)
-    return (
-      <button
-        type="button"
-        className="btn"
-        disabled={busy || !enabled}
-        onClick={() => setEditing(true)}
-      >
-        แก้ไขข้อมูลงาน
-      </button>
-    );
   return (
     <section className="task-edit" aria-label="แก้ไขข้อมูลงาน">
       <h3>แก้ไขข้อมูลงาน</h3>
@@ -97,14 +87,7 @@ export function TaskEditPanel({
             </label>
           </div>
           <div className="form-actions">
-            <button
-              type="button"
-              className="btn"
-              onClick={() => {
-                setAgentId(task.agentId);
-                setEditing(false);
-              }}
-            >
+            <button type="button" className="btn" onClick={onCancel}>
               ยกเลิกการแก้ไข
             </button>
             <button type="submit" className="btn primary">

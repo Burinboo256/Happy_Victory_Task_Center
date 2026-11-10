@@ -748,6 +748,12 @@ p {
   display: block;
   margin-top: 3px;
 }
+.task-detail-heading { align-items: flex-start; }
+.task-heading-text { min-width: 0; flex: 1; overflow-wrap: anywhere; }
+.task-heading-actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex-shrink: 0; }
+@media (max-width: 760px) {
+  .task-heading-actions { flex-direction: column; align-items: flex-end; gap: 8px; }
+}
 .panel-symbol {
   color: var(--muted);
   font-size: 19px;

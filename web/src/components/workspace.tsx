@@ -131,6 +131,7 @@ export function Workspace({
     [agent, setAgent] = useState('all'),
     [priority, setPriority] = useState('all');
   const [month, setMonth] = useState('');
+  const [editingTaskKey, setEditingTaskKey] = useState('');
   const [pageIndex, setPageIndex] = useState(0),
     [viewMode, setViewMode] = useState<'list' | 'cards'>('list');
   const [mobile, setMobile] = useState(false);
@@ -302,6 +303,7 @@ export function Workspace({
           body,
         });
         if (result.state === 'completed') {
+          if (endpoint.endsWith('/edit')) setEditingTaskKey('');
           sessionStorage.removeItem(storageKey);
           form.reset();
           setMessage(endpoint === '/api/tasks' ? 'ส่งงานเรียบร้อยแล้ว' : 'บันทึกเรียบร้อยแล้ว');
@@ -737,24 +739,39 @@ export function Workspace({
     if (page === 'detail') {
       if (!detail) return <Empty title="กำลังโหลดรายละเอียด…" message="" />;
       const task = detail.task;
+      const editKey = task.id + ':edit:' + task.version;
       return (
         <section className="panel form-panel">
-          <div className="panel-title">
-            <div>
+          <div className="panel-title task-detail-heading">
+            <div className="task-heading-text">
               <small>{task.code}</small>
               <h2>{task.title}</h2>
             </div>
-            <Badge status={task.status} />
+            <div className="task-heading-actions">
+              <Badge status={task.status} />
+              {manager && (
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={busy || !data.writesEnabled || editingTaskKey === editKey}
+                  aria-expanded={editingTaskKey === editKey}
+                  onClick={() => setEditingTaskKey(editKey)}
+                >
+                  แก้ไขข้อมูลงาน
+                </button>
+              )}
+            </div>
           </div>
           <div className="detail-body">
-            {manager && (
+            {manager && editingTaskKey === editKey && (
               <TaskEditPanel
-                key={task.id + ':edit:' + task.version}
+                key={editKey}
                 task={task}
                 users={data.users}
                 busy={busy}
                 enabled={data.writesEnabled}
                 submit={submit}
+                onCancel={() => setEditingTaskKey('')}
               />
             )}
             <p className="detail-description">{task.description}</p>
