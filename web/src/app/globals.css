@@ -1554,6 +1554,34 @@ progress::-webkit-progress-value {
 .case-workflow summary { cursor: pointer; font-weight: 700; padding: 10px 0; overflow-wrap: anywhere; }
 .case-workflow .workflow-item { min-width: 0; margin-top: 18px; }
 .case-workflow legend { white-space: normal; overflow-wrap: anywhere; max-width: 100%; }
+/* Clip rounded panel edges without creating a scroll container that traps the save bar. */
+.panel:has(.case-workflow) { overflow: clip; }
+.case-next { background: #f5f1fa; border-left: 4px solid #785392; border-radius: 8px; padding: 16px; margin: 18px 0; }
+.case-next p { margin: 6px 0; }
+.case-next time { display: block; font-weight: 700; margin-bottom: 8px; }
+.case-next small { display: block; color: #61516e; font-size: 14px; }
+.case-workflow .task-form { padding: 0; }
+.case-workflow .case-stage { padding-top: 10px; }
+.case-count { display: inline-block; font-size: 14px; color: #61516e; margin-left: 8px; }
+.case-workflow .case-checklist-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px 16px; padding: 12px 0; border-bottom: 1px solid #e7dfe3; }
+.case-workflow .case-check { display: flex; flex-direction: row; align-items: flex-start; gap: 12px; margin: 0; padding: 10px 0; font-size: 16px; cursor: pointer; }
+.case-workflow .case-check input { width: 22px; height: 22px; flex: 0 0 22px; margin: 2px 0 0; padding: 0; accent-color: #765185; }
+.case-workflow .case-check small { display: block; margin-top: 4px; font-size: 14px; }
+.case-status-done .case-check > span { color: #35664f; }
+.case-row-actions { display: flex; flex-wrap: wrap; gap: 4px 8px; }
+.case-action { border: 1px solid #d9cede; background: #fff; color: #654476; border-radius: 8px; padding: 9px 12px; min-height: 44px; font: inherit; font-size: 14px; cursor: pointer; }
+.case-skip { border-color: transparent; text-decoration: underline; text-underline-offset: 3px; }
+.case-action:disabled { opacity: .55; cursor: default; }
+.case-date-editor:not([hidden]) { display: flex; align-items: end; flex-wrap: wrap; gap: 8px; grid-column: 1 / -1; background: #faf8fc; border-radius: 8px; padding: 12px; }
+.case-workflow .case-date-editor label { margin: 0; min-width: 0; }
+.case-save-bar { position: sticky; bottom: 12px; z-index: 5; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; background: #fff; border: 1px solid #ddd1e3; box-shadow: 0 3px 16px #30203b18; border-radius: 10px; padding: 12px 16px; margin-top: 20px; }
+.case-save-bar > span { font-size: 14px; color: #61516e; }
+@media (max-width: 760px) {
+  .case-workflow .case-checklist-row { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .case-row-actions { padding-left: 34px; }
+  .case-save-bar { bottom: max(8px, env(safe-area-inset-bottom)); padding: 12px; }
+  .case-save-bar .btn { width: 100%; }
+}
 .category-badge, .category-key {
   color: var(--category-ink);
   background: var(--category-bg);

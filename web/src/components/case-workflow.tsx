@@ -29,6 +29,19 @@ export function CaseWorkflowPanel({
     [error, setError] = useState('');
   const definition = caseDefinitions[view.category],
     summary = state ? caseSummary(state) : view.summary;
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => {
+    const first = view.summary.sections.find((section) => section.done < section.total);
+    return first ? { [first.id]: true } : {};
+  });
+  const [dateEditors, setDateEditors] = useState<Record<string, boolean>>({});
+  const dirty = JSON.stringify(state) !== JSON.stringify(view.state);
+  const displayDate = (date: string) =>
+    new Intl.DateTimeFormat('th-TH', {
+      day: 'numeric',
+      month: 'short',
+      year: '2-digit',
+      timeZone: 'Asia/Bangkok',
+    }).format(new Date(date + 'T00:00:00+07:00'));
   const field = (id: string, value: string) =>
     setState((old) => (old ? { ...old, fields: { ...old.fields, [id]: value } } : old));
   return (
@@ -49,13 +62,18 @@ export function CaseWorkflowPanel({
       )}
       {state && (
         <>
-          <p>
-            บันทึกข้อมูลเฉพาะเคสนี้ เจ้าของเคสคือ Agent ที่ระบุในงาน{' '}
-            ข้อมูลประกอบเห็นเฉพาะทีมเลขา/ผู้ดูแล
-          </p>
+          <p>บันทึกข้อมูลเฉพาะเคสนี้ เจ้าของเคสคือ Agent ที่ระบุในงาน ข้อมูลประกอบเห็นเฉพาะทีมเลขา/ผู้ดูแล</p>
           {closed && (
             <p>งานหลักปิดแล้ว ยังบันทึกรายการติดตามต่อและทางเลือกได้ หากแก้รายการบังคับ ให้เปิดงานอีกครั้งก่อน</p>
           )}
+          <aside className="case-next" aria-label="งานติดตามถัดไป">
+            <strong>ติดตามถัดไป</strong>
+            <p>{summary.nextLabel || 'ยังไม่มีรายการที่ตั้งวันติดตาม'}</p>
+            {summary.nextDate && (
+              <time dateTime={summary.nextDate}>{displayDate(summary.nextDate)}</time>
+            )}
+            <small>แสดงรายการที่ยังไม่เสร็จและมีวันติดตามใกล้ที่สุด · กดบันทึกเพื่อยืนยันการเปลี่ยนแปลง</small>
+          </aside>
           <form
             className="task-form compact"
             onSubmit={(e) => {
@@ -118,9 +136,23 @@ export function CaseWorkflowPanel({
                 )}
               </details>
               {definition.sections.map((section, index) => (
-                <details className="workflow-step" key={section.id} open={index === 0 || undefined}>
+                <details
+                  className="workflow-step case-stage"
+                  key={section.id}
+                  open={!!openSections[section.id]}
+                  onToggle={(e) => {
+                    const open = e.currentTarget.open;
+                    setOpenSections((old) =>
+                      old[section.id] === open ? old : { ...old, [section.id]: open },
+                    );
+                  }}
+                >
                   <summary>
-                    {section.title} · {summary.sections[index].done}/{section.items.length}
+                    {section.title}{' '}
+                    <span className="case-count">
+                      {summary.sections[index].done}/{section.items.length}
+                      {summary.sections[index].done === section.items.length ? ' ครบแล้ว' : ''}
+                    </span>
                   </summary>
                   {section.items.map((item) => {
                     const value = state.items[item.id];
@@ -138,30 +170,66 @@ export function CaseWorkflowPanel({
                       );
                     return (
                       <fieldset
-                        className="workflow-item"
+                        className={'case-checklist-row case-status-' + value.status}
                         key={item.id}
+                        aria-label={item.label}
                         disabled={closed && item.required}
                       >
-                        <legend>
-                          {item.label} {!item.required && <small>· ติดตามต่อ/ทางเลือก</small>}
-                        </legend>
-                        <div className="form-row">
-                          <label>
-                            สถานะ
-                            <select
-                              aria-label={'สถานะ: ' + item.label}
-                              value={value.status}
-                              onChange={(e) =>
-                                patch({ status: e.target.value as typeof value.status })
+                        <label className="case-check">
+                          <input
+                            type="checkbox"
+                            aria-label={'เสร็จแล้ว: ' + item.label}
+                            checked={value.status === 'done'}
+                            onChange={(e) =>
+                              patch({ status: e.target.checked ? 'done' : 'pending' })
+                            }
+                          />
+                          <span>
+                            {item.label}
+                            {!item.required && <small>ติดตามต่อ / ทางเลือก</small>}
+                            {value.status === 'na' && <small>ไม่เกี่ยวข้องกับเคสนี้</small>}
+                          </span>
+                        </label>
+                        <div className="case-row-actions">
+                          <button
+                            type="button"
+                            className="case-action"
+                            aria-label={
+                              'ตั้งวันติดตาม: ' +
+                              item.label +
+                              (value.followupDate ? ' · ' + displayDate(value.followupDate) : '')
+                            }
+                            aria-expanded={!!dateEditors[item.id]}
+                            aria-controls={'case-date-' + taskId + '-' + item.id}
+                            onClick={() =>
+                              setDateEditors((old) => ({ ...old, [item.id]: !old[item.id] }))
+                            }
+                          >
+                            {value.followupDate ? displayDate(value.followupDate) : 'ตั้งวันติดตาม'}
+                          </button>
+                          {(!item.required || item.skippable) && (
+                            <button
+                              type="button"
+                              className="case-action case-skip"
+                              aria-label={
+                                'ไม่เกี่ยวข้อง: ' +
+                                item.label +
+                                (value.status === 'na' ? ' · นำกลับมาติดตาม' : '')
+                              }
+                              aria-pressed={value.status === 'na'}
+                              onClick={() =>
+                                patch({ status: value.status === 'na' ? 'pending' : 'na' })
                               }
                             >
-                              <option value="pending">ยังไม่เสร็จ</option>
-                              <option value="done">เสร็จแล้ว</option>
-                              {(!item.required || item.skippable) && (
-                                <option value="na">ไม่เกี่ยวข้องกับเคสนี้</option>
-                              )}
-                            </select>
-                          </label>
+                              {value.status === 'na' ? 'นำกลับมาติดตาม' : 'ไม่เกี่ยวข้อง'}
+                            </button>
+                          )}
+                        </div>
+                        <div
+                          className="case-date-editor"
+                          id={'case-date-' + taskId + '-' + item.id}
+                          hidden={!dateEditors[item.id]}
+                        >
                           <label>
                             วันติดตามครั้งถัดไป
                             <input
@@ -171,6 +239,20 @@ export function CaseWorkflowPanel({
                               onChange={(e) => patch({ followupDate: e.target.value })}
                             />
                           </label>
+                          <button
+                            type="button"
+                            className="case-action"
+                            onClick={() => patch({ followupDate: '' })}
+                          >
+                            ล้างวันที่
+                          </button>
+                          <button
+                            type="button"
+                            className="case-action"
+                            onClick={() => setDateEditors((old) => ({ ...old, [item.id]: false }))}
+                          >
+                            ซ่อนวันที่
+                          </button>
                         </div>
                       </fieldset>
                     );
@@ -178,10 +260,13 @@ export function CaseWorkflowPanel({
                 </details>
               ))}
               {error && <p role="alert">{error}</p>}
-              <button className="btn primary" type="submit">
-                {busy ? 'กำลังบันทึก…' : 'บันทึกขั้นตอนงาน'}
-              </button>
             </fieldset>
+            <div className="case-save-bar">
+              <span role="status">{dirty ? 'มีการเปลี่ยนแปลงที่ยังไม่บันทึก' : 'ข้อมูลตรงกับที่บันทึกไว้'}</span>
+              <button className="btn primary" type="submit" disabled={!editable || busy || !dirty}>
+                {busy ? 'กำลังบันทึก…' : 'บันทึกการเปลี่ยนแปลง'}
+              </button>
+            </div>
           </form>
           {!summary.complete && (
             <details>
