@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import {
   blankTracking,
   stageNames,
@@ -8,7 +8,6 @@ import {
   workflowSchema,
   type Onboarding,
   type WorkflowView,
-  type WorkflowTemplate,
 } from '@/domain/onboarding';
 
 type Submit = (
@@ -435,99 +434,6 @@ export function OnboardingPanel({
           )}
         </>
       )}
-    </section>
-  );
-}
-
-export function OnboardingSettings({
-  request,
-  submit,
-  disabled,
-}: {
-  request: (url: string) => Promise<{ version: number; template: WorkflowTemplate }>;
-  submit: Submit;
-  disabled: boolean;
-}) {
-  const [value, setValue] = useState<{ version: number; template: WorkflowTemplate } | null>(null),
-    [error, setError] = useState('');
-  useEffect(() => {
-    let live = true;
-    void request('/api/onboarding-template')
-      .then((v) => {
-        if (live) setValue(v);
-      })
-      .catch((e) => {
-        if (live) setError(e.message);
-      });
-    return () => {
-      live = false;
-    };
-  }, [request]);
-  if (error) return <p role="alert">{error}</p>;
-  if (!value) return <p role="status">กำลังโหลดรายการมาตรฐาน…</p>;
-  const update = (key: 'modules' | 'documents', items: WorkflowTemplate[typeof key]) =>
-    setValue({ ...value, template: { ...value.template, [key]: items } });
-  return (
-    <section className="workflow settings-panel" aria-label="ตั้งค่า Workflow ตัวแทนใหม่">
-      <h3>ตั้งค่า Workflow ตัวแทนใหม่</h3>
-      <p>
-        เฉพาะ Admin · เปลี่ยนชื่อ Module ได้โดยประวัติยังอยู่ รายการ Module
-        หรือเอกสารที่เพิ่มใหม่จะใช้กับเคสที่ยังไม่เคยบันทึก Workflow เท่านั้น เคสเดิมเพิ่มเอกสารเฉพาะเคสได้
-      </p>
-      <form
-        className="task-form compact"
-        onSubmit={(e) => void submit(e, '/api/onboarding-template', value)}
-      >
-        <fieldset disabled={disabled}>
-          {(['modules', 'documents'] as const).map((key) => (
-            <section className="workflow-step" key={key}>
-              <h4>{key === 'modules' ? 'ชื่อ Module มาตรฐาน' : 'ชุดเอกสารเริ่มต้น'}</h4>
-              {value.template[key].map((item, i) => (
-                <div className="workflow-template-row" key={item.id}>
-                  <Input
-                    label={(key === 'modules' ? 'Module ' : 'เอกสาร ') + (i + 1)}
-                    required
-                    value={item.name}
-                    onChange={(name) =>
-                      update(
-                        key,
-                        value.template[key].map((v, j) => (j === i ? { ...v, name } : v)),
-                      )
-                    }
-                  />
-                  {key === 'documents' && (
-                    <button
-                      className="btn small"
-                      type="button"
-                      onClick={() =>
-                        update(
-                          key,
-                          value.template[key].filter((_, j) => j !== i),
-                        )
-                      }
-                    >
-                      นำออกจากชุดเริ่มต้น
-                    </button>
-                  )}
-                </div>
-              ))}
-              <button
-                className="btn small"
-                type="button"
-                disabled={value.template[key].length >= (key === 'modules' ? 20 : 30)}
-                onClick={() =>
-                  update(key, [...value.template[key], { id: crypto.randomUUID(), name: '' }])
-                }
-              >
-                {key === 'modules' ? '+ เพิ่ม Module มาตรฐาน' : '+ เพิ่มเอกสารมาตรฐาน'}
-              </button>
-            </section>
-          ))}
-          <button className="btn primary" type="submit">
-            บันทึกรายการมาตรฐาน
-          </button>
-        </fieldset>
-      </form>
     </section>
   );
 }

@@ -82,36 +82,26 @@ test('Secretary records combined training and exam, sees pending modules, keeps 
   });
 });
 
-test('Admin edits module names and default documents from team settings', async ({ page }) => {
+test('Admin team page no longer exposes or loads retired workflow settings', async ({ page }) => {
   const h = repository(),
     admin = { ...h.secretary, role: 'Admin' as const };
-  let template = structuredClone(defaultTemplate),
-    version = 0;
+  let templateRequests = 0;
   await page.route('**/api/bootstrap*', async (r) =>
     r.fulfill({
       json: {
         ...(await bootstrap(h.repo, admin)),
-        syncedAt: String(version),
         csrfToken: 'b'.repeat(64),
         writesEnabled: true,
       },
     }),
   );
   await page.route('**/api/onboarding-template', async (r) => {
-    if (r.request().method() === 'GET') return r.fulfill({ json: { version, template } });
-    const input = r.request().postDataJSON();
-    template = input.template;
-    version++;
-    return r.fulfill({ json: { state: 'completed', id: 'template' } });
+    templateRequests++;
+    return r.fulfill({ status: 410, json: {} });
   });
   await page.goto('/team');
-  await page.getByText('ตั้งค่า Workflow รุ่นเดิม (เก็บไว้สำหรับประวัติ)', { exact: true }).click();
-  await page.getByLabel('Module 1', { exact: true }).fill('ชื่ออบรมจริง');
-  await page.getByRole('button', { name: '+ เพิ่มเอกสารมาตรฐาน' }).click();
-  await page.getByLabel('เอกสาร 1', { exact: true }).fill('เอกสารตัวอย่าง');
-  await page.getByRole('button', { name: 'บันทึกรายการมาตรฐาน', exact: true }).click();
-  await expect(page.getByText('บันทึกเรียบร้อยแล้ว', { exact: true })).toBeVisible();
-  await expect(page.getByLabel('Module 1', { exact: true })).toHaveValue('ชื่ออบรมจริง');
-  expect(template.modules[0].id).toBe('module-1');
-  expect(template.documents[0].name).toBe('เอกสารตัวอย่าง');
+  await expect(page.getByRole('heading', { name: 'สมาชิกในพื้นที่ทำงาน' })).toBeVisible();
+  await expect(page.getByText('ตั้งค่า Workflow รุ่นเดิม (เก็บไว้สำหรับประวัติ)', { exact: true })).toHaveCount(0);
+  await expect(page.getByRole('region', { name: 'ตั้งค่า Workflow ตัวแทนใหม่' })).toHaveCount(0);
+  expect(templateRequests).toBe(0);
 });

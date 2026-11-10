@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { Brand } from './brand';
 import { CategoryBadge, PriorityBadge, categoryClass } from './task-appearance';
-import { OnboardingPanel, OnboardingSettings } from './onboarding';
+import { OnboardingPanel } from './onboarding';
 import { CaseWorkflowPanel } from './case-workflow';
 import { LineSettings } from './line-settings';
 import {
@@ -1004,18 +1004,6 @@ export function Workspace({
               </article>
             ))}
           </div>
-          {data.user.role === 'Admin' && (
-            <details>
-              <summary>ตั้งค่า Workflow รุ่นเดิม (เก็บไว้สำหรับประวัติ)</summary>
-              <p>งานใหม่ใช้ขั้นตอนตาม 6 ประเภทงาน การตั้งค่าด้านล่างใช้กับประวัติ Workflow เดิมเท่านั้น</p>
-              <OnboardingSettings
-                key={data.syncedAt}
-                request={request}
-                submit={submit}
-                disabled={busy || !data.writesEnabled}
-              />
-            </details>
-          )}
           <LineSettings data={data} request={request} />
         </section>
       ) : (
