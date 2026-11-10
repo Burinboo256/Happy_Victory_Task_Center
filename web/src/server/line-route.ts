@@ -12,13 +12,13 @@ import {
   confirmLink,
   disconnectLine,
   setRecipient,
+  setAgentPreference,
 } from './line/accounts';
 import { safelyDrainLineQueue } from './line/queue';
 
 export function lineRead() {
   return route(async () => {
     const c = await protectedContext();
-    if (!['Admin', 'Secretary'].includes(c.user.role)) throw forbidden();
     const setting = (
       await c.db.query('SELECT enabled FROM hvr_line_settings WHERE environment=$1', [
         c.config.APP_ENV,
@@ -26,12 +26,12 @@ export function lineRead() {
     ).rows[0];
     const accounts = (
       await c.db.query(
-        `SELECT user_id,display_name,binding,enabled FROM hvr_line_accounts WHERE environment=$1 AND ($2 OR user_id=$3) ORDER BY linked_at`,
-        [c.config.APP_ENV, c.user.role === 'Admin', c.user.id],
+        `SELECT user_id,display_name,binding,enabled,recipient_role FROM hvr_line_accounts WHERE environment=$1 AND ($2 OR (user_id=$3 AND recipient_role=$4)) ORDER BY linked_at`,
+        [c.config.APP_ENV, c.user.role === 'Admin', c.user.id, c.user.role],
       )
     ).rows;
     let candidate: { id: string; name: string } | null = null;
-    if (c.user.role === 'Secretary' && lineConfigured(c.config)) {
+    if (c.user.role !== 'Admin' && lineConfigured(c.config)) {
       const id = await linkCandidate(c.db, c.config, c.user);
       if (id) candidate = { id, name: await lineProfile(c.config, id) };
     }
@@ -39,7 +39,7 @@ export function lineRead() {
       c.user.role === 'Admin'
         ? (
             await c.db.query(
-              `SELECT id,task_id,user_id,state,attempts,error_code,created_at FROM hvr_line_deliveries WHERE environment=$1 ORDER BY created_at DESC LIMIT 50`,
+              `SELECT id,task_id,user_id,state,attempts,error_code,created_at,event_type FROM hvr_line_deliveries WHERE environment=$1 ORDER BY created_at DESC LIMIT 50`,
               [c.config.APP_ENV],
             )
           ).rows
@@ -59,6 +59,7 @@ const actionSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('start') }),
   z.object({ action: z.literal('confirm'), candidateId: z.string() }),
   z.object({ action: z.literal('disconnect') }),
+  z.object({ action: z.literal('preference'), binding: z.uuid(), enabled: z.boolean() }),
   z.object({
     action: z.literal('recipient'),
     userId: z.string().regex(/^rec[a-zA-Z0-9]{14}$/),
@@ -77,6 +78,8 @@ export function lineWrite(request: Request) {
     if (input.action === 'start') return json(await startLink(c.db, c.config, c.user));
     if (input.action === 'confirm') await confirmLink(c.db, c.config, c.user, input.candidateId);
     else if (input.action === 'disconnect') await disconnectLine(c.db, c.config, c.user);
+    else if (input.action === 'preference')
+      await setAgentPreference(c.db, c.config, c.user, input.binding, input.enabled);
     else {
       if (c.user.role !== 'Admin') throw forbidden();
       if (input.action === 'recipient')
@@ -101,7 +104,7 @@ export function lineWrite(request: Request) {
             )
           ).rows.length
         )
-          throw new AppError(409, 'LINE_RECIPIENT', 'กรุณาเลือกเลขาผู้รับก่อนเปิดส่ง');
+          throw new AppError(409, 'LINE_RECIPIENT', 'ต้องมีผู้รับที่เปิดแจ้งเตือนก่อนเปิดระบบส่ง');
         await c.db.query(
           `INSERT INTO hvr_line_settings(environment,enabled) VALUES($1,$2)
           ON CONFLICT(environment) DO UPDATE SET enabled=EXCLUDED.enabled,updated_at=clock_timestamp()`,

@@ -42,7 +42,11 @@ export function mutationRoute(
       },
     );
     if (outcome.result?.id) await ownTask(c.repo, c.user, outcome.result.id);
-    if (action === 'create' && outcome.state === 'completed' && c.config.ENABLE_LINE_NOTIFICATIONS)
+    if (
+      ['create', 'status'].includes(action) &&
+      outcome.state === 'completed' &&
+      c.config.ENABLE_LINE_NOTIFICATIONS
+    )
       after(() => safelyDrainLineQueue(c.db, c.config, c.repo));
     return json(
       { operationId: outcome.operationId, state: outcome.state, ...(outcome.result || {}) },

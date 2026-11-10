@@ -2,11 +2,16 @@ import { randomUUID } from 'node:crypto';
 import type { Config } from '../config';
 import type { Sql } from '../db';
 import type { AirtableRepository } from '../airtable/client';
-import { userDto } from '../airtable/dto';
+import { userDto, taskDto } from '../airtable/dto';
 import { verifyInstance } from '../runtime';
 import { AppError } from '../errors';
 import { lineConfigured, pushMessage } from './client';
-import { newTaskMessage, summarySchema } from './message';
+import {
+  newTaskMessage,
+  summarySchema,
+  completedTaskMessage,
+  completionSummarySchema,
+} from './message';
 
 export async function drainLineQueue(
   db: Sql,
@@ -48,25 +53,46 @@ export async function drainLineQueue(
     let state = 'pending',
       code: string | null = null;
     try {
+      const completed = row.event_type === 'task_completed';
+      const requiredRole = completed ? 'Agent' : 'Secretary';
       const account = await db.query(
         `SELECT a.user_id FROM hvr_line_accounts a JOIN hvr_line_settings s USING(environment)
-        WHERE a.environment=$1 AND a.user_id=$2 AND a.binding=$3 AND a.line_id=$4 AND a.enabled AND s.enabled`,
-        [config.APP_ENV, row.user_id, row.binding, row.line_id],
+        WHERE a.environment=$1 AND a.user_id=$2 AND a.binding=$3 AND a.line_id=$4 AND a.enabled AND s.enabled AND a.recipient_role=$5`,
+        [config.APP_ENV, row.user_id, row.binding, row.line_id, requiredRole],
       );
       if (!account.rows.length) {
         state = 'cancelled';
         code = 'RECIPIENT_DISABLED';
       } else {
         const recipient = userDto(await repo.get('users', row.user_id));
-        if (!recipient.active || recipient.role !== 'Secretary') {
+        if (!recipient.active || recipient.role !== requiredRole) {
           state = 'cancelled';
           code = 'RECIPIENT_INACTIVE';
         } else {
+          const completion = completed ? completionSummarySchema.parse(row.summary) : null;
+          if (completion) {
+            const task = taskDto(await repo.get('tasks', row.task_id));
+            // Recheck ownership and the specific completion before EVERY attempt,
+            // including retries of a previously frozen message.
+            if (
+              task.agentId !== recipient.id ||
+              task.status !== 'Completed' ||
+              Date.parse(task.completedAt) !== Date.parse(completion.completedAt)
+            )
+              throw new AppError(409, 'LINE_TASK_CHANGED', 'งานหรือเจ้าของงานเปลี่ยนแล้ว');
+          }
           let message = row.message;
           if (!message) {
-            const summary = summarySchema.parse(row.summary);
+            const summary = completion || summarySchema.parse(row.summary);
             const sender = userDto(await repo.get('users', summary.senderId));
-            message = newTaskMessage(config.APP_ORIGIN, row.task_id, summary, sender.name);
+            message = completion
+              ? completedTaskMessage(config.APP_ORIGIN, row.task_id, completion, sender.name)
+              : newTaskMessage(
+                  config.APP_ORIGIN,
+                  row.task_id,
+                  summarySchema.parse(row.summary),
+                  sender.name,
+                );
           }
           // Persist the EXACT payload and first attempt before any external call.
           // A process dying here can retry with the same recipient, payload and UUID.
@@ -88,7 +114,10 @@ export async function drainLineQueue(
         }
       }
     } catch (error) {
-      if (error instanceof AppError && error.status === 404) {
+      if (error instanceof AppError && error.code === 'LINE_TASK_CHANGED') {
+        state = 'cancelled';
+        code = 'TASK_CHANGED';
+      } else if (error instanceof AppError && error.status === 404) {
         state = 'cancelled';
         code = 'USER_REMOVED';
       } else code = 'DELIVERY_UNAVAILABLE';

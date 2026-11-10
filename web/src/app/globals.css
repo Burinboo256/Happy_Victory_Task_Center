@@ -1585,6 +1585,8 @@ progress::-webkit-progress-value {
 .calendar-event .priority { margin: 4px 0; }
 .calendar-event .priority-normal, .calendar-event .priority-low { color: #334155; }
 .line-settings { margin-top: 32px; padding-top: 24px; border-top: 1px solid #dbe2ea; }
+.line-settings-panel { padding: clamp(16px, 3vw, 28px); }
+.line-settings-panel > .line-settings { margin-top: 0; padding-top: 0; border-top: 0; }
 .line-settings fieldset { border: 0; padding: 0; margin: 16px 0; min-width: 0; }
 .line-settings legend { font-weight: 700; margin-bottom: 12px; }
 .line-settings p { margin: 12px 0; }

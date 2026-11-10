@@ -10,7 +10,13 @@ type LineState = {
   enabled: boolean;
   oaId: string;
   candidate: { id: string; name: string } | null;
-  accounts: { user_id: string; display_name: string; binding: string; enabled: boolean }[];
+  accounts: {
+    user_id: string;
+    display_name: string;
+    binding: string;
+    enabled: boolean;
+    recipient_role: 'Secretary' | 'Agent';
+  }[];
   deliveries: {
     id: string;
     task_id: string;
@@ -19,6 +25,7 @@ type LineState = {
     attempts: number;
     error_code: string | null;
     created_at: string;
+    event_type: 'new_task' | 'task_completed';
   }[];
 };
 const stateNames: Record<string, string> = {
@@ -27,7 +34,7 @@ const stateNames: Record<string, string> = {
   accepted: 'LINE รับคำขอแล้ว',
   failed: 'ส่งไม่สำเร็จ — ตรวจการตั้งค่า/โควตา',
   review: 'ต้องตรวจสอบ — หยุดส่งซ้ำเพื่อกันข้อความซ้ำ',
-  cancelled: 'ยกเลิก — ผู้รับไม่ได้เปิดใช้งาน',
+  cancelled: 'ยกเลิก — ผู้รับหรือข้อมูลงานเปลี่ยนแล้ว',
 };
 export function LineSettings({
   data,
@@ -42,6 +49,8 @@ export function LineSettings({
     [code, setCode] = useState(''),
     [busy, setBusy] = useState(false);
   const admin = data.user.role === 'Admin';
+  const agent = data.user.role === 'Agent';
+  const heading = agent ? 'แจ้งงานเสร็จผ่าน LINE' : admin ? 'แจ้งเตือนงานผ่าน LINE' : 'แจ้งงานใหม่ผ่าน LINE';
   const load = useCallback(async () => {
     try {
       setState((await request('/api/line')) as LineState);
@@ -76,9 +85,15 @@ export function LineSettings({
   }
   const name = (id: string) => data.users.find((u) => u.id === id)?.name || 'สมาชิก';
   return (
-    <section className="line-settings" aria-label="แจ้งงานใหม่ผ่าน LINE">
-      <h2>แจ้งงานใหม่ผ่าน LINE</h2>
-      <p>รับข้อความจาก Official Account เมื่องานใหม่บันทึกสำเร็จ พร้อมปุ่มเปิดงานในเว็บ</p>
+    <section className="line-settings" aria-label={heading}>
+      <h2>{heading}</h2>
+      <p>
+        {agent
+          ? 'รับข้อความเมื่อเลขาเปลี่ยนงานของคุณเป็นเสร็จสิ้น พร้อมปุ่มเปิดดูงาน เปิดหรือปิดรับได้ด้วยตัวเอง'
+          : admin
+            ? 'แจ้งงานใหม่ให้เลขาที่เลือก และแจ้งงานเสร็จให้ Agent เจ้าของงานที่เปิดรับไว้'
+            : 'รับข้อความจาก Official Account เมื่องานใหม่บันทึกสำเร็จ พร้อมปุ่มเปิดงานในเว็บ'}
+      </p>
       {error && (
         <p role="alert" className="error-message">
           {error}
@@ -101,12 +116,12 @@ export function LineSettings({
         <>
           <p>
             <strong>
-              {state.enabled && state.sendingAllowed ? 'เปิดแจ้งเตือนงานใหม่' : 'ยังไม่เปิดส่งแจ้งเตือน'}
+              {state.enabled && state.sendingAllowed ? 'ระบบส่ง LINE เปิดอยู่' : 'ระบบส่ง LINE ยังไม่เปิด'}
             </strong>
             {state.oaId && ' · ' + state.oaId}
           </p>
           {!state.configured && (
-            <p className="muted">กำลังเตรียมการเชื่อมต่อ OA เมื่อพร้อมแล้ว เลขาจะเชื่อมบัญชีได้ที่หน้านี้</p>
+            <p className="muted">กำลังเตรียมการเชื่อมต่อ OA เมื่อพร้อมแล้ว คุณจะเชื่อมบัญชีได้ที่หน้านี้</p>
           )}
           {!admin && (
             <fieldset disabled={busy || !data.writesEnabled}>
@@ -124,9 +139,38 @@ export function LineSettings({
               {state.accounts.map((account) => (
                 <p key={account.user_id}>
                   เชื่อมกับ LINE: <strong>{account.display_name}</strong> ·{' '}
-                  {account.enabled ? 'ผู้ดูแลเปิดรับแจ้งเตือนแล้ว' : 'รอผู้ดูแลเปิดรับแจ้งเตือน'}
+                  {agent
+                    ? account.enabled
+                      ? 'เปิดรับแจ้งงานเสร็จแล้ว'
+                      : 'ยังไม่เปิดรับแจ้งงานเสร็จ'
+                    : account.enabled
+                      ? 'ผู้ดูแลเปิดรับแจ้งเตือนแล้ว'
+                      : 'รอผู้ดูแลเปิดรับแจ้งเตือน'}
                 </p>
               ))}
+              {agent &&
+                state.accounts.map((account) => (
+                  <p key={'preference-' + account.user_id}>
+                    <button
+                      className="btn small"
+                      type="button"
+                      onClick={() =>
+                        void act({
+                          action: 'preference',
+                          binding: account.binding,
+                          enabled: !account.enabled,
+                        })
+                      }
+                    >
+                      {account.enabled ? 'ปิดรับแจ้งงานเสร็จ' : 'เปิดรับแจ้งงานเสร็จ'}
+                    </button>
+                  </p>
+                ))}
+              {agent && (
+                <p className="muted">
+                  แจ้งเฉพาะงานของคุณที่เปลี่ยนเป็นเสร็จสิ้นหลังเปิดรับ ไม่ส่งงานที่เสร็จไปแล้วก่อนหน้านี้
+                </p>
+              )}
               <button
                 className="btn small"
                 type="button"
@@ -173,26 +217,28 @@ export function LineSettings({
             <>
               <fieldset disabled={busy || !data.writesEnabled}>
                 <legend>เลือกเลขาที่รับข้อความ</legend>
-                {!state.accounts.length && (
+                {!state.accounts.some((a) => (a.recipient_role || 'Secretary') === 'Secretary') && (
                   <p>ยังไม่มีเลขาเชื่อมบัญชี ให้เลขาเข้าสู่ระบบ → ทีมของเรา → เชื่อม LINE ก่อน</p>
                 )}
-                {state.accounts.map((account) => (
-                  <label className="check-label" key={account.user_id}>
-                    <input
-                      type="checkbox"
-                      checked={account.enabled}
-                      onChange={(e) =>
-                        void act({
-                          action: 'recipient',
-                          userId: account.user_id,
-                          binding: account.binding,
-                          enabled: e.target.checked,
-                        })
-                      }
-                    />
-                    {name(account.user_id)} · LINE {account.display_name}
-                  </label>
-                ))}
+                {state.accounts
+                  .filter((a) => (a.recipient_role || 'Secretary') === 'Secretary')
+                  .map((account) => (
+                    <label className="check-label" key={account.user_id}>
+                      <input
+                        type="checkbox"
+                        checked={account.enabled}
+                        onChange={(e) =>
+                          void act({
+                            action: 'recipient',
+                            userId: account.user_id,
+                            binding: account.binding,
+                            enabled: e.target.checked,
+                          })
+                        }
+                      />
+                      {name(account.user_id)} · LINE {account.display_name}
+                    </label>
+                  ))}
                 <div className="form-actions">
                   <button
                     className="btn small"
@@ -205,7 +251,7 @@ export function LineSettings({
                     }
                     onClick={() => void act({ action: 'switch', enabled: !state.enabled })}
                   >
-                    {state.enabled ? 'ปิดแจ้งเตือนงานใหม่' : 'เปิดแจ้งเตือนงานใหม่'}
+                    {state.enabled ? 'ปิดระบบแจ้งเตือน LINE' : 'เปิดระบบแจ้งเตือน LINE'}
                   </button>
                   <button
                     className="btn secondary small"
@@ -218,7 +264,8 @@ export function LineSettings({
                 </div>
               </fieldset>
               <p className="muted">
-                เริ่มแจ้งเฉพาะงานใหม่หลังเปิดระบบ ไม่ส่งงานเก่าย้อนหลัง
+                Agent เชื่อมบัญชีและเปิดรับแจ้งงานเสร็จได้เองที่เมนู “แจ้งเตือน LINE”
+                สวิตช์ระบบนี้ควบคุมทั้งแจ้งงานใหม่และงานเสร็จ ไม่ส่งเหตุการณ์เก่าย้อนหลัง
                 คิวที่ยังไม่สำเร็จจะลองใหม่เมื่อมีการใช้งานเว็บหรือถึงรอบตรวจประจำวัน
               </p>
               <h3>สถานะล่าสุด 50 รายการ</h3>
@@ -229,7 +276,9 @@ export function LineSettings({
                 {state.deliveries.map((delivery) => (
                   <li key={delivery.id}>
                     <Link href={'/tasks/' + delivery.task_id}>เปิดงาน</Link> ·{' '}
-                    {name(delivery.user_id)} · {stateNames[delivery.state] || delivery.state}
+                    {name(delivery.user_id)} ·{' '}
+                    {delivery.event_type === 'task_completed' ? 'งานเสร็จสิ้น' : 'งานเข้าใหม่'} ·{' '}
+                    {stateNames[delivery.state] || delivery.state}
                     <small>
                       {new Intl.DateTimeFormat('th-TH', {
                         dateStyle: 'short',

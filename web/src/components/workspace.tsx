@@ -29,6 +29,7 @@ export type Page =
   | 'reports'
   | 'team'
   | 'history'
+  | 'notifications'
   | 'new'
   | 'detail';
 const names: Record<Page, string> = {
@@ -40,6 +41,7 @@ const names: Record<Page, string> = {
   reports: 'รายงาน',
   team: 'ทีมของเรา',
   history: 'ประวัติงาน',
+  notifications: 'แจ้งเตือน LINE',
   new: 'ส่งงานใหม่',
   detail: 'รายละเอียดงาน',
 };
@@ -52,6 +54,7 @@ const nav: { page: Page; href: string; symbol: string; manager?: boolean; agent?
   { page: 'reports', href: '/reports', symbol: '▥', manager: true },
   { page: 'team', href: '/team', symbol: '♧', manager: true },
   { page: 'history', href: '/history', symbol: '✓', agent: true },
+  { page: 'notifications', href: '/notifications', symbol: '♧' },
 ];
 const fmtDate = (value: string, full = false) =>
   value
@@ -232,7 +235,9 @@ export function Workspace({
       const sequence = ++loadSequence.current;
       try {
         const value: Bootstrap = await request(
-          page === 'new' || page === 'detail' ? '/api/bootstrap?scope=context' : '/api/bootstrap',
+          ['new', 'detail', 'notifications'].includes(page)
+            ? '/api/bootstrap?scope=context'
+            : '/api/bootstrap',
           { signal },
         );
         const nextDetail = taskId ? await request('/api/tasks/' + taskId, { signal }) : null;
@@ -628,6 +633,12 @@ export function Workspace({
     </div>
   );
   const content = () => {
+    if (page === 'notifications')
+      return (
+        <div className="panel line-settings-panel">
+          <LineSettings data={data} request={request} />
+        </div>
+      );
     if (page === 'new')
       return (
         <section className="panel form-panel">

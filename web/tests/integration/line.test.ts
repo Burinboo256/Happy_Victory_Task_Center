@@ -47,7 +47,7 @@ const event = (text: string, userId = lineUser, type = 'user') => ({
   ],
 });
 
-test('LINE linking requires secretary, signed direct messages, explicit confirmation and Admin approval; codes cannot be replayed', async () => {
+test('Secretary LINE linking requires signed direct messages, explicit confirmation and Admin approval; codes cannot be replayed', async () => {
   const { db, engine } = await database(),
     h = repository();
   try {
@@ -58,7 +58,7 @@ test('LINE linking requires secretary, signed direct messages, explicit confirma
     verifySignature(raw, signature, enabledConfig.LINE_CHANNEL_SECRET);
     assert.throws(() => verifySignature(raw + ' ', signature, enabledConfig.LINE_CHANNEL_SECRET));
     assert.throws(() => verifySignature(raw, null, enabledConfig.LINE_CHANNEL_SECRET));
-    await assert.rejects(startLink(db, enabledConfig, h.agent));
+    await assert.rejects(startLink(db, enabledConfig, { ...h.agent, role: 'Admin' }));
     const { code } = await startLink(db, enabledConfig, h.secretary);
     await receiveWebhook(db, enabledConfig, event(code, lineUser, 'group'));
     assert.equal(await linkCandidate(db, enabledConfig, h.secretary), null);

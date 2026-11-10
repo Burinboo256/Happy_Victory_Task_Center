@@ -12,8 +12,11 @@ import { lineConfigured, lineId, lineProfile } from './client';
 export function requireSecretary(user: User) {
   if (!user.active || user.role !== 'Secretary') throw forbidden();
 }
+function requireLineMember(user: User) {
+  if (!user.active || !['Secretary', 'Agent'].includes(user.role)) throw forbidden();
+}
 export async function startLink(db: Sql, config: Config, user: User) {
-  requireSecretary(user);
+  requireLineMember(user);
   if (!lineConfigured(config)) throw new AppError(503, 'LINE_SETUP', 'ผู้ดูแลยังเชื่อม OA ไม่ครบ');
   const code = randomBytes(12).toString('hex');
   await db.query(
@@ -24,7 +27,7 @@ export async function startLink(db: Sql, config: Config, user: User) {
   return { code: 'HVR ' + code, expiresIn: 600 };
 }
 export async function linkCandidate(db: Sql, config: Config, user: User) {
-  requireSecretary(user);
+  requireLineMember(user);
   return (
     await db.query(
       'SELECT candidate_id FROM hvr_line_links WHERE environment=$1 AND user_id=$2 AND expires_at>clock_timestamp()',
@@ -39,7 +42,7 @@ export async function confirmLink(
   candidate: string,
   transport: typeof fetch = fetch,
 ) {
-  requireSecretary(user);
+  requireLineMember(user);
   lineId.parse(candidate);
   if ((await linkCandidate(db, config, user)) !== candidate)
     throw new AppError(409, 'LINE_LINK_EXPIRED', 'รหัสหมดอายุหรือบัญชีเปลี่ยน กรุณาเชื่อมใหม่');
@@ -48,11 +51,11 @@ export async function confirmLink(
     const result = await db.query(
       `WITH used AS (
       DELETE FROM hvr_line_links WHERE environment=$1 AND user_id=$2 AND candidate_id=$3 AND expires_at>clock_timestamp() RETURNING user_id
-    ) INSERT INTO hvr_line_accounts(environment,user_id,line_id,display_name)
-      SELECT $1,user_id,$3,$4 FROM used
+    ) INSERT INTO hvr_line_accounts(environment,user_id,line_id,display_name,recipient_role)
+      SELECT $1,user_id,$3,$4,$5 FROM used
       ON CONFLICT(environment,user_id) DO UPDATE SET line_id=EXCLUDED.line_id,display_name=EXCLUDED.display_name,
-        binding=gen_random_uuid(),enabled=false,linked_at=clock_timestamp() RETURNING user_id`,
-      [config.APP_ENV, user.id, candidate, name],
+        recipient_role=EXCLUDED.recipient_role,binding=gen_random_uuid(),enabled=false,linked_at=clock_timestamp() RETURNING user_id`,
+      [config.APP_ENV, user.id, candidate, name, user.role],
     );
     if (!result.rows.length) throw new AppError(409, 'LINE_LINK_EXPIRED', 'รหัสถูกใช้แล้ว กรุณาโหลดใหม่');
   } catch (error) {
@@ -62,7 +65,7 @@ export async function confirmLink(
   }
 }
 export async function disconnectLine(db: Sql, config: Config, user: User) {
-  requireSecretary(user);
+  requireLineMember(user);
   await db.query(
     `WITH removed AS (DELETE FROM hvr_line_accounts WHERE environment=$1 AND user_id=$2)
     DELETE FROM hvr_line_links WHERE environment=$1 AND user_id=$2`,
@@ -125,9 +128,27 @@ export async function setRecipient(
   z.uuid().parse(binding);
   if (enabled) requireSecretary(userDto(await repo.get('users', userId)));
   const result = await db.query(
-    `UPDATE hvr_line_accounts SET enabled=$4 WHERE environment=$1 AND user_id=$2 AND binding=$3 RETURNING user_id`,
+    `UPDATE hvr_line_accounts SET enabled=$4 WHERE environment=$1 AND user_id=$2 AND binding=$3 AND recipient_role='Secretary' RETURNING user_id`,
     [config.APP_ENV, userId, binding, enabled],
   );
   if (!result.rows.length)
     throw new AppError(409, 'LINE_ACCOUNT_CHANGED', 'บัญชี LINE เปลี่ยน กรุณาโหลดใหม่');
+}
+
+export async function setAgentPreference(
+  db: Sql,
+  config: Config,
+  user: User,
+  binding: string,
+  enabled: boolean,
+) {
+  if (!user.active || user.role !== 'Agent') throw forbidden();
+  z.uuid().parse(binding);
+  const result = await db.query(
+    `UPDATE hvr_line_accounts SET enabled=$4
+    WHERE environment=$1 AND user_id=$2 AND binding=$3 AND recipient_role='Agent' RETURNING user_id`,
+    [config.APP_ENV, user.id, binding, enabled],
+  );
+  if (!result.rows.length)
+    throw new AppError(409, 'LINE_ACCOUNT_CHANGED', 'กรุณาเชื่อม LINE ของคุณก่อน แล้วโหลดใหม่');
 }

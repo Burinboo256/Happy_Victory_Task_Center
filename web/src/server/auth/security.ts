@@ -35,6 +35,7 @@ const paths = new Set([
   '/reports',
   '/team',
   '/history',
+  '/notifications',
 ]);
 export const safeReturnTo = (value: string | null | undefined) =>
   value && (paths.has(value) || /^\/tasks\/rec[a-zA-Z0-9]{14}$/.test(value)) ? value : '/';
