@@ -62,25 +62,25 @@ for (const category of Object.keys(caseDefinitions)) {
       const result = panel.getByRole('combobox', { name: 'ผลการอบรม', exact: true });
       await expect(result).toHaveValue('Historical training result');
       await result.selectOption('ผ่าน');
-      if (info.project.name === 'desktop') {
-        const rows = await panel
-          .locator('.new-agent-case-fields > label')
-          .evaluateAll(
-            (labels) =>
-              [...new Set(labels.map((label) => Math.round(label.getBoundingClientRect().top)))]
-                .length,
-          );
-        expect(rows).toBe(2);
-      }
-      await mkdir(resolve('../artifacts/vercel/case-workflows'), { recursive: true });
-      await panel
-        .locator('.case-fields-container')
-        .screenshot({
-          path: resolve(
-            '../artifacts/vercel/case-workflows/case-fields-' + info.project.name + '.png',
-          ),
-        });
     }
+    const columns = await panel
+      .locator('.case-fields > label')
+      .evaluateAll(
+        (labels) =>
+          [...new Set(labels.map((label) => Math.round(label.getBoundingClientRect().left)))]
+            .length,
+      );
+    expect(columns).toBe(info.project.name === 'desktop' ? 2 : 1);
+    await mkdir(resolve('../artifacts/vercel/case-workflows'), { recursive: true });
+    await panel.locator('.case-fields-container').screenshot({
+      path: resolve(
+        '../artifacts/vercel/case-workflows/case-fields-' +
+          category +
+          '-' +
+          info.project.name +
+          '.png',
+      ),
+    });
     const label = first.label;
     await panel.getByRole('checkbox', { name: 'เสร็จแล้ว: ' + label, exact: true }).check();
     await expect(panel.locator('textarea')).toHaveCount(0);

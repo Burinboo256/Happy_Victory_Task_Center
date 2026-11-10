@@ -96,13 +96,7 @@ export function CaseWorkflowPanel({
               <details className="workflow-step" open>
                 <summary>ข้อมูลประกอบเคส</summary>
                 <fieldset disabled={closed} className="case-fields-container">
-                  <div
-                    className={
-                      view.category === 'ตัวแทนใหม่'
-                        ? 'case-fields new-agent-case-fields'
-                        : 'form-grid'
-                    }
-                  >
+                  <div className="case-fields">
                     {fields.map((f) => (
                       <label key={f.id} htmlFor={'case-field-' + taskId + '-' + f.id}>
                         {f.label}
