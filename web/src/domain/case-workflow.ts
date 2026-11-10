@@ -153,44 +153,6 @@ export const caseDefinitions: Record<string, CaseDefinition> = {
       { id: 'paymentDate', label: 'วันที่ยืนยันชำระแล้ว', type: 'date' },
     ],
   },
-  วันเกิดตัวแทนและลูกค้า: {
-    sections: [
-      section('birthday', 'วันเกิดตัวแทนและลูกค้า', [
-        'ตรวจรายชื่อวันเกิดล่วงหน้าทุกสัปดาห์',
-        'เตรียมข้อความหรือการ์ดอวยพร ตรวจชื่อและรูปให้ถูกต้อง',
-        'แจ้งเตือนแม่ตาลและตัวแทนเจ้าของลูกค้า',
-        'บันทึกว่าส่งคำอวยพรแล้ว',
-      ]),
-    ],
-    fields: [
-      { id: 'birthdayDate', label: 'วันเกิดที่ติดตามในรอบนี้', type: 'date' },
-      { id: 'greetingDate', label: 'วันที่ส่งคำอวยพร', type: 'date' },
-    ],
-  },
-  งานเคลม: {
-    sections: [
-      optional(
-        section('claim', 'ติดตามงานเคลมจนจบ', [
-          'รับเรื่องและบันทึกตัวแทนเจ้าของเคส',
-          'ตรวจรายการเอกสารที่ต้องใช้ตามประเภทเคลม',
-          'แจ้งเอกสารที่ยังขาดให้ชัดเจน',
-          'ติดตามเอกสารจนส่งครบ',
-          'บันทึกวันที่ส่ง เลขอ้างอิง และช่องทางติดตาม',
-          'ติดตามสถานะและเอกสารเพิ่มเติม',
-          'แจ้งความคืบหน้าให้ตัวแทนทราบ',
-          'ติดตามผลและการรับเงิน ก่อนปิดงาน',
-        ]),
-        [3, 6],
-      ),
-    ],
-    fields: [
-      { id: 'claimType', label: 'ประเภทเคลม' },
-      { id: 'claimSubmitted', label: 'วันที่ส่งเคลม', type: 'date' },
-      { id: 'claimReference', label: 'เลขอ้างอิงเคลม' },
-      { id: 'trackingChannel', label: 'ช่องทางติดตาม' },
-      { id: 'claimResult', label: 'ผลเคลม / ผลการรับเงิน' },
-    ],
-  },
 };
 export const caseDate = z
   .string()
@@ -291,8 +253,6 @@ export function caseSummary(state: CaseState) {
       'deliveryEvidence',
     ],
     ลูกค้าเก่า: ['premium', 'premiumDue', 'paymentChannel', 'paymentDate'],
-    วันเกิดตัวแทนและลูกค้า: ['birthdayDate', 'greetingDate'],
-    งานเคลม: ['claimType', 'claimSubmitted', 'claimReference', 'trackingChannel', 'claimResult'],
   };
   for (const id of requiredFields[state.category] || [])
     if (!state.fields[id])

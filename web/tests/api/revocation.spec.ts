@@ -101,7 +101,7 @@ test('disabled Active, replaced subject and invalid role fail closed; logout sti
           data: {
             title: 'Blocked user',
             description: 'Synthetic',
-            category: 'วันเกิดตัวแทนและลูกค้า',
+            category: 'ลูกค้าเก่า',
             priority: 'Normal',
             dueDate: '2026-11-07',
           },

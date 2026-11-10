@@ -38,7 +38,7 @@ test('overlapping HTTP status changes reserve one task, reject stale retry, and 
       data: {
         title: 'HTTP contention ' + randomUUID(),
         description: 'Synthetic same-task concurrency',
-        category: 'วันเกิดตัวแทนและลูกค้า',
+        category: 'ลูกค้าเก่า',
         priority: 'Normal',
         dueDate: '2026-11-08',
         agentId: rid(2),
@@ -54,8 +54,10 @@ test('overlapping HTTP status changes reserve one task, reject stale retry, and 
     const initial = await detail();
     const checklist = initial.caseWorkflow.state;
     for (const item of Object.values(checklist.items) as { status: string }[]) item.status = 'done';
-    checklist.fields.birthdayDate = '2026-11-10';
-    checklist.fields.greetingDate = '2026-11-10';
+    checklist.fields.premium = '12000';
+    checklist.fields.premiumDue = '2026-11-10';
+    checklist.fields.paymentChannel = 'Synthetic bank transfer';
+    checklist.fields.paymentDate = '2026-11-10';
     expect(
       (
         await clients[0].post('/api/tasks/' + id + '/workflow', {

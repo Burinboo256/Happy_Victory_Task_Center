@@ -202,7 +202,7 @@ const createData = (suffix: string) => ({
   title: '[LOCAL TEST] Recovery rehearsal ' + runId + ' ' + suffix,
   description: 'Synthetic recovery acceptance; no customer data.',
   dueDate: todayBangkok(),
-  category: 'วันเกิดตัวแทนและลูกค้า',
+  category: 'ลูกค้าเก่า',
   priority: 'Normal',
 });
 

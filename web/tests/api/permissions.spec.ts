@@ -60,7 +60,7 @@ test('actual create, replay, Secretary update and private comment round trip thr
   const payload = {
     title: 'งานทดสอบ HTTP',
     description: 'Synthetic API integration',
-    category: 'วันเกิดตัวแทนและลูกค้า',
+    category: 'ลูกค้าเก่า',
     priority: 'Normal',
     dueDate: '2026-11-06',
     agentId: rid(3),
@@ -97,8 +97,10 @@ test('actual create, replay, Secretary update and private comment round trip thr
     item.status = 'done';
     item.notes = 'PRIVATE-CHECKLIST-NOTE';
   }
-  caseView.state.fields.birthdayDate = '2026-11-10';
-  caseView.state.fields.greetingDate = '2026-11-10';
+  caseView.state.fields.premium = '12000';
+  caseView.state.fields.premiumDue = '2026-11-10';
+  caseView.state.fields.paymentChannel = 'Synthetic bank transfer';
+  caseView.state.fields.paymentDate = '2026-11-10';
   expect(
     (
       await page.request.post('/api/tasks/' + result.id + '/workflow', {
@@ -136,7 +138,7 @@ test('actual ambiguous write returns review and persists its idempotency key', a
   const payload = {
     title: 'TEST_UNCERTAIN',
     description: 'Synthetic failure',
-    category: 'วันเกิดตัวแทนและลูกค้า',
+    category: 'ลูกค้าเก่า',
     priority: 'Normal',
     dueDate: '2026-11-06',
   };

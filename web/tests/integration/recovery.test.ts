@@ -12,7 +12,7 @@ const data = {
   title: 'Synthetic recovery',
   description: 'No customer data',
   dueDate: '2026-11-06',
-  category: 'วันเกิดตัวแทนและลูกค้า',
+  category: 'ลูกค้าเก่า',
   priority: 'Normal',
 };
 const input = (id: string) => ({

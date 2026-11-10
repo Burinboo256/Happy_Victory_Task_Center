@@ -16,8 +16,6 @@ export const categories = [
   'ตัวแทนเก่า',
   'ลูกค้าใหม่',
   'ลูกค้าเก่า',
-  'วันเกิดตัวแทนและลูกค้า',
-  'งานเคลม',
 ] as const;
 export const statusNames: Record<Status, string> = {
   New: 'งานเข้าใหม่',

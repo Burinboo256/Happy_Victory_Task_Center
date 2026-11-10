@@ -37,7 +37,7 @@ PAT ใช้ scopes `data.records:read` และ `data.records:write` เฉ�
 | Agent | Link to Users | **ปิด Allow linking to multiple records** |
 | Agent Record ID | Lookup | จาก Agent → Record ID; ใช้ filter ฝั่ง API |
 | Assigned Secretary | Link to Users | ปิด multiple records |
-| Category | Single select | ตัวแทนใหม่, ตัวแทนเก่า, ลูกค้าใหม่, ลูกค้าเก่า, วันเกิดตัวแทนและลูกค้า, งานเคลม; งานเดิมที่นำประเภทออกแสดงเป็น ไม่ระบุประเภท |
+| Category | Single select | ตัวแทนใหม่, ตัวแทนเก่า, ลูกค้าใหม่, ลูกค้าเก่า; งานเดิมที่นำประเภทออกแสดงเป็น ไม่ระบุประเภท |
 | Status | Single select | `New`, `In Progress`, `Waiting`, `On Hold`, `Completed`, `Cancelled` |
 | Priority | Single select | `Low`, `Normal`, `High`, `Urgent` |
 | Due Date | Date, ไม่มีเวลา | กำหนดส่ง |

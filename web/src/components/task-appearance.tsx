@@ -10,8 +10,6 @@ const categoryClasses: Record<string, string> = {
   ตัวแทนเก่า: 'category-finance',
   ลูกค้าใหม่: 'category-documents',
   ลูกค้าเก่า: 'category-service',
-  วันเกิดตัวแทนและลูกค้า: 'category-appointment',
-  งานเคลม: 'category-claim',
 };
 export const categoryClass = (category: string) => categoryClasses[category] || 'category-general';
 export function CategoryBadge({ category }: { category: string }) {

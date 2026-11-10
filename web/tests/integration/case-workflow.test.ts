@@ -15,8 +15,8 @@ import {
   attachCaseSummaries,
 } from '../../src/server/services/case-workflow';
 import { ownTask } from '../../src/server/services/reads';
-test('all six checklists preserve mandatory items, conditional reasons, dates and exact case fields', () => {
-  assert.equal(Object.keys(caseDefinitions).length, 6);
+test('all four checklists preserve mandatory items, conditional reasons, dates and exact case fields', () => {
+  assert.equal(Object.keys(caseDefinitions).length, 4);
   for (const category of Object.keys(caseDefinitions)) {
     const s = newCaseState(category);
     assert.doesNotThrow(() => validateCaseState(s));

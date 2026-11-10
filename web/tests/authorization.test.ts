@@ -44,7 +44,7 @@ test('forged Agent owner and initial status are ignored; Agent comments are alwa
         title: 'Test',
         description: 'Test details',
         dueDate: '2026-11-06',
-        category: 'วันเกิดตัวแทนและลูกค้า',
+        category: 'ลูกค้าเก่า',
         priority: 'Normal',
         agentId: rid(3),
         role: 'Admin',

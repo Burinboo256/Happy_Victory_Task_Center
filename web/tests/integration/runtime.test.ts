@@ -95,7 +95,7 @@ test('journal replay persists across service instances and rejects changed paylo
         title: 'Test',
         description: 'Details',
         dueDate: '2026-11-06',
-        category: 'วันเกิดตัวแทนและลูกค้า',
+        category: 'ลูกค้าเก่า',
         priority: 'Normal',
       };
     const perform = (journal: Journal, payload = data) =>
@@ -133,7 +133,7 @@ test('partial audit failure resumes completed task step without creating another
         title: 'Test',
         description: 'Details',
         dueDate: '2026-11-06',
-        category: 'วันเกิดตัวแทนและลูกค้า',
+        category: 'ลูกค้าเก่า',
         priority: 'Normal',
       };
     const run = () =>
@@ -196,7 +196,7 @@ test('resuming a Manager create after role downgrade cannot reuse its stored own
         title: 'Manager draft',
         description: 'Synthetic details',
         dueDate: '2026-11-06',
-        category: 'วันเกิดตัวแทนและลูกค้า',
+        category: 'ลูกค้าเก่า',
         priority: 'Normal',
         agentId: h.agent.id,
       };

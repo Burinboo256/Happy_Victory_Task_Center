@@ -49,7 +49,7 @@ test('category colors match across lists and calendar, urgent work stands out an
   };
   await page.route('**/api/bootstrap*', (r) => r.fulfill({ json: data }));
   await page.goto('/tasks');
-  await expect(page.locator('.task-row')).toHaveCount(6);
+  await expect(page.locator('.task-row')).toHaveCount(4);
   await expect(page.locator('.task-row').first()).toContainText('งานสี ตัวแทนเก่า');
   await expect(page.locator('.task-row').first().locator('.priority-urgent')).toHaveText(
     '! ด่วนมาก',
@@ -64,7 +64,7 @@ test('category colors match across lists and calendar, urgent work stands out an
         ]),
       ),
     );
-  expect(new Set(Object.values(listColors)).size).toBe(6);
+  expect(new Set(Object.values(listColors)).size).toBe(4);
   const legend = page.getByRole('group', { name: 'กรองประเภทงานตามสี' });
   await legend.getByRole('button', { name: 'ลูกค้าเก่า', exact: true }).click();
   await expect(page.locator('.task-row')).toHaveCount(1);
@@ -77,7 +77,7 @@ test('category colors match across lists and calendar, urgent work stands out an
     fullPage: true,
   });
   await page.goto('/calendar');
-  await expect(page.locator('.calendar-event')).toHaveCount(6);
+  await expect(page.locator('.calendar-event')).toHaveCount(4);
   const calendarColors = await page
     .locator('.calendar-event')
     .evaluateAll((elements) =>
