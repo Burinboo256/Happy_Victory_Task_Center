@@ -15,7 +15,7 @@ import {
   attachCaseSummaries,
 } from '../../src/server/services/case-workflow';
 import { ownTask } from '../../src/server/services/reads';
-test('all four checklists preserve mandatory items, conditional reasons, dates and exact case fields', () => {
+test('all four checklists preserve mandatory items, conditional skips, dates and exact case fields', () => {
   assert.equal(Object.keys(caseDefinitions).length, 4);
   for (const category of Object.keys(caseDefinitions)) {
     const s = newCaseState(category);
@@ -27,8 +27,6 @@ test('all four checklists preserve mandatory items, conditional reasons, dates a
   }
   const s = newCaseState('ลูกค้าใหม่');
   s.items['application-9'].status = 'na';
-  assert.throws(() => validateCaseState(s));
-  s.items['application-9'].notes = 'ไม่มี CTF ในเคสนี้';
   assert.doesNotThrow(() => validateCaseState(s));
   s.items['application-1'].status = 'na';
   s.items['application-1'].notes = 'ไม่อยากทำ';
@@ -38,19 +36,27 @@ test('all four checklists preserve mandatory items, conditional reasons, dates a
   assert.throws(() => validateCaseState(s));
 });
 
-test('new Agent optional items need no hidden reason while required items and other categories retain their rules', () => {
+test('optional and conditional items need no hidden reason in every category while required items cannot be skipped', () => {
   const agent = newCaseState('ตัวแทนใหม่');
   agent.items['continue-1'].status = 'na';
   agent.items['develop-1'].status = 'na';
   assert.doesNotThrow(() => validateCaseState(agent));
   agent.items['prepare-1'].status = 'na';
   assert.throws(() => validateCaseState(agent));
-  for (const [category, id] of [['ตัวแทนเก่า', 'retain-4'], ['ลูกค้าใหม่', 'application-9'], ['ลูกค้าเก่า', 'renewal-5']]) {
+  for (const [category, id] of [
+    ['ตัวแทนเก่า', 'retain-4'],
+    ['ลูกค้าใหม่', 'application-9'],
+    ['ลูกค้าเก่า', 'renewal-5'],
+  ]) {
     const state = newCaseState(category);
     state.items[id].status = 'na';
-    assert.throws(() => validateCaseState(state));
-    state.items[id].notes = 'Not applicable to this case';
     assert.doesNotThrow(() => validateCaseState(state));
+    const required = caseDefinitions[category].sections
+      .flatMap((s) => s.items)
+      .find((i) => i.required && !i.skippable);
+    assert.ok(required);
+    state.items[required.id].status = 'na';
+    assert.throws(() => validateCaseState(state));
   }
 });
 test('new Agent closes after required registration steps, continues optional work after closing, keeps legacy history and rejects stale/cross-role writes', async () => {

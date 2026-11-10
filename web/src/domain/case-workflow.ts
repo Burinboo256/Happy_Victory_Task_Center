@@ -3,7 +3,7 @@ import { z } from 'zod';
 export type CaseItem = { id: string; label: string; required: boolean; skippable?: boolean };
 export type CaseSection = { id: string; title: string; items: CaseItem[] };
 export type CaseField = { id: string; label: string; type?: 'date' | 'number'; options?: string[] };
-export type CaseDefinition = { sections: CaseSection[]; fields: CaseField[]; itemNotes?: boolean };
+export type CaseDefinition = { sections: CaseSection[]; fields: CaseField[] };
 const section = (id: string, title: string, labels: string[], required = true): CaseSection => ({
   id,
   title,
@@ -15,7 +15,6 @@ const optional = (s: CaseSection, indexes: number[]) => ({
 });
 export const caseDefinitions: Record<string, CaseDefinition> = {
   ตัวแทนใหม่: {
-    itemNotes: false,
     sections: [
       section('prepare', '1.1 เตรียมสมัคร อบรม และสอบ', [
         'ขอข้อมูลส่วนตัวและเอกสารประกอบให้ครบ',
@@ -204,11 +203,8 @@ export function validateCaseState(input: unknown): CaseState {
     fail('ต้องเก็บรายการติดตามให้ครบ');
   for (const item of items) {
     const value = state.items[item.id];
-    if (
-      value.status === 'na' &&
-      ((!item.skippable && item.required) || (definition.itemNotes !== false && !value.notes))
-    )
-      fail('รายการนี้ข้ามไม่ได้ หรือต้องระบุเหตุผลที่ไม่ใช้กับเคสนี้');
+    if (value.status === 'na' && !item.skippable && item.required)
+      fail('รายการบังคับนี้ข้ามไม่ได้');
   }
   if (
     Object.keys(state.fields).length !== definition.fields.length ||

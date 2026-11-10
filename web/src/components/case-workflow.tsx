@@ -28,8 +28,7 @@ export function CaseWorkflowPanel({
   const [state, setState] = useState(view.state),
     [error, setError] = useState('');
   const definition = caseDefinitions[view.category],
-    summary = state ? caseSummary(state) : view.summary,
-    showItemNotes = definition.itemNotes !== false;
+    summary = state ? caseSummary(state) : view.summary;
   const field = (id: string, value: string) =>
     setState((old) => (old ? { ...old, fields: { ...old.fields, [id]: value } } : old));
   return (
@@ -52,7 +51,7 @@ export function CaseWorkflowPanel({
         <>
           <p>
             บันทึกข้อมูลเฉพาะเคสนี้ เจ้าของเคสคือ Agent ที่ระบุในงาน{' '}
-            {showItemNotes ? 'หมายเหตุและข้อมูลประกอบ' : 'ข้อมูลประกอบ'}เห็นเฉพาะทีมเลขา/ผู้ดูแล
+            ข้อมูลประกอบเห็นเฉพาะทีมเลขา/ผู้ดูแล
           </p>
           {closed && (
             <p>งานหลักปิดแล้ว ยังบันทึกรายการติดตามต่อและทางเลือกได้ หากแก้รายการบังคับ ให้เปิดงานอีกครั้งก่อน</p>
@@ -65,11 +64,7 @@ export function CaseWorkflowPanel({
               try {
                 validateCaseState(state);
               } catch {
-                setError(
-                  showItemNotes
-                    ? 'ตรวจวันที่ ยอด และเหตุผลของรายการที่ไม่เกี่ยวข้องให้ครบ'
-                    : 'ตรวจวันที่และข้อมูลประกอบเคสให้ถูกต้อง',
-                );
+                setError('ตรวจวันที่ ยอด และข้อมูลประกอบเคสให้ถูกต้อง');
                 return;
               }
               void submit(e, `/api/tasks/${taskId}/workflow`, { version: view.version, state });
@@ -177,19 +172,6 @@ export function CaseWorkflowPanel({
                             />
                           </label>
                         </div>
-                        {showItemNotes && (
-                          <label>
-                            หมายเหตุ / หลักฐาน / เหตุผลที่ไม่เกี่ยวข้อง <small>ภายในทีม</small>
-                            <textarea
-                              aria-label={'หมายเหตุ: ' + item.label}
-                              rows={2}
-                              maxLength={600}
-                              required={value.status === 'na'}
-                              value={value.notes}
-                              onChange={(e) => patch({ notes: e.target.value })}
-                            />
-                          </label>
-                        )}
                       </fieldset>
                     );
                   })}
