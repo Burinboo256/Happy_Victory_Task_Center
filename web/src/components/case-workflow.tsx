@@ -2,6 +2,7 @@
 import { useState, type FormEvent } from 'react';
 import {
   caseDefinitions,
+  caseRequiredFields,
   caseSummary,
   validateCaseState,
   type CaseView,
@@ -29,6 +30,8 @@ export function CaseWorkflowPanel({
     [error, setError] = useState('');
   const definition = caseDefinitions[view.category],
     summary = state ? caseSummary(state) : view.summary;
+  const requiredFields = caseRequiredFields[view.category] || [];
+  const requiredHintId = 'case-required-hint-' + taskId;
   // Keep the stored field shape compatible with existing workflows and history.
   const fields = definition.fields
     .filter((f) => view.category !== 'ตัวแทนใหม่' || f.id !== 'examResult')
@@ -95,15 +98,33 @@ export function CaseWorkflowPanel({
             <fieldset disabled={!editable || busy}>
               <details className="workflow-step" open>
                 <summary>ข้อมูลประกอบเคส</summary>
+                <p id={requiredHintId} className="case-required-hint">
+                  <span className="case-required-marker" aria-hidden="true">
+                    *
+                  </span>{' '}
+                  ต้องกรอกก่อนเปลี่ยนสถานะเป็นเสร็จสิ้น · ยังบันทึกความคืบหน้าได้แม้กรอกไม่ครบ
+                </p>
                 <fieldset disabled={closed} className="case-fields-container">
                   <div className="case-fields">
                     {fields.map((f) => (
                       <label key={f.id} htmlFor={'case-field-' + taskId + '-' + f.id}>
-                        {f.label}
+                        <span>
+                          {f.label}
+                          {requiredFields.includes(f.id) && (
+                            <span className="case-required-marker" aria-hidden="true">
+                              {' '}
+                              *
+                            </span>
+                          )}
+                        </span>
                         {f.options ? (
                           <select
                             id={'case-field-' + taskId + '-' + f.id}
                             aria-label={f.label}
+                            aria-required={requiredFields.includes(f.id) || undefined}
+                            aria-describedby={
+                              requiredFields.includes(f.id) ? requiredHintId : undefined
+                            }
                             value={state.fields[f.id]}
                             onChange={(e) => field(f.id, e.target.value)}
                           >
@@ -123,6 +144,10 @@ export function CaseWorkflowPanel({
                           <input
                             id={'case-field-' + taskId + '-' + f.id}
                             aria-label={f.label}
+                            aria-required={requiredFields.includes(f.id) || undefined}
+                            aria-describedby={
+                              requiredFields.includes(f.id) ? requiredHintId : undefined
+                            }
                             type={f.type || 'text'}
                             min={f.type === 'number' ? 0 : undefined}
                             step={f.type === 'number' ? '0.01' : undefined}

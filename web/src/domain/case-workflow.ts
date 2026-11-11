@@ -203,8 +203,7 @@ export function validateCaseState(input: unknown): CaseState {
     fail('ต้องเก็บรายการติดตามให้ครบ');
   for (const item of items) {
     const value = state.items[item.id];
-    if (value.status === 'na' && !item.skippable && item.required)
-      fail('รายการบังคับนี้ข้ามไม่ได้');
+    if (value.status === 'na' && !item.skippable && item.required) fail('รายการบังคับนี้ข้ามไม่ได้');
   }
   if (
     Object.keys(state.fields).length !== definition.fields.length ||
@@ -224,6 +223,20 @@ export function validateCaseState(input: unknown): CaseState {
   }
   return state;
 }
+// Shared by completion validation and the form's required-field indicators.
+// These are required to close a case, not to save work in progress.
+export const caseRequiredFields: Record<string, readonly string[]> = {
+  ตัวแทนใหม่: ['applicationMode', 'agentCode'],
+  ตัวแทนเก่า: ['pcTarget', 'pcAccumulated', 'deadline'],
+  ลูกค้าใหม่: [
+    'applicationNumber',
+    'submittedDate',
+    'freelookStart',
+    'nextPremiumDate',
+    'deliveryEvidence',
+  ],
+  ลูกค้าเก่า: ['premium', 'premiumDue', 'paymentChannel', 'paymentDate'],
+};
 export function caseSummary(state: CaseState) {
   const sections = caseDefinitions[state.category].sections.map((s) => ({
     id: s.id,
@@ -242,19 +255,7 @@ export function caseSummary(state: CaseState) {
     .filter((i) => state.items[i.id].status === 'pending')
     .map((i) => i.label);
   // These values identify the actual case; checkboxes alone cannot replace them.
-  const requiredFields: Record<string, string[]> = {
-    ตัวแทนใหม่: ['applicationMode', 'agentCode'],
-    ตัวแทนเก่า: ['pcTarget', 'pcAccumulated', 'deadline'],
-    ลูกค้าใหม่: [
-      'applicationNumber',
-      'submittedDate',
-      'freelookStart',
-      'nextPremiumDate',
-      'deliveryEvidence',
-    ],
-    ลูกค้าเก่า: ['premium', 'premiumDue', 'paymentChannel', 'paymentDate'],
-  };
-  for (const id of requiredFields[state.category] || [])
+  for (const id of caseRequiredFields[state.category] || [])
     if (!state.fields[id])
       missing.push(caseDefinitions[state.category].fields.find((f) => f.id === id)?.label || id);
   return {

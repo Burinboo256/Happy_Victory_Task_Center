@@ -56,6 +56,36 @@ for (const category of Object.keys(caseDefinitions)) {
     await page.goto('/tasks/' + rid(11));
     const panel = page.getByRole('region', { name: 'ขั้นตอนงาน ' + category });
     await expect(panel).toBeVisible();
+    const expectedRequired: Record<string, string[]> = {
+      ตัวแทนใหม่: ['ประเภทสมัครอบรม/สอบ', 'รหัสตัวแทนที่ออกแล้ว'],
+      ตัวแทนเก่า: ['เป้าหมาย PC ที่แม่ตาลระบุ', 'ยอด PC สะสม', 'วันครบกำหนดรักษาสัญญา'],
+      ลูกค้าใหม่: [
+        'เลขที่ใบคำขอ',
+        'วันที่ส่งใบคำขอ',
+        'วันเริ่มนับ Freelook ตามเอกสารบริษัท',
+        'วันครบกำหนดเบี้ยปีถัดไป',
+        'หลักฐานการส่งมอบ / ที่เก็บเอกสาร',
+      ],
+      ลูกค้าเก่า: ['ยอดเบี้ย', 'วันครบกำหนดชำระเบี้ย', 'ช่องทางชำระ', 'วันที่ยืนยันชำระแล้ว'],
+    };
+    await expect(panel.locator('.case-fields .case-required-marker')).toHaveCount(
+      expectedRequired[category].length,
+    );
+    for (const field of definition.fields.filter((f) => f.id !== 'examResult')) {
+      const input = panel.getByLabel(field.label, { exact: true });
+      if (expectedRequired[category].includes(field.label)) {
+        await expect(input).toHaveAttribute('aria-required', 'true');
+        await expect(input.locator('..').locator('.case-required-marker')).toHaveCSS(
+          'color',
+          'rgb(180, 35, 24)',
+        );
+      } else {
+        await expect(input).not.toHaveAttribute('aria-required', 'true');
+      }
+      // Completion-only requirements must not block saving a partially filled case.
+      await expect(input).not.toHaveAttribute('required');
+    }
+    await expect(panel.getByText('ต้องกรอกก่อนเปลี่ยนสถานะเป็นเสร็จสิ้น', { exact: false })).toBeVisible();
     if (category === 'ตัวแทนใหม่') {
       await panel.getByLabel('ประเภทสมัครอบรม/สอบ', { exact: true }).selectOption('สอบอย่างเดียว');
       await expect(panel.getByLabel('ผลสอบ / ผลสอบเดิม', { exact: true })).toHaveCount(0);

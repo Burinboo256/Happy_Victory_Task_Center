@@ -1563,6 +1563,8 @@ progress::-webkit-progress-value {
 /* Clip rounded panel edges without creating a scroll container that traps the save bar. */
 .panel:has(.case-workflow) { overflow: clip; }
 .case-fields-container { container-type: inline-size; }
+.case-required-marker { color: #b42318; font-weight: 700; }
+.case-required-hint { font-size: 14px; line-height: 1.6; }
 .case-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; padding: 8px 0; }
 .case-workflow .case-fields label { margin: 0; min-width: 0; justify-content: flex-end; }
 @container (max-width: 440px) {
