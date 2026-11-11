@@ -10,6 +10,13 @@ import { AppError, forbidden } from '../errors';
 import { lineId, lineProfile, verifySignature } from '../line/client';
 import { verifyInstance } from '../runtime';
 import { aiContext } from './context';
+import {
+  draftInput,
+  draftPostback,
+  finishDraft,
+  type DraftContext,
+  type DraftReply,
+} from './drafts';
 
 export function aiConfigured(c: Config) {
   return !!(
@@ -133,6 +140,7 @@ const envelope = z.object({
         replyToken: z.string().min(1).max(200).optional(),
         source: z.object({ type: z.string(), userId: lineId.optional() }).optional(),
         message: z.object({ type: z.string(), text: z.string().optional() }).optional(),
+        postback: z.object({ data: z.string().max(300) }).optional(),
       }),
     )
     .max(100),
@@ -142,6 +150,7 @@ export type AiJob = {
   needsAi: boolean;
   question: string;
   context?: Awaited<ReturnType<typeof aiContext>>['context'];
+  draft?: DraftContext;
 };
 const fallback = 'ขณะนี้ AI สรุปไม่สำเร็จ กรุณาถามใหม่อีกครั้ง หรือเปิดงานในเว็บ';
 
@@ -165,6 +174,7 @@ export async function receiveAi(
     [c.APP_ENV],
   );
   const jobs: AiJob[] = [];
+  let taskConfirmed = false;
   for (const e of body.events) {
     if (Math.abs(now - e.timestamp) > 120000 || e.source?.type !== 'user' || !e.source.userId)
       continue;
@@ -176,7 +186,7 @@ export async function receiveAi(
       );
       continue;
     }
-    if (e.type !== 'message' || !e.replyToken) continue;
+    if (!['message', 'postback'].includes(e.type) || !e.replyToken) continue;
     const ticket = randomBytes(32).toString('hex');
     const claim = await db.query(
       `INSERT INTO hvr_ai_events(environment,event_id,line_id,ticket_hash,reply_token,fallback_answer)
@@ -186,6 +196,10 @@ export async function receiveAi(
     if (!claim.rows.length) continue;
     let answer = '',
       context: AiJob['context'];
+    let draft: DraftContext | undefined,
+      draftId: string | undefined,
+      draftRevision: number | undefined;
+    let replyActions: DraftReply['actions'];
     let user: User | undefined,
       binding: string | undefined,
       taskIds: string[] = [];
@@ -204,7 +218,8 @@ export async function receiveAi(
         )
       ).rows[0].n;
       if (recent > 10 || global > 1000) answer = 'ถึงจำนวนคำถามที่รองรับในช่วงนี้แล้ว กรุณาลองภายหลัง';
-      else if (e.message?.type !== 'text') answer = 'กรุณาพิมพ์คำถาม เช่น สรุปงานวันนี้ หรือสถานะ HVR-00001';
+      else if (e.type !== 'postback' && e.message?.type !== 'text')
+        answer = 'กรุณาพิมพ์คำถาม เช่น สรุปงานวันนี้ หรือพิมพ์ “ส่งงาน” ตามด้วยรายละเอียด';
       else if (question.length > 2000) answer = 'กรุณาย่อคำถามให้ไม่เกิน 2,000 ตัวอักษร';
       else {
         const link = /^RINAI ([a-f0-9]{24})$/i.exec(question);
@@ -232,22 +247,54 @@ export async function receiveAi(
             user = userDto(await repo.get('users', account.user_id));
             if (!user.active) throw forbidden();
             binding = account.binding;
-            const data = await aiContext(db, c, repo, user, question);
-            context = data.context;
-            taskIds = data.taskIds;
+            if (e.type === 'postback') {
+              const result = await draftPostback(
+                db,
+                c,
+                repo,
+                user,
+                sender,
+                account.binding,
+                e.postback?.data || '',
+              );
+              answer = result.text;
+              replyActions = result.actions;
+              taskConfirmed ||= !!result.created;
+              if (result.taskId) taskIds = [result.taskId];
+            } else {
+              const result = await draftInput(db, c, repo, user, sender, account.binding, question);
+              if (result) {
+                answer = result.reply?.text || '';
+                replyActions = result.reply?.actions;
+                draft = result.context;
+                draftId = result.draft?.id;
+                draftRevision = result.draft?.revision;
+              } else {
+                const data = await aiContext(db, c, repo, user, question);
+                context = data.context;
+                taskIds = data.taskIds;
+              }
+            }
           }
         }
       }
     } catch {
       // Do not expose provider errors, account existence, SQL, or partially loaded task data.
-      answer = 'อ่านข้อมูลงานไม่ได้ กรุณาตรวจว่าบัญชีเว็บยังเปิดใช้งานอยู่ แล้วลองอีกครั้ง';
+      answer = e.type === 'postback'
+        ? 'ยังยืนยันผลคำขอนี้ไม่ได้ กรุณาตรวจสิทธิ์บัญชีและพิมพ์ “ดูร่าง” เพื่อตรวจคำขอเดิม หรือตรวจงานในเว็บก่อนส่งงานใหม่'
+        : 'อ่านข้อมูลงานไม่ได้ กรุณาตรวจว่าบัญชีเว็บยังเปิดใช้งานอยู่ แล้วลองอีกครั้ง';
       context = undefined;
+      draft = undefined;
+      draftId = undefined;
+      draftRevision = undefined;
+      replyActions = undefined;
       user = undefined;
       binding = undefined;
       taskIds = [];
     }
     await db.query(
-      `UPDATE hvr_ai_events SET state='ready',user_id=$3,role=$4,binding=$5,task_ids=$6::jsonb,direct_answer=$7 WHERE environment=$1 AND event_id=$2`,
+      `UPDATE hvr_ai_events SET state='ready',user_id=$3,role=$4,binding=$5,task_ids=$6::jsonb,direct_answer=$7,
+        draft_id=$8,draft_revision=$9,reply_actions=$10 WHERE environment=$1 AND event_id=$2`,
       [
         c.APP_ENV,
         e.webhookEventId,
@@ -256,16 +303,20 @@ export async function receiveAi(
         binding || null,
         JSON.stringify(taskIds),
         answer || null,
+        draftId || null,
+        draftRevision ?? null,
+        replyActions ? JSON.stringify(replyActions) : null,
       ],
     );
     jobs.push({
       ticket,
-      needsAi: !!context,
-      question: context ? question : '',
+      needsAi: !!context || !!draft,
+      question: context || draft ? question : '',
       ...(context ? { context } : {}),
+      ...(draft ? { draft } : {}),
     });
   }
-  return { jobs };
+  return { jobs, taskConfirmed };
 }
 
 export async function replyAi(
@@ -289,6 +340,7 @@ export async function replyAi(
   ).rows[0];
   if (!row) throw new AppError(409, 'AI_REPLY_USED', 'คำตอบนี้หมดอายุหรือถูกส่งแล้ว');
   try {
+    let currentUser: User | undefined;
     if (row.user_id) {
       const account = (
         await db.query(
@@ -298,8 +350,9 @@ export async function replyAi(
       ).rows[0];
       const user = userDto(await repo.get('users', row.user_id));
       if (!account || !user.active || user.role !== row.role) throw forbidden();
+      currentUser = user;
       // Ownership may change while the model is generating. Fail closed before disclosing a reply.
-      if (user.role === 'Agent') {
+      if (user.role === 'Agent' && row.task_ids.length) {
         const ids = z.array(z.string()).parse(row.task_ids);
         // One list request avoids one Airtable request per case.
         const current = await repo.list('tasks', `{Agent Record ID}="${user.id}"`, ['Agent']);
@@ -311,7 +364,23 @@ export async function replyAi(
         if (ids.some((id) => !owned.has(id))) throw forbidden();
       }
     }
-    const answer = String(row.direct_answer || text.trim() || row.fallback_answer).slice(0, 4500);
+    const draftReply =
+      row.draft_id && currentUser
+        ? await finishDraft(
+            db,
+            c,
+            repo,
+            currentUser,
+            row.draft_id,
+            row.draft_revision,
+            row.binding,
+            text,
+          )
+        : undefined;
+    const answer = String(
+      draftReply?.text || row.direct_answer || text.trim() || row.fallback_answer,
+    ).slice(0, 4500);
+    const buttons: DraftReply['actions'] = draftReply?.actions || row.reply_actions;
     const response = await transport('https://api.line.me/v2/bot/message/reply', {
       method: 'POST',
       headers: {
@@ -320,7 +389,22 @@ export async function replyAi(
       },
       body: JSON.stringify({
         replyToken: row.reply_token,
-        messages: [{ type: 'text', text: answer }],
+        messages: [
+          { type: 'text', text: answer },
+          ...(buttons?.length
+            ? [
+                {
+                  type: 'template',
+                  altText: 'เลือกการดำเนินการกับร่างงาน',
+                  template: {
+                    type: 'buttons',
+                    text: 'ตรวจข้อมูลด้านบนก่อนยืนยัน',
+                    actions: buttons.map((a) => ({ type: 'postback', ...a, displayText: a.label })),
+                  },
+                },
+              ]
+            : []),
+        ],
       }),
       signal: AbortSignal.timeout(10000),
     });

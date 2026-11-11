@@ -2,6 +2,8 @@ import { z } from 'zod';
 import { services } from '@/server/context';
 import { json, readBody, route } from '@/server/http';
 import { receiveAi } from '@/server/ai/line';
+import { after } from 'next/server';
+import { safelyDrainLineQueue } from '@/server/line/queue';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -10,6 +12,9 @@ export function POST(request: Request) {
   return route(async () => {
     const c = services();
     const body = input.parse(await readBody(request));
-    return json(await receiveAi(c.db, c.config, c.repo, body.raw, body.signature));
+    const result = await receiveAi(c.db, c.config, c.repo, body.raw, body.signature);
+    if (result.taskConfirmed && c.config.ENABLE_LINE_NOTIFICATIONS)
+      after(() => safelyDrainLineQueue(c.db, c.config, c.repo));
+    return json(result);
   });
 }
