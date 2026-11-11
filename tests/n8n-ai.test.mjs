@@ -8,6 +8,11 @@ test('n8n AI template keeps signatures intact, does not retain executions and ha
   assert.equal(workflow.settings.saveDataSuccessExecution,'none');
   assert.equal(workflow.settings.saveManualExecutions,false);
   assert.equal(workflow.nodes.find(n=>n.type.endsWith('.webhook')).parameters.options.rawBody,true);
+  assert.equal(workflow.nodes.find(n=>n.type.endsWith('.webhook')).parameters.responseMode,'onReceived');
+  // n8n rejects immediate responses when any downstream Respond node exists,
+  // including a disabled one. Keep the processing path connected without it.
+  assert.equal(workflow.nodes.some(n=>n.type.endsWith('.respondToWebhook')),false);
+  assert.equal(workflow.connections['Authorize and read cases'].main[0][0].node,'Questions');
   const raw=workflow.nodes.find(n=>n.name==='Preserve signed body');
   assert.match(raw.parameters.jsCode,/getBinaryDataBuffer/);
   for(const node of workflow.nodes) {
