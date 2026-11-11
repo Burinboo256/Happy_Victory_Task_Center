@@ -2,6 +2,7 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import { z } from 'zod';
 import {
   categories,
+  caseNameLabel,
   priorities,
   priorityNames,
   isManager,
@@ -22,6 +23,7 @@ const fieldsSchema = z
   .object({
     title: z.string().trim().max(180).nullable().optional(),
     description: z.string().trim().max(2000).nullable().optional(),
+    caseName: z.string().trim().max(180).nullable().optional(),
     category: z.enum(categories).nullable().optional(),
     priority: z.enum(priorities).nullable().optional(),
     dueDate: z
@@ -113,6 +115,8 @@ function missing(f: Fields) {
   if (!f.category) return 'งานนี้เป็นประเภทใด: ตัวแทนใหม่ / ตัวแทนเก่า / ลูกค้าใหม่ / ลูกค้าเก่า?';
   if (!f.agentId) return 'Agent เจ้าของงานชื่ออะไรครับ?';
   if (!f.dueDate) return 'กำหนดส่งวันไหนครับ? ระบุวันที่ หรือพิมพ์ “วันนี้” / “พรุ่งนี้” ได้';
+  if (!f.caseName)
+    return `ขอ${caseNameLabel(f.category)}ของเคสครับ พิมพ์ “${caseNameLabel(f.category)}: ชื่อ นามสกุล” (แยกจาก Agent เจ้าของงาน)`;
   return '';
 }
 function preview(c: Config, d: Draft): DraftReply {
@@ -129,7 +133,7 @@ function preview(c: Config, d: Draft): DraftReply {
       actions: actions(c, d, false),
     };
   return {
-    text: `ตรวจร่างก่อนสร้างงาน\nชื่องาน: ${f.title}\nประเภท: ${f.category}\nรายละเอียด: ${f.description}\nAgent: ${d.owner_name}\nความเร่งด่วน: ${priorityNames[f.priority || 'Normal']}\nกำหนดส่ง: ${f.dueDate} (เวลาไทย)\nสถานะเริ่มต้น: งานเข้าใหม่\n\nยังไม่สร้างงาน กดยืนยันด้านล่างเมื่อข้อมูลถูกต้อง ร่างมีอายุ 30 นาที`,
+    text: `ตรวจร่างก่อนสร้างงาน\nชื่องาน: ${f.title}\nประเภท: ${f.category}\n${caseNameLabel(f.category || '')}: ${f.caseName}\nรายละเอียด: ${f.description}\nAgent: ${d.owner_name}\nความเร่งด่วน: ${priorityNames[f.priority || 'Normal']}\nกำหนดส่ง: ${f.dueDate} (เวลาไทย)\nสถานะเริ่มต้น: งานเข้าใหม่\n\nยังไม่สร้างงาน กดยืนยันด้านล่างเมื่อข้อมูลถูกต้อง ร่างมีอายุ 30 นาที`,
     actions: actions(c, d),
   };
 }
@@ -225,6 +229,22 @@ export async function draftInput(
     )
   ).rows[0] as Draft | undefined;
   if (!next) return { reply: { text: busy } };
+  // Collect names explicitly even when an older n8n prompt does not extract caseName.
+  const name = /^(?:ชื่อตัวแทน|ชื่อลูกค้า|ชื่อบุคคลของเคส)\s*[:：]\s*([^\r\n]+)$/.exec(question);
+  if (name) {
+    return {
+      reply: await finishDraft(
+        db,
+        c,
+        repo,
+        user,
+        next.id,
+        next.revision,
+        binding,
+        JSON.stringify({ caseName: name[1] }),
+      ),
+    };
+  }
   return {
     draft: next,
     context: {

@@ -1,6 +1,12 @@
 'use client';
 import { useState, type FormEvent } from 'react';
-import { priorities, priorityNames, type PublicUser, type Task } from '@/domain/model';
+import {
+  caseNameLabel,
+  priorities,
+  priorityNames,
+  type PublicUser,
+  type Task,
+} from '@/domain/model';
 
 export function TaskEditPanel({
   task,
@@ -64,6 +70,15 @@ export function TaskEditPanel({
                 </option>
               ))}
             </select>
+          </label>
+          <label>
+            <span>
+              {caseNameLabel(task.category)}{' '}
+              <span className="case-required-marker" aria-hidden="true">
+                *
+              </span>
+            </span>
+            <input name="caseName" defaultValue={task.caseName || ''} required maxLength={180} />
           </label>
           {agentId !== task.agentId && (
             <p className="maintenance-notice">

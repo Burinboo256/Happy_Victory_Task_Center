@@ -11,12 +11,13 @@ export const statuses = [
 export type Status = (typeof statuses)[number];
 export const priorities = ['Low', 'Normal', 'High', 'Urgent'] as const;
 export type Priority = (typeof priorities)[number];
-export const categories = [
-  'ตัวแทนใหม่',
-  'ตัวแทนเก่า',
-  'ลูกค้าใหม่',
-  'ลูกค้าเก่า',
-] as const;
+export const categories = ['ตัวแทนใหม่', 'ตัวแทนเก่า', 'ลูกค้าใหม่', 'ลูกค้าเก่า'] as const;
+export const caseNameLabel = (category: string) =>
+  category.startsWith('ตัวแทน')
+    ? 'ชื่อตัวแทน'
+    : category.startsWith('ลูกค้า')
+      ? 'ชื่อลูกค้า'
+      : 'ชื่อบุคคลของเคส';
 export const statusNames: Record<Status, string> = {
   New: 'งานเข้าใหม่',
   'In Progress': 'กำลังดำเนินการ',
@@ -55,6 +56,7 @@ export interface TaskSummary {
   code: string;
   title: string;
   description: string;
+  caseName?: string;
   agentId: string;
   category: string;
   status: Status;

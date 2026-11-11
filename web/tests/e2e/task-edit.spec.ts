@@ -6,7 +6,7 @@ import { bootstrap, detail } from '../../src/server/services/reads';
 import { mutate } from '../../src/server/services/mutations';
 import { scanAccessibility } from '../support/accessibility';
 
-test('manager can cancel, retain a failed draft and save all five task fields', async ({
+test('manager can cancel, retain a failed draft and save task fields including case name', async ({
   page,
 }, info) => {
   const h = repository();
@@ -59,6 +59,7 @@ test('manager can cancel, retain a failed draft and save all five task fields', 
   await expect(editor.getByLabel('ชื่องาน')).toHaveValue('เอกสารทดสอบ A');
   await editor.getByLabel('ชื่องาน').fill('งานที่แก้ไขแล้ว');
   await editor.getByLabel('รายละเอียดงาน').fill('รายละเอียดที่แก้ไขแล้ว');
+  await editor.getByLabel('ชื่อบุคคลของเคส').fill('บุคคลที่แก้ไข สมมติ');
   await editor.getByLabel('Agent เจ้าของงาน').selectOption(h.other.id);
   await editor.getByLabel('ความเร่งด่วน').selectOption('Urgent');
   await editor.getByLabel('กำหนดส่ง').fill('2026-12-15');
@@ -77,6 +78,8 @@ test('manager can cancel, retain a failed draft and save all five task fields', 
   await expect(editor).toHaveCount(0);
   expect(h.tables.tasks[0].fields.Agent).toEqual([h.other.id]);
   expect(h.tables.tasks[0].fields.Priority).toBe('Urgent');
+  expect(h.tables.tasks[0].fields['Case Name']).toBe('บุคคลที่แก้ไข สมมติ');
+  await expect(page.locator('.detail-grid')).toContainText('บุคคลที่แก้ไข สมมติ');
   expect(h.tables.tasks[0].fields['Due Date']).toBe('2026-12-15');
   await expect(page.locator('.detail-description')).toHaveText('รายละเอียดที่แก้ไขแล้ว');
 });

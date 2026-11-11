@@ -94,6 +94,7 @@ test('journal replay persists across service instances and rejects changed paylo
       data = {
         title: 'Test',
         description: 'Details',
+        caseName: 'บุคคลสมมติ ทดสอบ',
         dueDate: '2026-11-06',
         category: 'ลูกค้าเก่า',
         priority: 'Normal',
@@ -132,6 +133,7 @@ test('partial audit failure resumes completed task step without creating another
       data = {
         title: 'Test',
         description: 'Details',
+        caseName: 'บุคคลสมมติ ทดสอบ',
         dueDate: '2026-11-06',
         category: 'ลูกค้าเก่า',
         priority: 'Normal',
@@ -195,6 +197,7 @@ test('resuming a Manager create after role downgrade cannot reuse its stored own
       data = {
         title: 'Manager draft',
         description: 'Synthetic details',
+        caseName: 'บุคคลสมมติ ทดสอบ',
         dueDate: '2026-11-06',
         category: 'ลูกค้าเก่า',
         priority: 'Normal',

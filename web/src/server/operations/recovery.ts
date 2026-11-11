@@ -84,6 +84,7 @@ function inScope(op: Operation, name: string, intent: WriteIntent) {
         canonical({
           'Task Title': op.payload.title,
           Description: op.payload.description,
+          ...(op.payload.caseName !== undefined ? { 'Case Name': op.payload.caseName } : {}),
           Agent: [op.payload.agentId],
           Priority: op.payload.priority,
           'Due Date': op.payload.dueDate,

@@ -143,6 +143,7 @@ test('only the opted-in owner receives a real Completed transition; retries/repe
       payload = {
         title: 'New task',
         description: 'private',
+        caseName: 'Synthetic Person',
         category: 'ลูกค้าเก่า',
         priority: 'Normal',
         dueDate: '2026-11-12',

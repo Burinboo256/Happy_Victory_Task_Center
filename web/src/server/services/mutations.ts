@@ -17,6 +17,7 @@ const schemas = {
   create: z.object({
     title: message(180).min(1),
     description: message(5000).min(1),
+    caseName: message(180).min(1),
     priority: z.enum(priorities),
     category: z.enum(categories),
     dueDate: day,
@@ -37,6 +38,7 @@ const schemas = {
       version: z.string().min(1),
       title: message(180).min(1),
       description: message(5000).min(1),
+      caseName: message(180).min(1).optional(),
       agentId: id,
       priority: z.enum(priorities),
       dueDate: day,
@@ -131,6 +133,7 @@ export async function mutate(
       'Request Key': steps.key,
       'Task Title': data.title,
       Description: data.description,
+      'Case Name': data.caseName,
       Agent: [owner],
       'Assigned Secretary': isManager(user) ? [user.id] : [],
       Category: data.category,
@@ -203,17 +206,19 @@ export async function mutate(
     const labels = {
       title: 'ชื่องาน',
       description: 'รายละเอียดงาน',
+      caseName: 'ชื่อบุคคลของเคส',
       agentId: 'Agent เจ้าของงาน',
       priority: 'ความเร่งด่วน',
       dueDate: 'กำหนดส่ง',
     } as const;
     const changed = (Object.keys(labels) as (keyof typeof labels)[]).filter(
-      (key) => data[key] !== original[key],
+      (key) => data[key] !== undefined && data[key] !== original[key],
     );
     if (!changed.length) return { id: data.id };
     await patchStep(steps, 'patch', repo, 'tasks', data.id, {
       'Task Title': data.title,
       Description: data.description,
+      ...(data.caseName !== undefined ? { 'Case Name': data.caseName } : {}),
       Agent: [data.agentId],
       Priority: data.priority,
       'Due Date': data.dueDate,

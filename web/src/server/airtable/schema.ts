@@ -45,6 +45,7 @@ export const schemaContract: Record<Table, { primary: string; fields: Record<str
       Sequence: field('autoNumber'),
       'Task Title': field('singleLineText'),
       Description: field('multilineText'),
+      'Case Name': field('singleLineText'),
       Agent: link('users'),
       'Agent Record ID': lookup('Agent', 'users'),
       'Assigned Secretary': link('users'),

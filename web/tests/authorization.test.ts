@@ -43,6 +43,7 @@ test('forged Agent owner and initial status are ignored; Agent comments are alwa
       {
         title: 'Test',
         description: 'Test details',
+        caseName: 'บุคคลสมมติ ทดสอบ',
         dueDate: '2026-11-06',
         category: 'ลูกค้าเก่า',
         priority: 'Normal',
@@ -79,6 +80,7 @@ test('managers edit task metadata and transfer ownership without changing workfl
     version: 'v1',
     title: 'Updated title',
     description: 'Updated description',
+    caseName: 'บุคคลสมมติ ทดสอบ',
     agentId: h.other.id,
     priority: 'Urgent',
     dueDate: '2026-12-15',
@@ -107,6 +109,7 @@ test('managers edit task metadata and transfer ownership without changing workfl
   const result = await detail(h.repo, h.other, rid(11));
   assert.equal(result.task.title, payload.title);
   assert.equal(result.task.description, payload.description);
+  assert.equal(result.task.caseName, payload.caseName);
   assert.equal(result.task.priority, 'Urgent');
   assert.equal(result.task.dueDate, payload.dueDate);
   assert.equal(result.task.status, 'New');
@@ -117,6 +120,7 @@ test('managers edit task metadata and transfer ownership without changing workfl
   for (const bad of [
     { title: ' ' },
     { description: '' },
+    { caseName: ' ' },
     { dueDate: '2026-02-30' },
     { priority: 'invalid' },
     { status: 'Completed' },
@@ -138,6 +142,7 @@ test('Admin can correct a closed task while retaining its inactive owner', async
       version: 'v1',
       title: 'Correction',
       description: 'Corrected',
+      caseName: 'บุคคลสมมติ ทดสอบ',
       agentId: h.agent.id,
       priority: 'Normal',
       dueDate: '2026-12-15',

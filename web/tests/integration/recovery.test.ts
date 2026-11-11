@@ -11,6 +11,7 @@ import { mutate } from '../../src/server/services/mutations';
 const data = {
   title: 'Synthetic recovery',
   description: 'No customer data',
+  caseName: 'บุคคลสมมติ ทดสอบ',
   dueDate: '2026-11-06',
   category: 'ลูกค้าเก่า',
   priority: 'Normal',
@@ -45,6 +46,7 @@ for (const failure of ['patch', 'audit']) {
         version: 'v1',
         title: 'Edited',
         description: 'Synthetic edit',
+        caseName: 'บุคคลสมมติ ทดสอบ',
         agentId: h.other.id,
         priority: 'High',
         dueDate: '2026-12-15',

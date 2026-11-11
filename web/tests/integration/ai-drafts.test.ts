@@ -23,6 +23,7 @@ const c = {
 const fields = {
   title: 'ติดตาม Memo สมมติ',
   description: 'ช่วยตรวจเอกสารที่ยังขาด',
+  caseName: 'บุคคลสมมติ ทดสอบ',
   category: 'ลูกค้าใหม่',
   priority: 'Urgent',
   dueDate: '2026-12-01',
@@ -111,6 +112,39 @@ test('signed LINE flow drafts without writes, requires a button, creates once an
   }
 });
 
+test('LINE explicitly asks for a case name and accepts it without an AI extraction call', async () => {
+  const { db, engine, h, binding } = await setup();
+  try {
+    const first = required(await draftInput(db, c, h.repo, h.agent, sender, binding, 'ส่งงาน'));
+    const reply = await finishDraft(
+      db,
+      c,
+      h.repo,
+      h.agent,
+      required(first.draft).id,
+      required(first.draft).revision,
+      binding,
+      JSON.stringify({ ...fields, caseName: null }),
+    );
+    assert.match(reply.text, /ชื่อลูกค้า:/);
+    assert.equal(
+      reply.actions?.some((a) => a.label === 'ยืนยันสร้างงาน'),
+      false,
+    );
+    const named = required(
+      await draftInput(db, c, h.repo, h.agent, sender, binding, 'ชื่อลูกค้า: คุณสมมติ ทดสอบ'),
+    );
+    assert.equal(named.context, undefined);
+    assert.match(required(named.reply).text, /ชื่อลูกค้า: คุณสมมติ ทดสอบ/);
+    const confirm = required(named.reply?.actions?.find((a) => a.label === 'ยืนยันสร้างงาน'));
+    await draftPostback(db, c, h.repo, h.agent, sender, binding, confirm.data);
+    assert.equal(h.tables.tasks.at(-1)?.fields['Case Name'], 'คุณสมมติ ทดสอบ');
+    assert.deepEqual(h.tables.tasks.at(-1)?.fields.Agent, [h.agent.id]);
+  } finally {
+    await engine.close();
+  }
+});
+
 test('multi-turn missing fields, edits, cancel and stale AI responses cannot use an earlier confirmation', async () => {
   const { db, engine, h, binding } = await setup();
   try {
@@ -127,6 +161,7 @@ test('multi-turn missing fields, edits, cancel and stale AI responses cannot use
       JSON.stringify({
         title: fields.title,
         description: fields.description,
+        caseName: 'บุคคลสมมติ ทดสอบ',
         category: fields.category,
       }),
     );

@@ -60,6 +60,7 @@ test('Agent opens mobile form directly and creates only after completed response
   await expect(page.getByLabel('Agent เจ้าของงาน')).toHaveCount(0);
   await page.getByLabel('ชื่องาน').fill('ติดตามเอกสารทดสอบ');
   await page.getByLabel('รายละเอียดงาน').fill('ข้อมูลสมมติสำหรับทดสอบฟอร์มบนมือถือ');
+  await page.getByLabel('ชื่อตัวแทน', { exact: true }).fill('บุคคลสมมติ ทดสอบ');
   await expect(page.locator('body')).toHaveJSProperty(
     'scrollWidth',
     await page.locator('body').evaluate((el) => el.clientWidth),

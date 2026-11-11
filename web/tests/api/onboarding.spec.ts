@@ -26,6 +26,7 @@ test('case workflow HTTP enforces ownership, CSRF, exact checklist, replay, stal
     data: {
       title: 'SIX CATEGORY WORKFLOW TEST',
       description: 'Synthetic only',
+      caseName: 'บุคคลสมมติ ทดสอบ',
       category: 'ตัวแทนใหม่',
       priority: 'Normal',
       dueDate: '2026-11-10',

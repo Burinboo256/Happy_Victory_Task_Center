@@ -28,6 +28,7 @@ const enabledConfig = {
 const payload = {
   title: 'ทดสอบงานใหม่',
   description: 'PRIVATE description not for LINE',
+  caseName: 'Synthetic Person',
   priority: 'Urgent',
   category: 'ตัวแทนใหม่',
   dueDate: '2026-11-12',

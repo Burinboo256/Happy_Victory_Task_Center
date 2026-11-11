@@ -29,7 +29,7 @@ export function schemaFixture() {
     tasks: make(config.AIRTABLE_TASKS_TABLE, 'Task ID', {
       formula: ['Task ID', 'Record ID'],
       autoNumber: ['Sequence'],
-      singleLineText: ['Task Title', 'Request Key'],
+      singleLineText: ['Task Title', 'Case Name', 'Request Key'],
       multilineText: ['Description'],
       multipleRecordLinks: ['Agent', 'Assigned Secretary'],
       multipleLookupValues: ['Agent Record ID'],

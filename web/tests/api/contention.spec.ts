@@ -38,6 +38,7 @@ test('overlapping HTTP status changes reserve one task, reject stale retry, and 
       data: {
         title: 'HTTP contention ' + randomUUID(),
         description: 'Synthetic same-task concurrency',
+        caseName: 'บุคคลสมมติ ทดสอบ',
         category: 'ลูกค้าเก่า',
         priority: 'Normal',
         dueDate: '2026-11-08',

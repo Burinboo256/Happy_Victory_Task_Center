@@ -17,6 +17,7 @@ import {
   priorityNames,
   statuses,
   priorities,
+  caseNameLabel,
   type Bootstrap,
   type Detail,
   type Task,
@@ -132,6 +133,7 @@ export function Workspace({
     [agent, setAgent] = useState('all'),
     [priority, setPriority] = useState('all');
   const [month, setMonth] = useState('');
+  const [newCategory, setNewCategory] = useState('');
   const [editingTaskKey, setEditingTaskKey] = useState('');
   const [pageIndex, setPageIndex] = useState(0),
     [viewMode, setViewMode] = useState<'list' | 'cards'>('list');
@@ -393,7 +395,7 @@ export function Workspace({
       (agent === 'all' || t.agentId === agent) &&
       (priority === 'all' || t.priority === priority) &&
       (category === 'all' || t.category === category) &&
-      `${t.code} ${t.title} ${t.description} ${userName(t.agentId)}`
+      `${t.code} ${t.title} ${t.description} ${t.caseName || ''} ${userName(t.agentId)}`
         .toLowerCase()
         .includes(search.toLowerCase()),
   );
@@ -510,7 +512,7 @@ export function Workspace({
         <input
           aria-label="ค้นหางาน"
           type="search"
-          placeholder="ค้นหาชื่องาน รหัสงาน หรือ Agent…"
+          placeholder="ค้นหางาน ชื่อบุคคล รหัส หรือ Agent…"
           value={search}
           onChange={(e) => {
             setSearch(e.target.value);
@@ -566,6 +568,11 @@ export function Workspace({
             >
               <span className="task-title">
                 <strong>{t.title}</strong>
+                {t.caseName && (
+                  <small>
+                    {caseNameLabel(t.category)}: {t.caseName}
+                  </small>
+                )}
                 {t.workflowSummary && <small>{t.workflowSummary}</small>}
                 <small>{t.code}</small>
                 <CategoryBadge category={t.category} />
@@ -695,7 +702,11 @@ export function Workspace({
               <div className="form-row">
                 <label>
                   ประเภทงาน
-                  <select name="category">
+                  <select
+                    name="category"
+                    value={newCategory || data.categories[0]}
+                    onChange={(e) => setNewCategory(e.target.value)}
+                  >
                     {data.categories.map((c) => (
                       <option key={c}>{c}</option>
                     ))}
@@ -712,6 +723,25 @@ export function Workspace({
                   </select>
                 </label>
               </div>
+              <label>
+                <span>
+                  {caseNameLabel(newCategory || data.categories[0])}{' '}
+                  <span className="case-required-marker" aria-hidden="true">
+                    *
+                  </span>
+                </span>
+                <input
+                  name="caseName"
+                  aria-label={caseNameLabel(newCategory || data.categories[0])}
+                  required
+                  maxLength={180}
+                  autoComplete="off"
+                  aria-describedby="case-name-hint"
+                />
+                <small id="case-name-hint">
+                  ชื่อ–นามสกุลของบุคคลที่ให้เลขาดำเนินการ แยกจาก Agent เจ้าของงาน
+                </small>
+              </label>
               <label>
                 กำหนดส่ง *<input type="date" name="dueDate" defaultValue={data.today} required />
               </label>
@@ -778,6 +808,10 @@ export function Workspace({
             )}
             <p className="detail-description">{task.description}</p>
             <dl className="detail-grid">
+              <div>
+                <dt>{caseNameLabel(task.category)}</dt>
+                <dd>{task.caseName || 'ยังไม่ระบุ'}</dd>
+              </div>
               <div>
                 <dt>Agent เจ้าของงาน</dt>
                 <dd>{userName(task.agentId)}</dd>

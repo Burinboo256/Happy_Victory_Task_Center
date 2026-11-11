@@ -46,6 +46,7 @@ test('PostgreSQL serializes simultaneous draft confirmation, edit and duplicate 
       JSON.stringify({
         title: 'Concurrent test',
         description: 'Synthetic',
+        caseName: 'บุคคลสมมติ ทดสอบ',
         category: 'ลูกค้าใหม่',
         dueDate: '2026-12-01',
       }),

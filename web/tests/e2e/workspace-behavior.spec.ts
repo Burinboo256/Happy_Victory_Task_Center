@@ -117,6 +117,7 @@ test('review response retains the form and same request key without claiming suc
   await page.goto('/tasks/new');
   await page.getByLabel('ชื่องาน').fill('ทดสอบการรอตรวจสอบ');
   await page.getByLabel('รายละเอียดงาน').fill('ข้อมูลสมมติ');
+  await page.getByLabel('ชื่อตัวแทน', { exact: true }).fill('บุคคลสมมติ ทดสอบ');
   await page.getByRole('button', { name: 'ส่งงานให้เลขาฯ' }).click();
   await expect(page.getByRole('alert').filter({ hasText: 'รอผู้ดูแลตรวจสอบ' })).toBeVisible();
   await expect(page.getByLabel('ชื่องาน')).toHaveValue('ทดสอบการรอตรวจสอบ');

@@ -31,6 +31,7 @@ test('task edit enforces CSRF, manager role, version and new owner access throug
     data: {
       title: 'Editable task',
       description: 'Synthetic',
+      caseName: 'บุคคลสมมติ ทดสอบ',
       category: 'ลูกค้าเก่า',
       priority: 'Normal',
       dueDate: '2026-12-01',
@@ -43,6 +44,7 @@ test('task edit enforces CSRF, manager role, version and new owner access throug
     version: initial.task.version,
     title: 'Reassigned task',
     description: 'Updated synthetic details',
+    caseName: 'บุคคลสมมติ ทดสอบ',
     agentId: rid(3),
     priority: 'Urgent',
     dueDate: '2026-12-15',
@@ -102,6 +104,7 @@ test('browser submits the real form through the API and PostgreSQL journal', asy
   await expect(page.getByRole('heading', { name: 'รายละเอียดงานใหม่' })).toBeVisible();
   await page.getByLabel('ชื่องาน').fill('งานทดสอบจากเบราว์เซอร์จริง');
   await page.getByLabel('รายละเอียดงาน').fill('ข้อมูลสมมติสำหรับทดสอบ UI ต่อ API โดยไม่ mock หน้าเว็บ');
+  await page.getByLabel('ชื่อตัวแทน', { exact: true }).fill('บุคคลสมมติ ทดสอบ');
   await page.getByRole('button', { name: 'ส่งงานให้เลขาฯ' }).click();
   await expect(page).toHaveURL(/\/tasks\/rec[a-zA-Z0-9]{14}$/);
   await expect(page.getByRole('heading', { name: 'งานทดสอบจากเบราว์เซอร์จริง' })).toBeVisible();
@@ -140,6 +143,7 @@ test('actual create, replay, Secretary update and private comment round trip thr
   const payload = {
     title: 'งานทดสอบ HTTP',
     description: 'Synthetic API integration',
+    caseName: 'บุคคลสมมติ ทดสอบ',
     category: 'ลูกค้าเก่า',
     priority: 'Normal',
     dueDate: '2026-11-06',
@@ -218,6 +222,7 @@ test('actual ambiguous write returns review and persists its idempotency key', a
   const payload = {
     title: 'TEST_UNCERTAIN',
     description: 'Synthetic failure',
+    caseName: 'บุคคลสมมติ ทดสอบ',
     category: 'ลูกค้าเก่า',
     priority: 'Normal',
     dueDate: '2026-11-06',

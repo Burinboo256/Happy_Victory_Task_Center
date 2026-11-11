@@ -201,6 +201,7 @@ async function lostAcknowledgement(user: User, action: Action, payload: unknown,
 const createData = (suffix: string) => ({
   title: '[LOCAL TEST] Recovery rehearsal ' + runId + ' ' + suffix,
   description: 'Synthetic recovery acceptance; no customer data.',
+  caseName: 'Synthetic Person',
   dueDate: todayBangkok(),
   category: 'ลูกค้าเก่า',
   priority: 'Normal',
