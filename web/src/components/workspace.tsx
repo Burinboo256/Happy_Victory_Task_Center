@@ -566,24 +566,36 @@ export function Workspace({
               key={t.id}
               href={'/tasks/' + t.id}
             >
-              <span className="task-title">
-                <strong>{t.title}</strong>
-                {t.caseName && (
-                  <small>
-                    {caseNameLabel(t.category)}: {t.caseName}
-                  </small>
-                )}
-                {t.workflowSummary && <small>{t.workflowSummary}</small>}
-                <small>{t.code}</small>
-                <CategoryBadge category={t.category} />
+              <span className="task-row-main">
+                <span className="task-title">
+                  <span className="task-field-label">งานที่ต้องทำ</span>
+                  <strong>{t.title}</strong>
+                </span>
+                <span className="task-case">
+                  <span className="task-field-label">{caseNameLabel(t.category)} (เคส)</span>
+                  <strong>{t.caseName || 'ยังไม่ระบุชื่อ'}</strong>
+                </span>
+                <span className="task-agent">
+                  <span className="task-field-label">Agent เจ้าของงาน</span>
+                  <strong>{userName(t.agentId)}</strong>
+                </span>
               </span>
-              {manager && <span className="task-agent">{userName(t.agentId)}</span>}
-              <Badge status={t.status} />
-              <PriorityBadge priority={t.priority} />
-              <span className={late(t) ? 'late' : 'task-date'}>
-                {fmtDate(page === 'followups' ? t.followupDate : t.dueDate)}
+              <span className="task-row-footer">
+                <span className="task-row-context">
+                  <CategoryBadge category={t.category} />
+                  <span>{t.code}</span>
+                  {t.workflowSummary && <span>{t.workflowSummary}</span>}
+                </span>
+                <span className="task-row-state">
+                  <Badge status={t.status} />
+                  <PriorityBadge priority={t.priority} />
+                  <span className={late(t) ? 'late' : 'task-date'}>
+                    {page === 'followups' ? 'นัดติดตาม: ' : 'กำหนดส่ง: '}
+                    {fmtDate(page === 'followups' ? t.followupDate : t.dueDate)}
+                  </span>
+                  <span aria-hidden="true">›</span>
+                </span>
               </span>
-              <span aria-hidden="true">›</span>
             </Link>
           ))}
         </div>
