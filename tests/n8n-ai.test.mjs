@@ -44,4 +44,11 @@ test('draft and summary use separate prompts and only forward model text to the 
   assert.equal(summary.messages[0].content,instructions);
   assert.equal(summary.response_format,undefined);
   assert.deepEqual(JSON.parse(summary.messages[1].content).context,{totals:{new:1}});
+  const history=[{question:'สถานะ HVR-00001',answer:'คำตอบเก่า'}];
+  const followup=body({question:'แล้วเคสนี้กำหนดส่งวันไหน',context:{conversation:{history,followup:true},items:[]}});
+  assert.deepEqual(JSON.parse(followup.messages[1].content).context.conversation.history,history);
+  assert.equal(followup.tools,undefined);
+  assert.match(followup.messages[0].content,/conversation.history/);
+  const separate=body({question:'ส่งงาน',draft:{mode:'draft',current:{},agents:[]},context:{conversation:{history}}});
+  assert.equal(JSON.parse(separate.messages[1].content).context,undefined);
 });

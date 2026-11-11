@@ -11,6 +11,14 @@ import { lineId, lineProfile, verifySignature } from '../line/client';
 import { verifyInstance } from '../runtime';
 import { aiContext } from './context';
 import {
+  beginMemory,
+  cleanMemory,
+  memoryIsCurrent,
+  memorySession,
+  readMemory,
+  rememberReply,
+} from './memory';
+import {
   draftInput,
   draftPostback,
   finishDraft,
@@ -169,6 +177,7 @@ export async function receiveAi(
   const body = envelope.parse(JSON.parse(raw));
   if (body.destination !== (c.AI_LINE_BOT_USER_ID || (await botIdentity(c)))) throw forbidden();
   await verifyInstance(db, c);
+  await cleanMemory(db, c);
   await db.query(
     "DELETE FROM hvr_ai_events WHERE environment=$1 AND created_at<clock_timestamp()-interval '1 day'",
     [c.APP_ENV],
@@ -200,6 +209,7 @@ export async function receiveAi(
       draftId: string | undefined,
       draftRevision: number | undefined;
     let replyActions: DraftReply['actions'];
+    let memoryTurnId: string | undefined;
     let user: User | undefined,
       binding: string | undefined,
       taskIds: string[] = [];
@@ -261,6 +271,10 @@ export async function receiveAi(
               replyActions = result.actions;
               taskConfirmed ||= !!result.created;
               if (result.taskId) taskIds = [result.taskId];
+            } else if (/^(ล้างความจำ|เริ่มคุยใหม่)$/.test(question)) {
+              await memorySession(db, c, user, account.binding, true);
+              answer =
+                'ล้างความจำบทสนทนาแล้ว เริ่มถามเรื่องใหม่ได้เลย งานและร่างส่งงานยังอยู่ หากต้องการยกเลิกร่างให้พิมพ์ “ยกเลิก”';
             } else {
               const result = await draftInput(db, c, repo, user, sender, account.binding, question);
               if (result) {
@@ -270,9 +284,21 @@ export async function receiveAi(
                 draftId = result.draft?.id;
                 draftRevision = result.draft?.revision;
               } else {
-                const data = await aiContext(db, c, repo, user, question);
+                const epoch = await memorySession(db, c, user, account.binding);
+                const memory = await readMemory(db, c, user, epoch);
+                const data = await aiContext(db, c, repo, user, question, memory);
                 context = data.context;
                 taskIds = data.taskIds;
+                memoryTurnId = await beginMemory(
+                  db,
+                  c,
+                  user,
+                  epoch,
+                  e.webhookEventId,
+                  question,
+                  taskIds,
+                  data.taskRefs,
+                );
               }
             }
           }
@@ -280,21 +306,23 @@ export async function receiveAi(
       }
     } catch {
       // Do not expose provider errors, account existence, SQL, or partially loaded task data.
-      answer = e.type === 'postback'
-        ? 'ยังยืนยันผลคำขอนี้ไม่ได้ กรุณาตรวจสิทธิ์บัญชีและพิมพ์ “ดูร่าง” เพื่อตรวจคำขอเดิม หรือตรวจงานในเว็บก่อนส่งงานใหม่'
-        : 'อ่านข้อมูลงานไม่ได้ กรุณาตรวจว่าบัญชีเว็บยังเปิดใช้งานอยู่ แล้วลองอีกครั้ง';
+      answer =
+        e.type === 'postback'
+          ? 'ยังยืนยันผลคำขอนี้ไม่ได้ กรุณาตรวจสิทธิ์บัญชีและพิมพ์ “ดูร่าง” เพื่อตรวจคำขอเดิม หรือตรวจงานในเว็บก่อนส่งงานใหม่'
+          : 'อ่านข้อมูลงานไม่ได้ กรุณาตรวจว่าบัญชีเว็บยังเปิดใช้งานอยู่ แล้วลองอีกครั้ง';
       context = undefined;
       draft = undefined;
       draftId = undefined;
       draftRevision = undefined;
       replyActions = undefined;
+      memoryTurnId = undefined;
       user = undefined;
       binding = undefined;
       taskIds = [];
     }
     await db.query(
       `UPDATE hvr_ai_events SET state='ready',user_id=$3,role=$4,binding=$5,task_ids=$6::jsonb,direct_answer=$7,
-        draft_id=$8,draft_revision=$9,reply_actions=$10 WHERE environment=$1 AND event_id=$2`,
+        draft_id=$8,draft_revision=$9,reply_actions=$10,memory_turn_id=$11 WHERE environment=$1 AND event_id=$2`,
       [
         c.APP_ENV,
         e.webhookEventId,
@@ -306,6 +334,7 @@ export async function receiveAi(
         draftId || null,
         draftRevision ?? null,
         replyActions ? JSON.stringify(replyActions) : null,
+        memoryTurnId || null,
       ],
     );
     jobs.push({
@@ -381,6 +410,8 @@ export async function replyAi(
       draftReply?.text || row.direct_answer || text.trim() || row.fallback_answer,
     ).slice(0, 4500);
     const buttons: DraftReply['actions'] = draftReply?.actions || row.reply_actions;
+    if (row.memory_turn_id && !(await memoryIsCurrent(db, c, row.memory_turn_id)))
+      throw new AppError(409, 'AI_MEMORY_CLEARED', 'บทสนทนานี้ถูกล้างหรือหมดอายุแล้ว กรุณาถามใหม่');
     const response = await transport('https://api.line.me/v2/bot/message/reply', {
       method: 'POST',
       headers: {
@@ -413,6 +444,14 @@ export async function replyAi(
       "UPDATE hvr_ai_events SET state='sent',reply_token=NULL WHERE environment=$1 AND event_id=$2",
       [c.APP_ENV, row.event_id],
     );
+    if (row.memory_turn_id && text.trim() && !row.direct_answer && !row.draft_id) {
+      // A storage failure after a successful LINE send must not turn into a duplicate-send retry.
+      try {
+        await rememberReply(db, c, row.memory_turn_id, answer);
+      } catch {
+        console.error('ai_memory_save_failed');
+      }
+    }
     return { sent: true };
   } catch (e) {
     // Never blindly retry an ambiguous LINE send; reply tokens are single-use.

@@ -17,6 +17,7 @@ import { taskDto, taskSummaryFields, publicUserFields, userDto } from '../airtab
 import type { Sql } from '../db';
 import type { Config } from '../config';
 import { forbidden } from '../errors';
+import { authorizedMemory, type MemoryTurn, type Conversation } from './memory';
 
 // Projection deliberately excludes descriptions, comments, attachments and case field values.
 export async function aiContext(
@@ -25,6 +26,7 @@ export async function aiContext(
   repo: AirtableRepository,
   user: User,
   question: string,
+  memory: MemoryTurn[] = [],
 ) {
   if (!user.active) throw forbidden();
   const records = await repo.list(
@@ -70,6 +72,12 @@ export async function aiContext(
     }
   const q = question.toLocaleLowerCase();
   const codes = q.match(/hvr-\d+|rec[a-z0-9]{14}/g);
+  const turns = authorizedMemory(
+    memory,
+    tasks.map((t) => t.id),
+  );
+  const focusIds = turns.at(-1)?.focus_ids || [];
+  let followup = false;
   let selected = tasks;
   if (codes)
     selected = selected.filter(
@@ -82,6 +90,12 @@ export async function aiContext(
     if (owners.length) selected = selected.filter((t) => owners.includes(t.agentId));
     const category = Object.keys(caseDefinitions).find((c) => q.includes(c));
     if (category) selected = selected.filter((t) => t.category === category);
+    followup =
+      !owners.length &&
+      !category &&
+      !/สรุป|ทั้งหมด|งานไหน|วันนี้|เกินกำหนด|เลยกำหนด|urgent|ด่วน/.test(q) &&
+      /เคสนี้|เคสนั้น|งานนี้|งานนั้น|รายการนี้|รายการนั้น|^แล้ว|ยังขาดอะไร|ใครรับผิดชอบ/.test(q);
+    if (followup) selected = selected.filter((t) => focusIds.includes(t.id));
     if (/เกินกำหนด|เลยกำหนด|overdue/.test(q))
       selected = selected.filter((t) => isOpen(t) && t.dueDate && t.dueDate < today);
     else if (/ด่วน|urgent/.test(q))
@@ -151,7 +165,13 @@ export async function aiContext(
   });
   return {
     taskIds: tasks.map((t) => t.id),
+    taskRefs: selected.map((t) => ({ id: t.id, code: t.code })),
     context: {
+      conversation: {
+        history: turns.map((t) => ({ question: t.question, answer: t.answer })),
+        followup,
+        focusCodes: selected.filter((t) => focusIds.includes(t.id)).map((t) => t.code),
+      } satisfies Conversation,
       asOf: new Date().toISOString(),
       timezone: 'Asia/Bangkok',
       today,
