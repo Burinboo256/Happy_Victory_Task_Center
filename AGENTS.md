@@ -1,34 +1,43 @@
 # Repository Guidelines
 
-## Project Structure & Module Organization
+## Project Structure & Architecture
 
-- `apps-script/` contains production Google Apps Script: `.gs` backend services, `Index.html`, `Styles.html`, `Scripts.html`, and `appsscript.json`. Keep task, follow-up, authentication, Airtable, and notification logic in their respective services.
-- `preview/Demo.html` supplies the local demo adapter with synthetic data and browser localStorage.
-- `tools/` contains preview assembly, the local HTTP server, and syntax checks.
-- `tests/` covers backend behavior, LINE integration logic, and preview assembly.
-- `docs/` documents deployment, database schema, security checks, and LINE setup. `artifacts/` holds screenshots and packaged exports; `dist/` contains generated preview output. Both are ignored by Git.
+RINLYN Secretary runs from `web/` on Vercel. Airtable stores business records; Neon PostgreSQL stores sessions, operation journals, LINE bindings, and AI memory.
+
+- `web/src/app/`: routes; `components/`: interface; `domain/`: workflow rules; `server/`: authentication, integrations, and services.
+- `web/db/migrations/`, `web/tests/`, and `web/tools/`: migrations, tests, and operational utilities.
+- `integrations/n8n/`: LINE AI workflow; `docs/`: schemas and runbooks.
+- `apps-script/`, `preview/`, root `tools/`, and root `tests/`: legacy application and offline demo.
+- `artifacts/`: ignored local generators/evidence; `output/`: delivered PDFs/videos; `pic/`: user references.
 
 ## Build, Test, and Development Commands
 
-Use Node.js 20 or newer; no dependency installation is required. Run commands from the repository root:
+Use Node.js 24. From `web/`:
 
-- `npm run build`: assemble the standalone demo at `dist/index.html`.
-- `npm run preview`: build and serve the demo at `http://127.0.0.1:4173/`; override the port with `PORT`.
-- `npm run check`: parse backend, frontend, and demo JavaScript and validate the Apps Script manifest.
-- `npm test`: run all `tests/*.test.mjs` using Node's built-in test runner.
+- `npm ci` and `npm run dev`: install dependencies and start development.
+- `npm run lint`, `npm run typecheck`, `npm test`: static checks and unit tests.
+- `npm run test:integration`: PGlite integration tests.
+- `npm run build` then `npm run test:e2e`: production build and Playwright tests.
+- `npm run db:migrate`: apply migrations against the configured database.
 
-## Coding Style & Naming Conventions
+Root `npm run build`, `npm run preview`, `npm run check`, and `npm test` target the legacy demo, not the Vercel app. Windows PowerShell can use `npm.cmd`.
 
-Follow surrounding formatting: two-space indentation in expanded blocks, semicolons, and single-quoted JavaScript strings. Backend code uses `var`, camelCase functions, and trailing underscores for internal helpers, such as `ownTask_`. Node tools and tests use ES modules (`.mjs`). Keep service filenames descriptive, such as `TaskService.gs`. Preserve Thai interface text and UTF-8 encoding. No formatter or linter is configured; `check` performs syntax validation.
+## Coding Style & Naming
+
+Follow `web/AGENTS.md` and bundled Next.js documentation before changing web code. Use TypeScript, two-space indentation, single quotes, and Biome (`web/biome.json`). Preserve UTF-8 Thai text, `Asia/Bangkok` dates, and existing component conventions.
 
 ## Testing Guidelines
 
-Use `node:test` with `node:assert/strict`; name files `*.test.mjs` and describe expected behavior in test names. Mock Apps Script services and external APIs through the existing VM harnesses. Cover authorization, ownership, retries, and Bangkok date boundaries when changing related logic. No numeric coverage threshold is configured. Run checks and tests before submitting; verify UI changes in the preview. Follow `docs/security-and-testing.md` for account-level integration checks.
+Use `node:test` (`*.test.ts`), PGlite, and Playwright as appropriate. Cover ownership, Active/role checks, idempotency, workflow completion, and date boundaries. Use isolated fixtures; browser emulation does not establish physical-device compatibility.
 
-## Commit & Pull Request Guidelines
+## Configuration & Deployment
 
-This checkout has no Git history to establish commit conventions. Use concise, imperative subjects, for example `Fix LINE summary retry handling`. PRs should explain behavior changes, list validation performed, link relevant issues, and include screenshots for UI changes.
+Keep secrets in ignored environment files and hosting configuration. Separate development, staging, and production credentials. Vercel Root Directory is `web/`; consult `docs/vercel-production.md` and deployment/recovery runbooks. Early README deployment snapshots may be outdated. Keep authorization server-side and legacy writes paused after cutover.
 
-## Security & Deployment
+## Manuals & Videos
 
-Store credentials in Apps Script Script Properties. Keep authorization checks server-side. Deploy only `apps-script/`; the preview is a simulation. Follow `docs/deployment.md` and keep `Asia/Bangkok` timezone behavior consistent.
+Use synthetic data and mocked APIs for captures. Keep A4 manuals with iPhone-framed screenshots. Approved narration uses Thai gTTS, 1.08× speed, without “คะ/ค่ะ”; align visuals to speech. Preserve full videos and split topics at sentence boundaries. Verify decoding, layout, playback, and ZIP links. Local generators live in ignored `artifacts/`; verify availability. Deliver under `output/pdf/` or `output/video/`; topic collections use `output/video/topics/`. Do not restore removed AI chapters without a request.
+
+## Commits & Pull Requests
+
+Use concise imperative subjects, matching history: `Require case person names when creating tasks`. Describe behavior, validation, and relevant issues; include screenshots for interface changes. Stage only intended files.
