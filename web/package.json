@@ -8,6 +8,7 @@
   },
   "scripts": {
     "dev": "next dev",
+    "preview:forms": "node tools/forms-preview.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "biome lint src tools tests --error-on-warnings",
@@ -20,6 +21,7 @@
     "test:load": "tsx tools/load-local.ts",
     "probe:live": "tsx tools/probe-live.ts",
     "db:migrate": "tsx tools/migrate.ts",
+    "forms:import": "tsx tools/import-documents.ts",
     "diagnose": "tsx tools/diagnose.ts",
     "rehearse:live": "tsx tools/rehearse-live.ts",
     "rehearse:backup": "tsx tools/rehearse-backup.ts",

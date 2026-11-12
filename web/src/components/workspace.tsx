@@ -10,6 +10,7 @@ import { CaseWorkflowPanel } from './case-workflow';
 import { TaskEditPanel } from './task-edit';
 import { LineSettings } from './line-settings';
 import { AiLineSettings } from './ai-line-settings';
+import { FormsLibrary } from './forms';
 import {
   isManager,
   isOpen,
@@ -34,6 +35,7 @@ export type Page =
   | 'team'
   | 'history'
   | 'notifications'
+  | 'forms'
   | 'new'
   | 'detail';
 const names: Record<Page, string> = {
@@ -46,6 +48,7 @@ const names: Record<Page, string> = {
   team: 'ทีมของเรา',
   history: 'ประวัติงาน',
   notifications: 'แจ้งเตือน LINE',
+  forms: 'เอกสารและแบบฟอร์ม',
   new: 'ส่งงานใหม่',
   detail: 'รายละเอียดงาน',
 };
@@ -59,6 +62,7 @@ const nav: { page: Page; href: string; symbol: string; manager?: boolean; agent?
   { page: 'team', href: '/team', symbol: '♧', manager: true },
   { page: 'history', href: '/history', symbol: '✓', agent: true },
   { page: 'notifications', href: '/notifications', symbol: '♧' },
+  { page: 'forms', href: '/forms', symbol: '▧' },
 ];
 const fmtDate = (value: string, full = false) =>
   value
@@ -115,10 +119,14 @@ export function Workspace({
   page,
   taskId,
   initialStatus = 'all',
+  formId,
+  initialFormQuery,
 }: {
   page: Page;
   taskId?: string;
   initialStatus?: string;
+  formId?: string;
+  initialFormQuery?: string;
 }) {
   const router = useRouter();
   const [data, setData] = useState<Bootstrap | null>(null),
@@ -202,7 +210,11 @@ export function Workspace({
       ? '/tasks/' + taskId
       : page === 'new'
         ? '/tasks/new'
-        : nav.find((n) => n.page === page)?.href || '/';
+        : page === 'forms' && formId
+          ? '/forms/' + formId
+          : page === 'forms' && initialFormQuery
+            ? '/forms?' + new URLSearchParams({ q: initialFormQuery }).toString()
+            : nav.find((n) => n.page === page)?.href || '/';
   const request = useCallback(
     async (url: string, options?: RequestInit) => {
       let response: Response;
@@ -241,7 +253,7 @@ export function Workspace({
       const sequence = ++loadSequence.current;
       try {
         const value: Bootstrap = await request(
-          ['new', 'detail', 'notifications'].includes(page)
+          ['new', 'detail', 'notifications', 'forms'].includes(page)
             ? '/api/bootstrap?scope=context'
             : '/api/bootstrap',
           { signal },
@@ -659,6 +671,15 @@ export function Workspace({
     </div>
   );
   const content = () => {
+    if (page === 'forms')
+      return (
+        <FormsLibrary
+          data={data}
+          request={request}
+          initialId={formId}
+          initialQuery={initialFormQuery}
+        />
+      );
     if (page === 'notifications')
       return (
         <div className="panel line-settings-panel">
@@ -1338,7 +1359,12 @@ export function Workspace({
         <span className="nav-label">WORKSPACE</span>
         <nav aria-label="เมนูหลัก">
           {nav
-            .filter((n) => (!n.manager || manager) && (!n.agent || !manager))
+            .filter(
+              (n) =>
+                (!n.manager || manager) &&
+                (!n.agent || !manager) &&
+                (n.page !== 'forms' || data.formsEnabled),
+            )
             .map((n) => (
               <Link
                 className={page === n.page ? 'active' : ''}
@@ -1431,10 +1457,12 @@ export function Workspace({
               <p>
                 {page === 'new'
                   ? 'บอกสิ่งที่ต้องการให้ช่วย แล้วเราจะเดินหน้าไปด้วยกัน'
-                  : 'ทุกความคืบหน้า อยู่ในพื้นที่เดียวกัน'}
+                  : page === 'forms'
+                    ? 'ค้นหาเอกสารและเปิดฉบับที่ทีมเผยแพร่ไว้'
+                    : 'ทุกความคืบหน้า อยู่ในพื้นที่เดียวกัน'}
               </p>
             </div>
-            {page !== 'new' && (
+            {page !== 'new' && page !== 'forms' && (
               <Link className="btn primary" href="/tasks/new">
                 + ส่งงานใหม่
               </Link>

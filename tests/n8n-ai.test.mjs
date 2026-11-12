@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { workflow, draftInstructions, instructions } from '../tools/build-n8n-ai.mjs';
+import { workflow, draftInstructions, instructions, documentInstructions } from '../tools/build-n8n-ai.mjs';
 const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
 test('n8n AI template keeps signatures intact, does not retain executions and has no task write tools',()=>{
   assert.equal(workflow.active,false);
@@ -51,4 +51,17 @@ test('draft and summary use separate prompts and only forward model text to the 
   assert.match(followup.messages[0].content,/conversation.history/);
   const separate=body({question:'ส่งงาน',draft:{mode:'draft',current:{},agents:[]},context:{conversation:{history}}});
   assert.equal(JSON.parse(separate.messages[1].content).context,undefined);
+});
+
+test('document contract sends bounded metadata and requests IDs through the existing HTTP model node',()=>{
+  const expression=workflow.nodes.find(n=>n.name==='OpenRouter').parameters.jsonBody;
+  const body=new Function('$json','return ('+expression.slice(3,-2).trim()+');');
+  const documents={contractVersion:2,items:[{id:'test-document',title:'HC1',source:'allianz'}],total:1};
+  const result=body({question:'ขอฟอร์ม HC1',documents});
+  assert.equal(result.messages[0].content,documentInstructions);
+  assert.deepEqual(result.response_format,{type:'json_object'});
+  assert.equal(result.tools,undefined);
+  assert.deepEqual(JSON.parse(result.messages[1].content),{question:'ขอฟอร์ม HC1',documents,contractVersion:2});
+  assert.match(documentInstructions,/documentIds/);
+  assert.equal(workflow.nodes.filter(n=>n.name==='Send verified LINE reply').length,1);
 });

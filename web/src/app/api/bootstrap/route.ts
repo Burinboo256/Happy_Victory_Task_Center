@@ -25,6 +25,7 @@ export function GET(request: Request) {
       ...data,
       csrfToken: c.csrfToken,
       writesEnabled: state.writes,
+      formsEnabled: c.config.FORMS_ENABLED,
     });
   });
 }

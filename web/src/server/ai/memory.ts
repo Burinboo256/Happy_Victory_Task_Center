@@ -8,7 +8,9 @@ export type MemoryTurn = {
   answer: string;
   task_ids: string[];
   focus_ids: string[];
+  document_refs?: DocumentRef[];
 };
+export type DocumentRef = { id: string; versionId: string };
 type TaskRef = { id: string; code: string };
 export type Conversation = {
   history: { question: string; answer: string }[];
@@ -53,7 +55,7 @@ export async function memorySession(
 export async function readMemory(db: Sql, c: Config, user: User, epoch: string) {
   const rows = (
     await db.query<MemoryTurn>(
-      `SELECT question,answer,task_ids,focus_ids FROM hvr_ai_memory_turns
+      `SELECT question,answer,task_ids,focus_ids,document_refs FROM hvr_ai_memory_turns
       WHERE environment=$1 AND user_id=$2 AND epoch=$3 AND answer IS NOT NULL
       AND expires_at>clock_timestamp() ORDER BY id DESC LIMIT 6`,
       [c.APP_ENV, user.id, epoch],
@@ -77,13 +79,23 @@ export async function beginMemory(
   question: string,
   taskIds: string[],
   refs: TaskRef[],
+  documentRefs: DocumentRef[] = [],
 ) {
   const row = (
     await db.query(
-      `INSERT INTO hvr_ai_memory_turns(environment,user_id,epoch,event_id,question,task_ids,task_refs)
-      SELECT environment,user_id,epoch,$4,$5,$6::jsonb,$7::jsonb FROM hvr_ai_memory_sessions
+      `INSERT INTO hvr_ai_memory_turns(environment,user_id,epoch,event_id,question,task_ids,task_refs,document_refs)
+      SELECT environment,user_id,epoch,$4,$5,$6::jsonb,$7::jsonb,$8::jsonb FROM hvr_ai_memory_sessions
       WHERE environment=$1 AND user_id=$2 AND epoch=$3 RETURNING id`,
-      [c.APP_ENV, user.id, epoch, eventId, question, JSON.stringify(taskIds), JSON.stringify(refs)],
+      [
+        c.APP_ENV,
+        user.id,
+        epoch,
+        eventId,
+        question,
+        JSON.stringify(taskIds),
+        JSON.stringify(refs),
+        JSON.stringify(documentRefs),
+      ],
     )
   ).rows[0];
   if (!row) throw forbidden();
@@ -100,7 +112,13 @@ export async function memoryIsCurrent(db: Sql, c: Config, turnId: string) {
   ).rows.length;
 }
 
-export async function rememberReply(db: Sql, c: Config, turnId: string, answer: string) {
+export async function rememberReply(
+  db: Sql,
+  c: Config,
+  turnId: string,
+  answer: string,
+  documentRefs?: DocumentRef[],
+) {
   const row = (
     await db.query(
       `SELECT task_refs FROM hvr_ai_memory_turns WHERE environment=$1 AND id=$2 AND expires_at>clock_timestamp()`,
@@ -116,9 +134,15 @@ export async function rememberReply(db: Sql, c: Config, turnId: string, answer: 
   const ids = (focus.length ? focus : refs.length === 1 ? refs : []).map((r) => r.id);
   const saved = (
     await db.query(
-      `UPDATE hvr_ai_memory_turns SET answer=$3,focus_ids=$4::jsonb
+      `UPDATE hvr_ai_memory_turns SET answer=$3,focus_ids=$4::jsonb,document_refs=COALESCE($5::jsonb,document_refs)
       WHERE environment=$1 AND id=$2 AND answer IS NULL AND expires_at>clock_timestamp() RETURNING user_id,epoch`,
-      [c.APP_ENV, turnId, answer, JSON.stringify(ids)],
+      [
+        c.APP_ENV,
+        turnId,
+        answer,
+        JSON.stringify(ids),
+        documentRefs ? JSON.stringify(documentRefs) : null,
+      ],
     )
   ).rows[0];
   if (saved)

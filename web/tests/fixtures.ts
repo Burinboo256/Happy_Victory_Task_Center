@@ -2,7 +2,7 @@ import { PGlite } from '@electric-sql/pglite';
 import { readFile, readdir } from 'node:fs/promises';
 import type { QueryResult, QueryResultRow } from 'pg';
 import { readConfig } from '../src/server/config';
-import type { Sql } from '../src/server/db';
+import type { TransactionalSql } from '../src/server/db';
 import type { AirtableRepository, RecordData, Table } from '../src/server/airtable/client';
 import { userDto } from '../src/server/airtable/dto';
 
@@ -36,7 +36,20 @@ export async function migrationSql() {
 export async function database() {
   const engine = new PGlite();
   for (const sql of await migrationSql()) await engine.exec(sql);
-  const db: Sql = {
+  const db: TransactionalSql = {
+    async transaction(work) {
+      return engine.transaction(async (tx) =>
+        work({
+          async query<R extends QueryResultRow>(sql: string, values: unknown[] = []) {
+            const result = await tx.query<R>(sql, values);
+            return {
+              rows: result.rows,
+              rowCount: result.affectedRows ?? result.rows.length,
+            } as QueryResult<R>;
+          },
+        }),
+      );
+    },
     async query<R extends QueryResultRow>(sql: string, values: unknown[] = []) {
       const result = await engine.query<R>(sql, values);
       return {

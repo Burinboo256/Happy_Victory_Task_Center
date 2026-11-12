@@ -100,6 +100,7 @@ export interface Bootstrap {
   syncedAt: string;
   csrfToken: string;
   writesEnabled: boolean;
+  formsEnabled?: boolean;
 }
 export interface Detail {
   caseWorkflow?: import('./case-workflow').CaseView;

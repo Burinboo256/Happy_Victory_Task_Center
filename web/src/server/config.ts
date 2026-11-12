@@ -38,6 +38,8 @@ const schema = z.object({
     .optional(),
   CRON_SECRET: z.string().min(32).optional(),
   AI_LINE_ENABLED: flag,
+  FORMS_ENABLED: flag,
+  AI_FORMS_ENABLED: flag,
   AI_LINE_CHANNEL_ACCESS_TOKEN: z.string().min(20).optional(),
   AI_LINE_CHANNEL_SECRET: z.string().min(16).optional(),
   AI_LINE_OA_ID: z

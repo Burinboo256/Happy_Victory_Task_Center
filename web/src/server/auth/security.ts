@@ -36,9 +36,29 @@ const paths = new Set([
   '/team',
   '/history',
   '/notifications',
+  '/forms',
 ]);
-export const safeReturnTo = (value: string | null | undefined) =>
-  value && (paths.has(value) || /^\/tasks\/rec[a-zA-Z0-9]{14}$/.test(value)) ? value : '/';
+export function safeReturnTo(value: string | null | undefined): string {
+  if (!value) return '/';
+  if (
+    paths.has(value) ||
+    /^\/tasks\/rec[a-zA-Z0-9]{14}$/.test(value) ||
+    /^\/forms\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(\/open)?$/.test(value)
+  )
+    return value;
+  if (value.startsWith('/forms?')) {
+    const query = new URLSearchParams(value.slice('/forms?'.length));
+    const q = query.get('q');
+    if (
+      q !== null &&
+      q.length <= 300 &&
+      [...query.keys()].every((k) => k === 'q') &&
+      query.getAll('q').length === 1
+    )
+      return '/forms?' + new URLSearchParams({ q }).toString();
+  }
+  return '/';
+}
 export function requireCsrf(request: Request, csrfToken: string, config: Config) {
   const token = request.headers.get('x-csrf-token') || '';
   if (

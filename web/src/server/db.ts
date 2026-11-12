@@ -7,6 +7,18 @@ export interface Sql {
     values?: unknown[],
   ): Promise<QueryResult<R>>;
 }
+export interface TransactionalSql extends Sql {
+  transaction<T>(work: (db: Sql) => Promise<T>): Promise<T>;
+}
+
+// Production uses a checked-out connection; isolated test engines supply their own transaction.
+export async function atomic<T>(db: Sql, work: (connection: Sql) => Promise<T>): Promise<T> {
+  if ('transaction' in db && typeof db.transaction === 'function')
+    return (db as TransactionalSql).transaction(work);
+  if (!('connect' in db) || typeof db.connect !== 'function')
+    throw new Error('A transactional database is required');
+  return transaction(db as Pool, work);
+}
 const pools = new Map<string, Pool>();
 export function getPool(config: Pick<Config, 'DATABASE_URL'>) {
   let pool = pools.get(config.DATABASE_URL);

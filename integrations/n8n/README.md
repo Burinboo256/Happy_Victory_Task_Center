@@ -27,6 +27,16 @@
 - หมดอายุแล้วจะไม่ถูกใช้ ลบจากฐานข้อมูลเมื่อมี webhook ถัดไป (ไม่มี cron เพิ่ม) จำกัดคำถาม 2,000/คำตอบ 4,500 ตัวอักษรต่อรอบ สำเนา backup และข้อมูลที่ผู้ให้บริการได้รับเป็นไปตามการเก็บข้อมูลของแต่ละระบบ
 - ความจำการถามงานไม่ถูกนำไปแก้ร่างหรือกดยืนยันงาน; ร่างใช้ state และปุ่มยืนยันเดิม ระหว่างมีร่างเปิดอยู่ใช้ “สรุป…”/“สถานะ…” เพื่อถามงาน หรือยกเลิกร่างก่อนถามต่ออิสระ
 
+## เอกสารและแบบฟอร์ม
+
+Document contract v2 ใช้ `documents` แยกจากบริบทงาน เปิดด้วย `FORMS_ENABLED` และ `AI_FORMS_ENABLED` หลังเผยแพร่ทะเบียนที่ตรวจแล้ว รุ่นนี้ต้องมี migrations ถึง `011_ai_documents.sql` ก่อน deploy เว็บ ดู [แผน](../../docs/forms-production-plan.md) และ [สถานะปล่อย](../../docs/forms-production-progress.md)
+
+คำถามเช่น “ขอฟอร์ม HC1”, “มีเอกสารหักบัญชีไหม”, “ขอเอกสารที่ฉันติดดาวไว้” ค้นทะเบียน Neon เดียวกับเว็บ สูงสุด 5 รายการ ไม่โหลด Tasks สำหรับคำถามเอกสารล้วน ไม่อ่านหรือเก็บเนื้อหา PDF/Drive และไม่แก้ร่างงานที่เปิดอยู่
+
+OpenRouter ส่งกลับ `documentIds` และ `taskAnswer` เฉพาะคำถามผสม เว็บตรวจ ID/ฉบับ/สิทธิ์ล่าสุดและสร้างชื่อกับลิงก์เอง หากโมเดลล้มเหลวหรือ JSON ไม่ผ่าน ใช้ผลค้นจากทะเบียนแทน เอกสารพักใช้หรือร่างไม่ถูกส่ง ลำดับเอกสารใน memory ใช้ถามต่อ “รายการที่สอง”; เปลี่ยนฉบับหรือหมดสิทธิ์จะตัดประวัตินั้นออก
+
+การอัปเดต workflow ที่ใช้อยู่ให้ export สำรองและคง credential เดิมก่อนแทน node parameters อย่าสร้าง webhook ซ้ำหรือเปลี่ยน OA โดยอัตโนมัติ เปิดเว็บก่อน → deploy workflow contract v2 → เปิด AI flag ตรวจคำถามเอกสารและงานเดิมจริง ปิดเฉพาะ `AI_FORMS_ENABLED` เพื่อย้อนฟีเจอร์เอกสารโดยคงถามงานเดิมได้
+
 ## เส้นทางคำขอ
 
 LINE → n8n Webhook (raw body) → `/api/ai/line` ตรวจลายเซ็น/บัญชี/สิทธิ์ → OpenRouter เรียบเรียง → `/api/ai/reply` ตรวจสิทธิ์ล่าสุดและส่งกลับด้วย reply token ของเหตุการณ์นั้น
@@ -42,7 +52,7 @@ n8n ตอบรับ LINE ทันทีเพื่อหลีกเลี�
 
 ## ติดตั้ง
 
-1. สำรอง Neon และรัน migration ถึง `009_ai_conversation_memory.sql` ผ่าน `npm run db:migrate` ด้วย environment ที่ถูกต้อง
+1. สำรอง Neon และรัน migration ถึง `011_ai_documents.sql` ผ่าน `npm run db:migrate` ด้วย environment ที่ถูกต้อง
 2. ตั้งค่า Vercel แบบ server-only: `AI_LINE_CHANNEL_SECRET`, `AI_LINE_CHANNEL_ACCESS_TOKEN`, `AI_LINE_OA_ID=@672vhuss`, `AI_LINE_ENABLED=true` แล้ว deploy หากไม่กำหนด `AI_LINE_BOT_USER_ID` ระบบตรวจตัวตน OA ด้วย LINE bot info และ cache 5 นาที
 3. สร้างไฟล์ด้วย `node tools/build-n8n-ai.mjs` และนำ `rinlyn-secretary-ai.json` เข้า workflow ว่าง
 4. ใน node OpenRouter เลือก Header Auth credential: Name `Authorization`, Value `Bearer <API key>`, Allowed Domains `openrouter.ai` เก็บ key ใน Credentials เท่านั้น

@@ -11,6 +11,14 @@ import { lineId, lineProfile, verifySignature } from '../line/client';
 import { verifyInstance } from '../runtime';
 import { aiContext } from './context';
 import {
+  aiDocuments,
+  currentDocumentMemory,
+  documentIntent,
+  documentRefs,
+  renderDocumentReply,
+  type AiDocuments,
+} from './documents';
+import {
   beginMemory,
   cleanMemory,
   memoryIsCurrent,
@@ -159,6 +167,8 @@ export type AiJob = {
   question: string;
   context?: Awaited<ReturnType<typeof aiContext>>['context'];
   draft?: DraftContext;
+  documents?: AiDocuments;
+  contractVersion?: 2;
 };
 const fallback = 'ขณะนี้ AI สรุปไม่สำเร็จ กรุณาถามใหม่อีกครั้ง หรือเปิดงานในเว็บ';
 
@@ -210,6 +220,7 @@ export async function receiveAi(
       draftRevision: number | undefined;
     let replyActions: DraftReply['actions'];
     let memoryTurnId: string | undefined;
+    let documents: AiDocuments | undefined;
     let user: User | undefined,
       binding: string | undefined,
       taskIds: string[] = [];
@@ -276,7 +287,14 @@ export async function receiveAi(
               answer =
                 'ล้างความจำบทสนทนาแล้ว เริ่มถามเรื่องใหม่ได้เลย งานและร่างส่งงานยังอยู่ หากต้องการยกเลิกร่างให้พิมพ์ “ยกเลิก”';
             } else {
-              const result = await draftInput(db, c, repo, user, sender, account.binding, question);
+              const epoch = await memorySession(db, c, user, account.binding);
+              const rawMemory = await readMemory(db, c, user, epoch);
+              const memory = await currentDocumentMemory(db, c, user, rawMemory);
+              const wantsDocuments =
+                c.FORMS_ENABLED && c.AI_FORMS_ENABLED && documentIntent(question, rawMemory);
+              const result = wantsDocuments
+                ? null
+                : await draftInput(db, c, repo, user, sender, account.binding, question);
               if (result) {
                 answer = result.reply?.text || '';
                 replyActions = result.reply?.actions;
@@ -284,11 +302,13 @@ export async function receiveAi(
                 draftId = result.draft?.id;
                 draftRevision = result.draft?.revision;
               } else {
-                const epoch = await memorySession(db, c, user, account.binding);
-                const memory = await readMemory(db, c, user, epoch);
-                const data = await aiContext(db, c, repo, user, question, memory);
-                context = data.context;
-                taskIds = data.taskIds;
+                if (wantsDocuments) documents = await aiDocuments(db, c, user, question, memory);
+                const data =
+                  !documents || documents.mixed
+                    ? await aiContext(db, c, repo, user, question, memory)
+                    : null;
+                context = data?.context;
+                taskIds = data?.taskIds || [];
                 memoryTurnId = await beginMemory(
                   db,
                   c,
@@ -297,7 +317,8 @@ export async function receiveAi(
                   e.webhookEventId,
                   question,
                   taskIds,
-                  data.taskRefs,
+                  data?.taskRefs || [],
+                  documents ? documentRefs(documents) : [],
                 );
               }
             }
@@ -316,13 +337,14 @@ export async function receiveAi(
       draftRevision = undefined;
       replyActions = undefined;
       memoryTurnId = undefined;
+      documents = undefined;
       user = undefined;
       binding = undefined;
       taskIds = [];
     }
     await db.query(
       `UPDATE hvr_ai_events SET state='ready',user_id=$3,role=$4,binding=$5,task_ids=$6::jsonb,direct_answer=$7,
-        draft_id=$8,draft_revision=$9,reply_actions=$10,memory_turn_id=$11 WHERE environment=$1 AND event_id=$2`,
+        draft_id=$8,draft_revision=$9,reply_actions=$10,memory_turn_id=$11,document_context=$12 WHERE environment=$1 AND event_id=$2`,
       [
         c.APP_ENV,
         e.webhookEventId,
@@ -335,14 +357,18 @@ export async function receiveAi(
         draftRevision ?? null,
         replyActions ? JSON.stringify(replyActions) : null,
         memoryTurnId || null,
+        documents
+          ? JSON.stringify({ search: documents, taskUrls: context?.items.map((t) => t.url) || [] })
+          : null,
       ],
     );
     jobs.push({
       ticket,
-      needsAi: !!context || !!draft,
-      question: context || draft ? question : '',
+      needsAi: !!context || !!draft || !!documents,
+      question: context || draft || documents ? question : '',
       ...(context ? { context } : {}),
       ...(draft ? { draft } : {}),
+      ...(documents ? { documents, contractVersion: 2 as const } : {}),
     });
   }
   return { jobs, taskConfirmed };
@@ -406,8 +432,25 @@ export async function replyAi(
             text,
           )
         : undefined;
+    if (row.document_context && (!currentUser || !c.FORMS_ENABLED || !c.AI_FORMS_ENABLED))
+      throw forbidden();
+    const documentReply =
+      row.document_context && currentUser
+        ? await renderDocumentReply(
+            db,
+            c,
+            currentUser,
+            row.document_context.search,
+            text,
+            row.document_context.taskUrls,
+          )
+        : undefined;
     const answer = String(
-      draftReply?.text || row.direct_answer || text.trim() || row.fallback_answer,
+      documentReply?.answer ||
+        draftReply?.text ||
+        row.direct_answer ||
+        text.trim() ||
+        row.fallback_answer,
     ).slice(0, 4500);
     const buttons: DraftReply['actions'] = draftReply?.actions || row.reply_actions;
     if (row.memory_turn_id && !(await memoryIsCurrent(db, c, row.memory_turn_id)))
@@ -444,10 +487,15 @@ export async function replyAi(
       "UPDATE hvr_ai_events SET state='sent',reply_token=NULL WHERE environment=$1 AND event_id=$2",
       [c.APP_ENV, row.event_id],
     );
-    if (row.memory_turn_id && text.trim() && !row.direct_answer && !row.draft_id) {
+    if (
+      row.memory_turn_id &&
+      (text.trim() || documentReply) &&
+      !row.direct_answer &&
+      !row.draft_id
+    ) {
       // A storage failure after a successful LINE send must not turn into a duplicate-send retry.
       try {
-        await rememberReply(db, c, row.memory_turn_id, answer);
+        await rememberReply(db, c, row.memory_turn_id, answer, documentReply?.refs);
       } catch {
         console.error('ai_memory_save_failed');
       }

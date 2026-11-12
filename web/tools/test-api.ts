@@ -32,6 +32,7 @@ try {
     JOBS_ENABLED: 'false',
     ENABLE_EMAIL_NOTIFICATIONS: 'false',
     ENABLE_LINE_NOTIFICATIONS: 'false',
+    FORMS_ENABLED: 'true',
     HVR_TEST_CONTROL_FILE: controlFile,
   };
   const config = readConfig(env),
