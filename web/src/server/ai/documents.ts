@@ -8,6 +8,8 @@ import type { DocumentRef, MemoryTurn } from './memory';
 
 export type AiDocuments = {
   contractVersion: 2;
+  selection?: 'keyword' | 'semantic';
+  searchLimited?: boolean;
   query: string;
   favorites: boolean;
   total: number;
@@ -21,15 +23,19 @@ export type AiDocuments = {
     title: string;
     category: string;
     description: string;
+    keywords?: string[];
     label: string;
     source: string;
   }[];
 };
+// One existing model call can review this bounded metadata set, never document files.
+const semanticCandidateLimit = 100;
+const documentCode = /\b(?:hc\d+|w-8ben-e|w-8ben|w-9|fatca|crs|opd|ipd)\b/i;
 export function documentIntent(question: string, memory: MemoryTurn[] = []) {
   if (/^(?:ช่วย)?(?:ส่งงาน|สร้างงาน|เพิ่มงาน|งานใหม่)|^(ดูร่าง|ยกเลิก|ยืนยันสร้างงาน)$/.test(question))
     return false;
   const explicit =
-    /แบบฟอร์ม|ฟอร์ม|ขอ(?:ลิงก์|เอกสาร|ประวัติ)|เปิดเอกสาร|หาเอกสาร|มีเอกสาร|เอกสาร.*(?:อะไร|ไหน|บ้าง)|ติดดาว|ใช้บ่อย|\bhc[12]\b|fatca|crs|w-8ben|w-9|ใบหักบัญชี/i.test(
+    /แบบฟอร์ม|ฟอร์ม|ขอ(?:ลิงก์|เอกสาร|ประวัติ)|เปิดเอกสาร|หาเอกสาร|มีเอกสาร|เอกสาร.*(?:อะไร|ไหน|บ้าง)|ติดดาว|ใช้บ่อย|รายการโปรด|\bhc\d+\b|fatca|crs|w-8ben|w-9|ใบหักบัญชี/i.test(
       question,
     );
   return (
@@ -44,15 +50,16 @@ export function mixedDocumentQuestion(question: string) {
   );
 }
 export function documentSearchPhrase(question: string) {
-  const code = /\b(?:hc[12]|w-8ben-e|w-8ben|w-9|fatca|crs|opd|ipd)\b/i.exec(question)?.[0];
+  const code = documentCode.exec(question)?.[0];
   if (code) return code;
-  if (/ยูนิต\s*ลิงค|unit\s*link/i.test(question)) return 'ยูนิต ลิงค์';
-  if (/หักบัญชี|หักชำระ|dda|dca/i.test(question)) return 'หักบัญชี';
-  if (/ประวัติ(?:การรักษา)?|ขอประวัติ/.test(question)) return 'ขอประวัติ';
-  return normalizeDocumentText(question)
+  const phrase = question
+    .replace(/ยูนิต\s*ลิงค์?|unit\s*link(?:ed)?/gi, 'ยูนิต ลิงค์')
+    .replace(/หักบัญชี|หักชำระ|\b(?:dda|dca)\b/gi, 'หักบัญชี')
+    .replace(/(?:ขอ)?ประวัติ(?:การรักษา)?/g, 'ขอประวัติ');
+  return normalizeDocumentText(phrase)
     .replace(/hvr-\d+|rec[a-z0-9]{14}/gi, '')
     .replace(
-      /ขอเอกสารที่ฉันติดดาวไว้|รายการโปรด|ที่ฉันติดดาวไว้|ติดดาว|ใช้บ่อย|มีอะไรบ้าง|มีไหม|อะไรบ้าง|ขอ(?:ลิงก์|เอกสาร|ฟอร์ม|แบบฟอร์ม)|ช่วย(?:หา|ค้นหา)|แบบฟอร์ม|เอกสาร|ฟอร์ม|ลิงก์|กรุณา|หน่อย|ครับ|ค่ะ|คะ|ได้ไหม|ไหม|สำหรับ|ต้องใช้|อยากได้/g,
+      /ขอเอกสารที่ฉันติดดาวไว้|รายการโปรด|ที่ฉันติดดาวไว้|ติดดาว|ใช้บ่อย|มีอะไรบ้าง|มีไหม|อะไรบ้าง|ขอ(?:ลิงก์|เอกสาร|ฟอร์ม|แบบฟอร์ม)|ช่วย(?:หา|ค้นหา)|แบบฟอร์ม|เอกสาร|ฟอร์ม|ลิงก์|เกี่ยวกับ|กรุณา|หน่อย|ครับ|ค่ะ|คะ|ได้ไหม|ไหม|สำหรับ|ต้องใช้|อยากได้/g,
       ' ',
     )
     .replace(/^มี/, '')
@@ -87,6 +94,8 @@ export async function aiDocuments(
   const followup = !!ordinal || /เอกสารนี้|ฉบับนี้/.test(question);
   let clarify = false;
   const query = favorites || followup ? '' : documentSearchPhrase(question);
+  let selection: AiDocuments['selection'] = 'keyword';
+  let searchLimited = false;
   let matched: DocumentEntry[];
   if (followup) {
     const ref = index !== null ? last[index] : last.length === 1 ? last[0] : undefined;
@@ -102,9 +111,19 @@ export async function aiDocuments(
           b.score - a.score || a.d.version.data.title.localeCompare(b.d.version.data.title, 'th'),
       )
       .map(({ d }) => d);
+    if (!matched.length && query && !favorites && !documentCode.test(question)) {
+      // Do not silently search only the first page of a larger catalogue.
+      searchLimited = all.length > semanticCandidateLimit;
+      if (all.length && !searchLimited) {
+        selection = 'semantic';
+        matched = all;
+      }
+    }
   }
   return {
     contractVersion: 2,
+    selection,
+    searchLimited,
     query,
     favorites,
     total: matched.length,
@@ -112,18 +131,21 @@ export async function aiDocuments(
     clarify,
     mixed: mixedDocumentQuestion(question),
     asOf: new Date().toISOString(),
-    items: matched.slice(0, 5).map((d) => ({
+    items: matched.slice(0, selection === 'semantic' ? semanticCandidateLimit : 5).map((d) => ({
       id: d.id,
       versionId: d.version.id,
       title: d.version.data.title,
       category: d.version.data.category,
       description: d.version.data.description.slice(0, 350),
+      keywords: d.version.data.keywords.slice(0, 10),
       label: d.version.data.label,
       source: d.version.source,
     })),
   };
 }
 export function documentRefs(context: AiDocuments): DocumentRef[] {
+  // Candidates are not results. Only the rendered selection enters conversation memory.
+  if (context.selection === 'semantic') return [];
   return context.items.map((d) => ({ id: d.id, versionId: d.versionId }));
 }
 const modelReply = z
@@ -146,11 +168,17 @@ export async function renderDocumentReply(
   }
   const allowed = new Set(context.items.map((d) => d.id));
   if (parsed?.documentIds.some((id) => !allowed.has(id))) parsed = undefined;
-  const requested = parsed?.documentIds.length
+  const semantic = context.selection === 'semantic';
+  const requested = parsed
     ? [...new Set(parsed.documentIds)]
-    : context.items.map((d) => d.id);
+    : semantic
+      ? []
+      : context.items.map((d) => d.id).slice(0, 5);
   const current = new Map((await publishedDocuments(db, c, user)).map((d) => [d.id, d]));
-  const selected = requested.map((id) => current.get(id)).filter((d): d is DocumentEntry => !!d);
+  const versions = new Map(context.items.map((d) => [d.id, d.versionId]));
+  const selected = requested
+    .map((id) => current.get(id))
+    .filter((d): d is DocumentEntry => !!d && (!semantic || versions.get(d.id) === d.version.id));
   const changed = context.items.some((old) => current.get(old.id)?.version.id !== old.versionId);
   const parts: string[] = [];
   if (context.mixed) {
@@ -163,20 +191,36 @@ export async function renderDocumentReply(
     );
   }
   if (context.clarify) parts.push('กรุณาระบุชื่อเอกสารหรือค้นใหม่ เพื่อเลือกฉบับที่ถูกต้อง');
+  else if (context.searchLimited)
+    parts.push(
+      'คำถามยังไม่ตรงชื่อหรือคำค้นในทะเบียน และมีเอกสารหลายรายการ กรุณาระบุชื่อ หมวด หรือวัตถุประสงค์ให้ละเอียดขึ้น',
+    );
+  else if (semantic && !selected.length)
+    parts.push(
+      !parsed || changed
+        ? 'ยังเลือกเอกสารที่ตรงคำถามไม่ได้ในครั้งนี้ กรุณาระบุชื่อหรือวัตถุประสงค์เพิ่มเติม แล้วลองอีกครั้ง'
+        : 'ยังไม่พบเอกสารที่ตรงวัตถุประสงค์จากชื่อและคำอธิบายในทะเบียน กรุณาถามใหม่โดยระบุเพิ่มเติม เช่น “ขอฟอร์มสำหรับ…” ตามด้วยเรื่องที่ต้องการทำ',
+    );
   else if (!selected.length) parts.push('ไม่พบเอกสารที่เผยแพร่และคุณมีสิทธิ์เข้าถึง ลองระบุชื่อหรือรหัสเอกสารเพิ่ม');
   else {
     parts.push(
-      changed
-        ? 'ทะเบียนเอกสารเปลี่ยนแล้ว แสดงฉบับที่เผยแพร่ปัจจุบัน:'
-        : context.favorites
-          ? 'เอกสารใช้บ่อยของคุณ:'
-          : `พบเอกสารที่เกี่ยวข้อง${context.total > selected.length ? ` แสดง ${selected.length} จาก ${context.total} รายการ ณ เวลาค้นหา` : ''}:`,
+      semantic
+        ? 'AI พบรายการที่อาจเกี่ยวข้องจากชื่อและคำอธิบายในทะเบียน (ยังไม่ได้อ่านเนื้อหาไฟล์):'
+        : changed
+          ? 'ทะเบียนเอกสารเปลี่ยนแล้ว แสดงฉบับที่เผยแพร่ปัจจุบัน:'
+          : context.favorites
+            ? 'เอกสารใช้บ่อยของคุณ:'
+            : `พบเอกสารที่เกี่ยวข้อง${context.total > selected.length ? ` แสดง ${selected.length} จาก ${context.total} รายการ ณ เวลาค้นหา` : ''}:`,
     );
     selected.forEach((d, i) => {
       parts.push(
         `${i + 1}. ${d.version.data.title}\n${d.version.data.category} · ${d.version.source === 'drive' ? 'Google Drive' : 'Allianz'}\n${d.version.data.description.slice(0, 180)}\nเปิดเอกสาร: ${c.APP_ORIGIN}/forms/${d.id}/open`,
       );
     });
+    if (semantic)
+      parts.push(
+        'หากยังไม่ตรง กรุณาถามใหม่ว่า “ขอฟอร์มสำหรับ…” ระบุเรื่องที่ต้องการทำและประเภทกรมธรรม์ เพื่อเลือกเอกสารให้ชัดเจนขึ้น',
+      );
   }
   parts.push(
     `ค้นต่อในเว็บ: ${c.APP_ORIGIN}/forms${context.query && !changed ? '?q=' + encodeURIComponent(context.query) : ''}`,

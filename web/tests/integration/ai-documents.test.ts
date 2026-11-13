@@ -92,6 +92,10 @@ test('document intent distinguishes task commands and supports Thai aliases', ()
     assert.equal(documentIntent(q), false, q);
   assert.equal(documentSearchPhrase('มีเอกสารหักบัญชีไหม'), 'หักบัญชี');
   assert.equal(documentSearchPhrase('เอกสารยูนิตลิงค์มีอะไรบ้าง'), 'ยูนิต ลิงค์');
+  assert.equal(
+    documentSearchPhrase('ขอฟอร์มมอบอำนาจ ตัวแทน ยูนิตลิงค์'),
+    'มอบอำนาจ ตัวแทน ยูนิต ลิงค์'.normalize('NFKC'),
+  );
 });
 test('document-only questions never list tasks; untrusted model links/IDs are ignored; single-use reply persists ordered refs', async () => {
   const x = await harness();
@@ -226,6 +230,159 @@ test('revoked Active and mixed questions retain existing task ownership checks',
     account.fields.Active = false;
     await assert.rejects(replyAi(x.db, c, x.h.repo, job.ticket, '', x.transport));
     assert.equal(x.sent.length, 0);
+  } finally {
+    await x.engine.close();
+  }
+});
+
+test('natural-language search gives AI authorized metadata and remembers only selected results', async () => {
+  const x = await harness();
+  try {
+    const consent = await x.create('หนังสือให้เปิดเผยประวัติการรักษาและการมอบอำนาจ');
+    const linked = await x.create('หนังสือให้เปิดเผยประวัติการรักษาและการมอบอำนาจ ยูนิต ลิงค์');
+    await x.create('HC1');
+    const staff = await x.create('มอบอำนาจภายใน', 'staff');
+    const draft = await x.create('มอบอำนาจฉบับร่าง', 'all', false);
+    const paused = await x.create('มอบอำนาจพักใช้');
+    await pauseDocument(x.db, c, x.admin, paused.id, 2, true);
+    const list = x.h.repo.list;
+    let taskReads = 0;
+    x.h.repo.list = async (...args) => {
+      if (args[0] === 'tasks') taskReads++;
+      return list(...args);
+    };
+    const job = await x.ask('มีฟอร์มเกี่ยวกับ มอบอำนาจ ตัวแทนไหม');
+    assert.equal(job.documents?.selection, 'semantic');
+    assert.equal(job.documents?.query, 'มอบอำนาจ ตัวแทน'.normalize('NFKC'));
+    assert.equal(job.documents?.items.length, 3);
+    assert.ok(job.documents?.items.every((d) => Array.isArray(d.keywords)));
+    assert.equal(taskReads, 0);
+    for (const excluded of [staff.id, draft.id, paused.id])
+      assert.ok(!JSON.stringify(job).includes(excluded));
+    assert.ok(!JSON.stringify(job.documents).includes('https://'));
+    assert.deepEqual(
+      (await x.db.query('SELECT document_refs FROM hvr_ai_memory_turns')).rows[0].document_refs,
+      [],
+    );
+    await replyAi(
+      x.db,
+      c,
+      x.h.repo,
+      job.ticket,
+      JSON.stringify({ documentIds: [linked.id, consent.id] }),
+      x.transport,
+    );
+    assert.ok(x.sent[0].includes('อาจเกี่ยวข้อง'));
+    assert.ok(x.sent[0].includes('ยังไม่ได้อ่านเนื้อหาไฟล์'));
+    assert.ok(!x.sent[0].includes('HC1'));
+    assert.ok(!x.sent[0].includes('จาก 3 รายการ'));
+    const refs = (await x.db.query('SELECT document_refs FROM hvr_ai_memory_turns')).rows[0]
+      .document_refs;
+    assert.deepEqual(
+      refs.map((r: { id: string }) => r.id),
+      [linked.id, consent.id],
+    );
+    const followup = await x.ask('ขอลิงก์รายการที่สอง');
+    assert.equal(followup.documents?.selection, 'keyword');
+    assert.equal(followup.documents?.items[0].id, consent.id);
+  } finally {
+    await x.engine.close();
+  }
+});
+
+test('semantic failures, empty selections and invented IDs never display the candidate catalogue', async () => {
+  const x = await harness();
+  try {
+    const a = await x.create('HC1');
+    for (const response of [
+      '',
+      'https://evil.test/document.pdf',
+      JSON.stringify({ documentIds: [] }),
+      JSON.stringify({ documentIds: [randomUUID()] }),
+      JSON.stringify({ documentIds: [a.id], url: 'https://evil.test' }),
+    ]) {
+      const job = await x.ask('ขอฟอร์มให้คนอื่นดำเนินการแทน');
+      assert.equal(job.documents?.selection, 'semantic');
+      await replyAi(x.db, c, x.h.repo, job.ticket, response, x.transport);
+      const answer = x.sent.at(-1);
+      assert.ok(answer);
+      assert.ok(!answer.includes('HC1'));
+      assert.ok(!answer.includes(a.id));
+      assert.ok(!answer.includes('evil.test'));
+      assert.ok(answer.includes('เพิ่มเติม'));
+    }
+    const memories = (await x.db.query('SELECT document_refs FROM hvr_ai_memory_turns')).rows;
+    assert.ok(memories.every((r) => r.document_refs.length === 0));
+  } finally {
+    await x.engine.close();
+  }
+});
+
+test('semantic selections recheck access and do not reuse model relevance for a changed version', async () => {
+  const x = await harness();
+  try {
+    const a = await x.create('มอบอำนาจ');
+    const b = await x.create('ใบยินยอม');
+    const job = await x.ask('ขอฟอร์มให้คนอื่นดำเนินการแทน');
+    assert.equal(job.documents?.selection, 'semantic');
+    const next = await saveDocumentDraft(x.db, c, x.admin, a.id, 2, null, {
+      ...data,
+      title: 'เอกสารเปลี่ยนวัตถุประสงค์',
+    });
+    await publishDocument(x.db, c, x.admin, a.id, next.revision, next.versionId, true);
+    await pauseDocument(x.db, c, x.admin, b.id, 2, true);
+    await replyAi(
+      x.db,
+      c,
+      x.h.repo,
+      job.ticket,
+      JSON.stringify({ documentIds: [a.id, b.id] }),
+      x.transport,
+    );
+    assert.ok(!x.sent[0].includes(a.id));
+    assert.ok(!x.sent[0].includes(b.id));
+    assert.ok(x.sent[0].includes('ลองอีกครั้ง'));
+  } finally {
+    await x.engine.close();
+  }
+});
+
+test('exact codes and empty favorites never broaden into semantic candidates', async () => {
+  const x = await harness();
+  try {
+    await x.create('HC1');
+    for (const question of ['ขอฟอร์ม HC99', 'รายการโปรด', 'ขอเอกสารที่ฉันติดดาวไว้']) {
+      const job = await x.ask(question);
+      assert.equal(job.documents?.selection, 'keyword');
+      assert.equal(job.documents?.items.length, 0);
+    }
+    const exact = await x.ask('ขอฟอร์ม HC1');
+    assert.equal(exact.documents?.selection, 'keyword');
+    assert.equal(exact.documents?.items.length, 1);
+    await replyAi(
+      x.db,
+      c,
+      x.h.repo,
+      exact.ticket,
+      JSON.stringify({ documentIds: [] }),
+      x.transport,
+    );
+    assert.ok(!x.sent[0].includes('เปิดเอกสาร:'));
+  } finally {
+    await x.engine.close();
+  }
+});
+
+test('larger catalogues ask for a narrower query instead of silently searching a truncated list', async () => {
+  const x = await harness();
+  try {
+    for (let i = 0; i < 101; i++) await x.create(`เอกสารลำดับ ${i}`);
+    const job = await x.ask('ขอฟอร์มให้คนอื่นดำเนินการแทน');
+    assert.equal(job.documents?.searchLimited, true);
+    assert.equal(job.documents?.items.length, 0);
+    await replyAi(x.db, c, x.h.repo, job.ticket, '', x.transport);
+    assert.ok(x.sent[0].includes('ละเอียดขึ้น'));
+    assert.ok(!x.sent[0].includes('เอกสารลำดับ'));
   } finally {
     await x.engine.close();
   }

@@ -1,6 +1,16 @@
 # Happy Victory Web
 
-Next.js App Router + TypeScript สำหรับ Vercel ใช้ Airtable เป็นข้อมูลธุรกิจ และ PostgreSQL สำหรับ session, OAuth state, idempotency journal และการประสานคำขอ
+Next.js App Router + TypeScript สำหรับ Vercel ใช้ Airtable เก็บบัญชีและงาน และ Neon PostgreSQL เก็บ session, OAuth state, operation journal, LINE bindings/AI memory รวมถึงทะเบียนเอกสาร ฉบับ และรายการโปรด เอกสารจริงเปิดจาก Allianz/Google Drive เท่านั้น
+
+## คลังเอกสาร
+
+`/forms` ใช้ `FORMS_ENABLED`; ค้นผ่าน LINE ใช้ `AI_FORMS_ENABLED` เพิ่ม ทั้งสองเริ่มปิด ต้องรัน migration ถึง `011_ai_documents.sql` ก่อน deploy โค้ดรุ่นนี้ เพราะ memory ใช้คอลัมน์ใหม่แม้ยังปิดฟีเจอร์เอกสาร
+
+Admin/Secretary ที่ Active สร้างร่างได้ เลขาแก้ร่างตนเอง Admin เผยแพร่/พักใช้ Agent อ่านฉบับเผยแพร่ที่มีสิทธิ์ ทุกบทบาทจัด favorites ส่วนตัวใน Neon ได้ ใช้ transaction และ revision สำหรับการเผยแพร่ ไม่เพิ่มตาราง Airtable หรืออัปโหลดไฟล์
+
+LINE ค้นชื่อ/รหัสก่อน หากไม่พบด้วยข้อความทั่วไป ให้ OpenRouter เลือกจาก metadata ฉบับเผยแพร่ที่ผู้ใช้มีสิทธิ์ (ไม่เกิน 100 รายการ; มากกว่านี้ขอคำค้นเพิ่ม) ใช้ HTTP Request/contract v2 เดิมและเรียกโมเดลครั้งเดียว ไม่อ่านไฟล์ ผลตอบจำกัด 5 IDs และตรวจสิทธิ์/ฉบับซ้ำก่อนสร้างลิงก์เอง หากโมเดลผิดรูปแบบหรือไม่เลือกเอกสาร จะไม่แสดงทั้งชุดสำรอง Memory เก็บเฉพาะผลที่ตอบจริง
+
+รัน `npm run forms:import` เพื่อตรวจ 43 รายการโดยไม่เขียนฐานข้อมูล; `npm run forms:import -- --apply --admin-email=<email>` นำเข้าเป็นร่างด้วย Active Admin ใน environment ที่ตั้งไว้ รันซ้ำไม่เขียนทับรายการเดิม ดู [คู่มือ](../docs/forms-library.md), [แผน](../docs/forms-production-plan.md) และ [สถานะเปิดใช้งาน](../docs/forms-production-progress.md)
 
 ## เริ่มพัฒนา
 

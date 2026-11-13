@@ -1,5 +1,7 @@
 # โครงสร้าง Airtable
 
+ทะเบียน **เอกสารและแบบฟอร์ม** รุ่น Vercel อยู่ใน Neon แยกจาก schema Airtable นี้: `hvr_documents`, `hvr_document_versions`, `hvr_document_favorites`, `hvr_document_events` ใช้ migrations 010–011 เก็บเฉพาะ metadata/URL ไม่มีไฟล์ PDF หรือ Google Drive ในฐานข้อมูล ดู [คู่มือคลังเอกสาร](forms-library.md) และ [สถานะเปิดใช้งาน](forms-production-progress.md)
+
 ตั้งชื่อ Base เป็น **Happy Victory Rinlyn Task Center** ใช้ Base เดิมได้ โดยสำรองข้อมูลและเพิ่มฟิลด์ตามคู่มือนี้ก่อน ตั้งชื่อฟิลด์ให้ตรงทุกตัวอักษร หรือปรับ mapping ในโค้ดก่อนใช้งาน อย่าเปลี่ยนชื่อฟิลด์เดิมที่ระบบอื่นใช้อยู่โดยไม่ตรวจผลกระทบ
 
 PAT ใช้ scopes `data.records:read` และ `data.records:write` เฉพาะ Base นี้ ไม่ต้องให้ schema write เพื่อรันแอป ตารางและ select options ต้องมีอยู่ก่อน ตัวแอปไม่สร้าง schema อัตโนมัติ
