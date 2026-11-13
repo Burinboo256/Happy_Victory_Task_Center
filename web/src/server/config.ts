@@ -40,6 +40,7 @@ const schema = z.object({
   AI_LINE_ENABLED: flag,
   FORMS_ENABLED: flag,
   AI_FORMS_ENABLED: flag,
+  AI_TASK_SEARCH_ENABLED: flag,
   AI_LINE_CHANNEL_ACCESS_TOKEN: z.string().min(20).optional(),
   AI_LINE_CHANNEL_SECRET: z.string().min(16).optional(),
   AI_LINE_OA_ID: z

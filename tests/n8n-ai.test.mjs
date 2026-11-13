@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { workflow, draftInstructions, instructions, documentInstructions } from '../tools/build-n8n-ai.mjs';
+import { workflow, draftInstructions, instructions, documentInstructions, taskSearchInstructions } from '../tools/build-n8n-ai.mjs';
 const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
 test('n8n AI template keeps signatures intact, does not retain executions and has no task write tools',()=>{
   assert.equal(workflow.active,false);
@@ -64,4 +64,19 @@ test('document contract sends bounded metadata and requests IDs through the exis
   assert.deepEqual(JSON.parse(result.messages[1].content),{question:'ขอฟอร์ม HC1',documents,contractVersion:2});
   assert.match(documentInstructions,/documentIds/);
   assert.equal(workflow.nodes.filter(n=>n.name==='Send verified LINE reply').length,1);
+});
+
+test('task search selects IDs without exposing summary history or changing document and draft contracts',()=>{
+  const expression=workflow.nodes.find(n=>n.name==='OpenRouter').parameters.jsonBody;
+  const body=new Function('$json','return ('+expression.slice(3,-2).trim()+');');
+  const taskSearch={contractVersion:1,items:[{id:'rec00000000000011',title:'งานสมมติ',status:'รอข้อมูล'}]};
+  const result=body({question:'หางานที่ยังรอข้อมูล',taskSearch,context:{conversation:{history:['OLD_PRIVATE_CONTEXT']}}});
+  assert.equal(result.messages[0].content,taskSearchInstructions);
+  assert.deepEqual(result.response_format,{type:'json_object'});
+  assert.deepEqual(JSON.parse(result.messages[1].content),{question:'หางานที่ยังรอข้อมูล',taskSearch});
+  assert.equal(result.tools,undefined);
+  assert.match(taskSearchInstructions,/taskIds/);
+  const draft=body({question:'ส่งงาน',draft:{mode:'draft'},taskSearch});
+  assert.equal(draft.messages[0].content,draftInstructions);
+  assert.equal(JSON.parse(draft.messages[1].content).taskSearch,undefined);
 });

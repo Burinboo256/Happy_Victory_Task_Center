@@ -47,7 +47,9 @@ Vercel/Neon แยกจาก Production ตรวจ instance/Base และ m
 
 ## ขั้นเปิด Production ที่ยังเหลือ
 
-ปรับปรุงที่ตรวจ Local แล้ว: คำถาม “มีฟอร์มเกี่ยวกับ มอบอำนาจ ตัวแทนไหม” จะใช้ AI เลือกจาก metadata ที่อนุญาตเมื่อค้นตรงคำไม่พบ รองรับ contract v2/HTTP Request เดิม ไม่มี migration ใหม่; ผลจำกัด 5 รายการ ไม่แต่งลิงก์และไม่ส่งทั้งคลังเมื่อ AI ตอบไม่ได้ รหัสตรงและ favorites ยังใช้การค้นเดิม Lint/typecheck/build, unit 32 และ integration 61 ผ่าน; หลังปรับ alias ให้รักษารายละเอียดประเภทกรมธรรม์ ตรวจชุด AI documents ซ้ำผ่าน 10 กรณี ผลเหล่านี้ใช้โมเดลจำลอง ยังรอ deploy และคำถามจริงก่อนนับว่าโมเดลเลือกเอกสารสำเร็จ
+ปรับปรุงเผยแพร่ commit `1d9df11` แล้ว: คำถาม “มีฟอร์มเกี่ยวกับ มอบอำนาจ ตัวแทนไหม” จะใช้ AI เลือกจาก metadata ที่อนุญาตเมื่อค้นตรงคำไม่พบ รองรับ contract v2/HTTP Request เดิม ไม่มี migration ใหม่; ผลจำกัด 5 รายการ ไม่แต่งลิงก์และไม่ส่งทั้งคลังเมื่อ AI ตอบไม่ได้ รหัสตรงและ favorites ยังใช้การค้นเดิม Lint/typecheck/build, unit 32 และ integration 61 ผ่าน; หลังปรับ alias ให้รักษารายละเอียดประเภทกรมธรรม์ ตรวจชุด AI documents ซ้ำผ่าน 10 กรณี และ [CI ชุดเต็ม](https://github.com/Burinboo256/Happy_Victory_Task_Center/actions/runs/43383494056) ผ่านก่อน push main
+
+Staging `dpl_7tNyP7SDPGXkPEQTvdUbmye8ZFjy` และ Production `dpl_5tJgCQqQFdJs5Bg2YXghAgBbfdBh` READY ตรวจ alias/SHA/public endpoints/สิทธิ์ anonymous/signature และ migration checksums ผ่าน เวลา 13:14 น. Asia/Bangkok Production ยังมี 40 published/3 drafts และ runtime เดิม ไม่แก้ n8n/credential/webhook เพิ่ม ผลทดสอบเลือกเอกสารใช้โมเดลจำลอง จึงยังรอผู้ใช้ลองคำถามมอบอำนาจจริงก่อนยืนยันผลโมเดลบน LINE
 
 1. เพิ่ม Drive จริงผ่านร่าง/ตรวจ/เผยแพร่เมื่อต้องการใช้จริง ไม่ย้ายตัวอย่างทดสอบอัตโนมัติ
 2. เมื่อเชื่อม Chrome/n8n ได้ ให้ตรวจ workflow ที่เจ้าของ Publish รวม settings/credential และยืนยันว่ามี export สำรองก่อนแก้

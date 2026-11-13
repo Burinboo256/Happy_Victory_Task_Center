@@ -27,6 +27,7 @@ export async function aiContext(
   user: User,
   question: string,
   memory: MemoryTurn[] = [],
+  options: { search?: boolean; ids?: string[] } = {},
 ) {
   if (!user.active) throw forbidden();
   const records = await repo.list(
@@ -79,7 +80,8 @@ export async function aiContext(
   const focusIds = turns.at(-1)?.focus_ids || [];
   let followup = false;
   let selected = tasks;
-  if (codes)
+  if (options.ids) selected = selected.filter((t) => options.ids?.includes(t.id));
+  else if (codes)
     selected = selected.filter(
       (t) => codes.includes(t.code.toLowerCase()) || codes.includes(t.id.toLowerCase()),
     );
@@ -88,7 +90,9 @@ export async function aiContext(
       .filter(([, name]) => name.length > 2 && q.includes(name.toLowerCase()))
       .map(([id]) => id);
     if (owners.length) selected = selected.filter((t) => owners.includes(t.agentId));
-    const category = Object.keys(caseDefinitions).find((c) => q.includes(c));
+    const category =
+      Object.keys(caseDefinitions).find((c) => q.includes(c)) ||
+      (options.search && /สมัครตัวแทน/.test(q) ? 'ตัวแทนใหม่' : undefined);
     if (category) selected = selected.filter((t) => t.category === category);
     followup =
       !owners.length &&
@@ -96,11 +100,13 @@ export async function aiContext(
       !/สรุป|ทั้งหมด|งานไหน|วันนี้|เกินกำหนด|เลยกำหนด|urgent|ด่วน/.test(q) &&
       /เคสนี้|เคสนั้น|งานนี้|งานนั้น|รายการนี้|รายการนั้น|^แล้ว|ยังขาดอะไร|ใครรับผิดชอบ/.test(q);
     if (followup) selected = selected.filter((t) => focusIds.includes(t.id));
+    if (options.search && /ยังไม่(?:เสร็จ|จบ)|คงค้าง|งานค้าง|ยังค้าง/.test(q))
+      selected = selected.filter(isOpen);
     if (/เกินกำหนด|เลยกำหนด|overdue/.test(q))
       selected = selected.filter((t) => isOpen(t) && t.dueDate && t.dueDate < today);
     else if (/ด่วน|urgent/.test(q))
       selected = selected.filter((t) => isOpen(t) && ['Urgent', 'High'].includes(t.priority));
-    else if (/เสร็จ.*วันนี้|วันนี้.*เสร็จ/.test(q))
+    else if (!/ไม่เสร็จ/.test(q) && /เสร็จ.*วันนี้|วันนี้.*เสร็จ/.test(q))
       selected = selected.filter((t) => t.status === 'Completed' && dayOf(t.completedAt) === today);
     else if (/กำหนด.*วันนี้|วันนี้.*กำหนด/.test(q))
       selected = selected.filter((t) => isOpen(t) && t.dueDate === today);
@@ -113,7 +119,8 @@ export async function aiContext(
       a.code.localeCompare(b.code),
   );
   const matched = selected.length;
-  selected = selected.slice(0, 60);
+  const limit = options.search ? 250 : 60;
+  selected = options.search && matched > limit ? [] : selected.slice(0, limit);
   const rows = selected.length
     ? (
         await db.query(
@@ -181,8 +188,7 @@ export async function aiContext(
       included: items.length,
       truncated: matched > items.length,
       items,
-      limitations:
-        'ไม่มีรายละเอียดส่วนตัว เอกสารแนบ หรือข้อความอัปเดตในคำตอบนี้ ยอดรวมเป็นภาพรวมตามสิทธิ์ ส่วนรายการกรองตามคำถามและแสดงได้ไม่เกิน 60 งาน หากต้องการเคสเฉพาะให้ระบุรหัส HVR',
+      limitations: `ไม่มีรายละเอียดส่วนตัว เอกสารแนบ หรือข้อความอัปเดตในคำตอบนี้ ยอดรวมเป็นภาพรวมตามสิทธิ์ ส่วนรายการกรองตามคำถามและแสดงได้ไม่เกิน ${limit} งาน หากต้องการเคสเฉพาะให้ระบุรหัส HVR`,
     },
   };
 }

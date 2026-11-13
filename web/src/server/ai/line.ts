@@ -11,6 +11,12 @@ import { lineId, lineProfile, verifySignature } from '../line/client';
 import { verifyInstance } from '../runtime';
 import { aiContext } from './context';
 import {
+  taskSearchIntent,
+  taskSearchContext,
+  renderTaskSearchReply,
+  type TaskSearch,
+} from './task-search';
+import {
   aiDocuments,
   currentDocumentMemory,
   documentIntent,
@@ -168,6 +174,7 @@ export type AiJob = {
   context?: Awaited<ReturnType<typeof aiContext>>['context'];
   draft?: DraftContext;
   documents?: AiDocuments;
+  taskSearch?: TaskSearch;
   contractVersion?: 2;
 };
 const fallback = 'ขณะนี้ AI สรุปไม่สำเร็จ กรุณาถามใหม่อีกครั้ง หรือเปิดงานในเว็บ';
@@ -221,6 +228,7 @@ export async function receiveAi(
     let replyActions: DraftReply['actions'];
     let memoryTurnId: string | undefined;
     let documents: AiDocuments | undefined;
+    let taskSearch: TaskSearch | undefined;
     let user: User | undefined,
       binding: string | undefined,
       taskIds: string[] = [];
@@ -292,9 +300,12 @@ export async function receiveAi(
               const memory = await currentDocumentMemory(db, c, user, rawMemory);
               const wantsDocuments =
                 c.FORMS_ENABLED && c.AI_FORMS_ENABLED && documentIntent(question, rawMemory);
-              const result = wantsDocuments
-                ? null
-                : await draftInput(db, c, repo, user, sender, account.binding, question);
+              const wantsTaskSearch =
+                !wantsDocuments && c.AI_TASK_SEARCH_ENABLED && taskSearchIntent(question);
+              const result =
+                wantsDocuments || wantsTaskSearch
+                  ? null
+                  : await draftInput(db, c, repo, user, sender, account.binding, question);
               if (result) {
                 answer = result.reply?.text || '';
                 replyActions = result.reply?.actions;
@@ -305,9 +316,19 @@ export async function receiveAi(
                 if (wantsDocuments) documents = await aiDocuments(db, c, user, question, memory);
                 const data =
                   !documents || documents.mixed
-                    ? await aiContext(db, c, repo, user, question, memory)
+                    ? await aiContext(db, c, repo, user, question, memory, {
+                        search: wantsTaskSearch,
+                      })
                     : null;
-                context = data?.context;
+                if (wantsTaskSearch && data) {
+                  taskSearch = taskSearchContext(data);
+                  if (!taskSearch.items.length) {
+                    answer = taskSearch.limited
+                      ? 'มีงานหรือข้อมูลประกอบหลายรายการ กรุณาจำกัดประเภท เจ้าของ หรือระบุรหัส HVR เพื่อค้นให้ครบและตรงขึ้น'
+                      : 'ไม่พบงานตามเงื่อนไขในขอบเขตที่คุณมีสิทธิ์เห็น ลองระบุชื่องานหรือรหัส HVR';
+                    taskSearch = undefined;
+                  }
+                } else context = data?.context;
                 taskIds = data?.taskIds || [];
                 memoryTurnId = await beginMemory(
                   db,
@@ -320,6 +341,12 @@ export async function receiveAi(
                   data?.taskRefs || [],
                   documents ? documentRefs(documents) : [],
                 );
+                // Additive schema is only needed once the separately gated search mode is enabled.
+                if (taskSearch)
+                  await db.query(
+                    'UPDATE hvr_ai_events SET task_search_context=$3::jsonb WHERE environment=$1 AND event_id=$2',
+                    [c.APP_ENV, e.webhookEventId, JSON.stringify(taskSearch)],
+                  );
               }
             }
           }
@@ -338,6 +365,7 @@ export async function receiveAi(
       replyActions = undefined;
       memoryTurnId = undefined;
       documents = undefined;
+      taskSearch = undefined;
       user = undefined;
       binding = undefined;
       taskIds = [];
@@ -364,10 +392,11 @@ export async function receiveAi(
     );
     jobs.push({
       ticket,
-      needsAi: !!context || !!draft || !!documents,
-      question: context || draft || documents ? question : '',
+      needsAi: !!context || !!draft || !!documents || !!taskSearch,
+      question: context || draft || documents || taskSearch ? question : '',
       ...(context ? { context } : {}),
       ...(draft ? { draft } : {}),
+      ...(taskSearch ? { taskSearch } : {}),
       ...(documents ? { documents, contractVersion: 2 as const } : {}),
     });
   }
@@ -445,8 +474,14 @@ export async function replyAi(
             row.document_context.taskUrls,
           )
         : undefined;
+    if (row.task_search_context && (!currentUser || !c.AI_TASK_SEARCH_ENABLED)) throw forbidden();
+    const taskSearchReply =
+      row.task_search_context && currentUser
+        ? await renderTaskSearchReply(db, c, repo, currentUser, row.task_search_context, text)
+        : undefined;
     const answer = String(
-      documentReply?.answer ||
+      taskSearchReply?.answer ||
+        documentReply?.answer ||
         draftReply?.text ||
         row.direct_answer ||
         text.trim() ||
@@ -489,13 +524,20 @@ export async function replyAi(
     );
     if (
       row.memory_turn_id &&
-      (text.trim() || documentReply) &&
+      (text.trim() || documentReply || taskSearchReply) &&
       !row.direct_answer &&
       !row.draft_id
     ) {
       // A storage failure after a successful LINE send must not turn into a duplicate-send retry.
       try {
-        await rememberReply(db, c, row.memory_turn_id, answer, documentReply?.refs);
+        await rememberReply(
+          db,
+          c,
+          row.memory_turn_id,
+          answer,
+          documentReply?.refs,
+          taskSearchReply?.ids,
+        );
       } catch {
         console.error('ai_memory_save_failed');
       }

@@ -34,6 +34,8 @@ const documentCode = /\b(?:hc\d+|w-8ben-e|w-8ben|w-9|fatca|crs|opd|ipd)\b/i;
 export function documentIntent(question: string, memory: MemoryTurn[] = []) {
   if (/^(?:ช่วย)?(?:ส่งงาน|สร้างงาน|เพิ่มงาน|งานใหม่)|^(ดูร่าง|ยกเลิก|ยืนยันสร้างงาน)$/.test(question))
     return false;
+  if (/(?:งาน|เคส).*(?:รอ|ขาด|ติดตาม).*เอกสาร/.test(question) && !/ฟอร์ม|ขอ(?:ลิงก์|เอกสาร)|หาเอกสาร/.test(question))
+    return false;
   const explicit =
     /แบบฟอร์ม|ฟอร์ม|ขอ(?:ลิงก์|เอกสาร|ประวัติ)|เปิดเอกสาร|หาเอกสาร|มีเอกสาร|เอกสาร.*(?:อะไร|ไหน|บ้าง)|ติดดาว|ใช้บ่อย|รายการโปรด|\bhc\d+\b|fatca|crs|w-8ben|w-9|ใบหักบัญชี/i.test(
       question,

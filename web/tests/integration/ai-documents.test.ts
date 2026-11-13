@@ -88,7 +88,7 @@ async function harness() {
 test('document intent distinguishes task commands and supports Thai aliases', () => {
   for (const q of ['ขอฟอร์ม HC1', 'มีเอกสารหักบัญชีไหม', 'เอกสารยูนิตลิงค์มีอะไรบ้าง', 'ขอเอกสารที่ฉันติดดาวไว้'])
     assert.ok(documentIntent(q), q);
-  for (const q of ['ส่งงาน ขอเอกสารลูกค้า', 'ยืนยันสร้างงาน', 'ยกเลิก', 'สถานะงานเอกสาร HVR-00001'])
+  for (const q of ['ส่งงาน ขอเอกสารลูกค้า', 'ยืนยันสร้างงาน', 'ยกเลิก', 'สถานะงานเอกสาร HVR-00001', 'งานที่ยังขาดเอกสารมีอะไรบ้าง'])
     assert.equal(documentIntent(q), false, q);
   assert.equal(documentSearchPhrase('มีเอกสารหักบัญชีไหม'), 'หักบัญชี');
   assert.equal(documentSearchPhrase('เอกสารยูนิตลิงค์มีอะไรบ้าง'), 'ยูนิต ลิงค์');

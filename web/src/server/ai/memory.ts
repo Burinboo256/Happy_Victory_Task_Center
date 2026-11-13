@@ -118,6 +118,7 @@ export async function rememberReply(
   turnId: string,
   answer: string,
   documentRefs?: DocumentRef[],
+  taskFocus?: string[],
 ) {
   const row = (
     await db.query(
@@ -131,7 +132,9 @@ export async function rememberReply(
   const focus = refs.filter(
     (r) => mentioned.has(r.code.toLowerCase()) || mentioned.has(r.id.toLowerCase()),
   );
-  const ids = (focus.length ? focus : refs.length === 1 ? refs : []).map((r) => r.id);
+  const ids = taskFocus
+    ? refs.filter((r) => taskFocus.includes(r.id)).map((r) => r.id)
+    : (focus.length ? focus : refs.length === 1 ? refs : []).map((r) => r.id);
   const saved = (
     await db.query(
       `UPDATE hvr_ai_memory_turns SET answer=$3,focus_ids=$4::jsonb,document_refs=COALESCE($5::jsonb,document_refs)
