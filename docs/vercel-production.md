@@ -1,5 +1,17 @@
 # สถานะ production
 
+## สถานะตรวจล่าสุด 15 พฤศจิกายน 2569
+
+Vercel เป็นระบบใช้งานจริง Google Login/รับงานเปิดแล้ว และ Apps Script เดิมพักการเขียน ข้อมูลในหัวข้อ cutover ด้านล่างเป็นประวัติวันที่ 9 พฤศจิกายน ไม่ใช่สถานะล่าสุดของ migrations หรือฟีเจอร์ LINE
+
+- ตรวจ deployment `dpl_E5v5mix6uGv1ZDSAzZyDFzYrB2MJ`, app commit `32928188bdc85ab6b50e9d97b752f565a49294cb` READY; migration checksums 010–012 ตรงไฟล์ Runtime `task_writes=true`, `jobs=false`
+- เปิดคลังเอกสารและ LINE form search รวมถึง AI task search แล้ว คลัง Production มี Allianz 43 รายการและ Drive “แบบประกัน” 1 รายการ เก็บเฉพาะทะเบียน/ลิงก์ใน Neon
+- เจ้าของยืนยันชุดทดสอบเอกสารบน iPhone รวมค้นผ่าน OA `@672vhuss`, เปิด Drive และรายการโปรดแล้ว ดู [หลักฐานและข้อที่ยังรอตรวจ](forms-production-progress.md) ไม่ใช้ผลนี้รับรอง Android/iPad หรือ LINE staging
+- สำรองล่าสุดก่อนเพิ่มรายการวันที่ 15 พฤศจิกายน: run `e6228d99-7bea-40ea-8120-bf8c750ec99a` เข้ารหัสและ restore แยกเครือข่ายผ่าน 27 ตาราง/constraints ไฟล์และกุญแจอยู่ใน ignored private artifacts
+- Export n8n ที่ Published จริงแล้ว prompt รองรับทั้งเอกสารและค้นงาน ใช้โมเดล `openai/gpt-6-luna` ใน live ต่างจากค่าใน generator ดู [สถานะ AI task search](ai-task-search.md) ก่อนนำ workflow เข้าใหม่
+
+## ประวัติเปิด Production และ cutover
+
 หน้าลงทะเบียนตัวแทน `/register` และวิธีเปิด Active รายคนใน Airtable อธิบายไว้ใน [คู่มือลงทะเบียน](agent-registration.md) ต้องมี migration 003 และฟิลด์ Users `Agent Code` / `Phone` ก่อนใช้รุ่นลงทะเบียน
 
 9 พฤศจิกายน 2026: เปิดรับงานบน Vercel Production แล้ว หลังพักการเขียนงานของ Apps Script เดิม ตรวจ baseline และทดสอบสร้างงานผ่าน Admin Google session จริงสำเร็จ คง Vercel Hobby / Neon Free ตามที่เจ้าของเลือก โดย jobs และการแจ้งเตือนยังปิด

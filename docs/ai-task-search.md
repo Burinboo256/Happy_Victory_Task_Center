@@ -27,4 +27,14 @@
 
 ## สถานะ
 
-พัฒนาแล้ว Local ผ่าน lint/typecheck/build, unit 32, integration 67 และ n8n contract 4 กรณี (รวม task search ใหม่ 6 กรณี) ทดสอบด้วยข้อมูลและโมเดลจำลอง ยังไม่เปิดโหมดค้นงานใหม่ใน Production เครื่องมือควบคุม Chrome ยังเชื่อมไม่ได้ จึงเตรียม `output/n8n/task-search/` ให้เจ้าของสำรองและ Publish ด้วยตนเองก่อนเปิด flag
+อัปเดต 15 พฤศจิกายน 2569: เปิด `AI_TASK_SEARCH_ENABLED` ใน Production แล้ว ตรวจ n8n ผ่าน Chrome พบ Published และ Export workflow จริงสำเร็จ Prompt/contract ตรงกับ repo ยกเว้นโมเดล: live ใช้ `openai/gpt-6-luna` แต่ generator ใช้ `openai/gpt-6.1-sol` คงค่า live ตามที่พบ ไม่เปลี่ยนโมเดลหรือ credentials ระหว่างตรวจ เอกสารและคำถามงานใช้ workflow เดียวกันโดยมีจุดส่งคำตอบผ่านเว็บเพียงจุดเดียว
+
+การยืนยันชุดทดสอบเอกสาร/Drive/favorites บน iPhone ไม่ใช่หลักฐานผ่าน semantic task search ทุกกรณี ยังต้องตรวจค้นงานด้วยโมเดลจริง สิทธิ์ข้ามเจ้าของ การถามต่อ และร่างงานเดิมตามรายการปล่อยด้านบน
+
+ประวัติ 13 พฤศจิกายน: พัฒนา commit `3292818` แล้ว Local ผ่าน lint/typecheck/build, unit 32, integration 67 และ n8n contract 4 กรณี (รวม task search ใหม่ 6 กรณี) ทดสอบด้วยข้อมูลและโมเดลจำลอง เจ้าของยืนยัน **“Publish ค้นงานแล้ว”** หลังใช้ไฟล์ `output/n8n/task-search/openrouter-body-expression.txt` ขณะนั้น Chrome ยังเชื่อมไม่ได้; ผลตรวจ workflow จริงวันที่ 15 พฤศจิกายนข้างต้นแทนข้อจำกัดเดิมนี้
+
+สำรอง Production run `f84ef155-6c8c-4350-bb1d-bb8582c8bd17` แบบ read-only snapshot/AES-GCM ผ่าน restore 27 ตารางพร้อม constraints ใน Docker ที่ไม่มี network/ports และปฏิเสธ archive เสียหาย รอบก่อนหน้าติด `pg_attver` จึงอัปเดตเครื่องมือ dump/restore จาก PostgreSQL 18.6 เป็น 18.7 แล้วสำรองใหม่จนผ่าน ไม่มีการแก้ dump เพื่อลบข้อผิดพลาด (อ้างอิง [release 18.7](https://www.postgresql.org/docs/release/18.7/))
+
+Migration 012 ผ่านทั้ง Staging และ Production โดย runtime writes=true/jobs=false คงเดิม Staging `dpl_67gYK8bjjBz7YvkcKewXA3EgXfmN` READY และตรวจ alias/SHA/public endpoints/anonymous access/migration checksums ผ่าน
+
+[CI ชุดเต็ม](https://github.com/Burinboo256/Happy_Victory_Task_Center/actions/runs/43386432253) ผ่านก่อน push main เปิด `AI_TASK_SEARCH_ENABLED=true` เฉพาะ Production โดยคง `AI_FORMS_ENABLED=true` แล้ว Deploy `dpl_E5v5mix6uGv1ZDSAzZyDFzYrB2MJ` จาก `3292818` READY ตรวจ production alias, public endpoints, anonymous access, forged signature และ migration 010–012 checksums ผ่าน เวลา 13:39 น. Asia/Bangkok วันที่ 13 พฤศจิกายน 2569 หลักฐาน `artifacts/vercel/task-search-production-release.json` ยังระบุ `lineLive=false` เพราะรอเจ้าของลองค้นงานด้วยโมเดลจริงใน OA

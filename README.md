@@ -1,83 +1,67 @@
-# Happy Victory Rinlyn Task Center
+# RINLYN Secretary
 
-ระบบติดตามงานสำหรับเลขาฯ และ Agent 10 คน ตาม guideline ของผู้ใช้
+ระบบติดตามงานสำหรับ Admin เลขา และ Agent ใช้งานจริงบน **Next.js / Vercel** โดย Airtable เก็บบัญชีและข้อมูลงาน ส่วน Neon PostgreSQL เก็บ session, OAuth state, operation journal, workflow, LINE bindings, AI memory และทะเบียนเอกสาร ใช้เวลา `Asia/Bangkok`
 
-**Host:** Google Apps Script HTML Service · **Database:** Airtable · **Timezone:** Asia/Bangkok
+## ระบบที่ใช้งานปัจจุบัน
 
-เว็บ Next.js ขึ้น [Vercel](https://happy-victory-task-center.vercel.app) และ [GitHub](https://github.com/Burinboo256/Happy_Victory_Task_Center) แล้ว หน้าเว็บออนไลน์แต่ยังรอตั้ง PostgreSQL / OAuth บน cloud จึงยัง Login และส่งงานบน URL ใหม่ไม่ได้ ดู [สถานะ deployment แรก](docs/vercel-first-deployment.md) Google Apps Script ยังคงเป็นระบบใช้งานจริง
+สถานะตรวจล่าสุด 15 พฤศจิกายน 2569:
 
-## เริ่มทดลองบนเครื่อง
+- [Production](https://happy-victory-task-center.vercel.app) ใช้ branch `main`; [Staging](https://happy-victory-task-center-git-staging-burin.vercel.app) ใช้ branch `staging` แยกฐานข้อมูลและ credentials
+- [ส่งงานใหม่สำหรับ LINE Rich Menu](https://happy-victory-task-center.vercel.app/tasks/new?openExternalBrowser=1) และ [สมัครตัวแทน](https://happy-victory-task-center.vercel.app/register) ผ่าน Google Login ผู้สมัครใหม่รอ Admin เปิด Active ใน Airtable
+- งานมีประเภท ตัวแทนใหม่ / ตัวแทนเก่า / ลูกค้าใหม่ / ลูกค้าเก่า พร้อม checklist ตามประเภทและเงื่อนไขก่อนปิดงาน Agent เห็นงานตามสิทธิ์เจ้าของ
+- [เอกสารและแบบฟอร์ม](https://happy-victory-task-center.vercel.app/forms) เผยแพร่ 44 รายการ: Allianz 43 และ Google Drive “แบบประกัน” 1 รายการ ทั้ง Production และ Staging เก็บเฉพาะ metadata/URL ไม่มีไฟล์เอกสารในระบบ
+- OA `@672vhuss` ใช้ส่งร่างงานและยืนยันสร้างงาน ค้น/สรุปงาน และค้นแบบฟอร์ม ส่วน OA `@688rmrty` ใช้แจ้งเตือนงาน การเชื่อมบัญชีของสอง OA แยกกัน
+- เจ้าของยืนยันใช้งานคลังเอกสารผ่าน LINE บน iPhone รวมเปิด Drive และรายการโปรดแล้ว Android/iPad, การตรวจข้ามบัญชีบางกรณี และ OA ทดสอบแยกยังมีรายการตรวจรับค้าง ดู [สถานะคลังเอกสาร](docs/forms-production-progress.md)
 
-ต้องมี Node.js 20 ขึ้นไป ไม่ต้องติดตั้ง dependencies
+Apps Script เป็นระบบเดิมที่พักการเขียนหลัง cutover แล้ว ห้ามเปิดให้เขียนงานคู่กับ Vercel โดยไม่มีแผนย้ายระบบ ดู [สถานะ Production](docs/vercel-production.md) และ [การกู้คืน](docs/vercel-recovery.md)
+
+## พัฒนาและทดสอบเว็บ
+
+ใช้ Node.js 24 รันคำสั่งใน `web/`:
 
 ```powershell
-cd 'E:\Happy Victory Task Center'
-npm run preview
+cd web
+npm ci
+# เตรียม .env.local จาก .env.example เมื่อยังไม่มีไฟล์ ใช้ค่าทดสอบแยกจาก Production
+npm run db:migrate
+npm run dev
 ```
 
-เปิด http://127.0.0.1:4173/ แล้วเลือกทดลองบทบาทจากแถบสีครีมด้านบน ข้อมูลทั้งหมดเป็นข้อมูลสมมติ เก็บใน localStorage ของเบราว์เซอร์ ไม่มีการเรียก Airtable หรือส่งอีเมล การสลับบทบาทมีเฉพาะตัวทดลองเท่านั้น
+เปิด `http://localhost:3000` รายละเอียดการตั้งค่าอยู่ใน [web/README.md](web/README.md) โค้ดปัจจุบันมี migrations ถึง `012_ai_task_search.sql` ตรวจ environment/Base ก่อนใช้คำสั่งฐานข้อมูล เก็บ secrets ในไฟล์ที่ Git ignore หรือ Vercel Environment Variables เท่านั้น
 
-หรือใช้ `npm run build` แล้วเปิด `dist/index.html` ในเบราว์เซอร์ รองรับการทดลองออฟไลน์ โดยฟอนต์ออนไลน์จะใช้ฟอนต์สำรองเมื่อโหลดไม่ได้
-
-## ฟังก์ชันที่พัฒนาแล้ว
-
-- Dashboard งานคงค้าง งานถึงวันติดตาม งานเกินกำหนด และงานเสร็จสิ้น
-- ค้นหา กรอง Agent / ความเร่งด่วน / สถานะ แบ่งหน้า และสลับตารางกับการ์ด
-- Agent ส่งงานใหม่ ดูงานและประวัติเฉพาะของตัวเอง และเพิ่มข้อความ
-- ลิงก์ตรง [ส่งงานใหม่สำหรับ LINE Rich Menu](https://script.google.com/macros/s/AKfycbxyQsNe8I4psZUgv0lcIzUZKDWj8Yb_sUCcRllxGD8Hj9F3WF3iMEhgoh7P85UR2zTp/exec?view=create&openExternalBrowser=1) รองรับมือถือและกลับเข้าฟอร์มหลัง Google Login; ดูวิธีตั้งค่าใน [คู่มือ LINE OA](docs/line-oa-setup.md#ลิงก์ส่งงานใหม่สำหรับ-rich-menu)
-- เลขาฯ ดูทุกงาน อัปเดตสถานะ บันทึกสรุป และดูรายงานแยก Agent
-- นัดติดตามแยกจากสถานะงาน รองรับหลายนัด บันทึกผล / ข้ามนัด และคำนวณนัดถัดไป
-- Timeline แยกข้อความที่ Agent เห็นออกจากบันทึกภายใน
-- ปฏิทินกำหนดส่งและนัดติดตาม รายชื่อสมาชิก และประวัติงาน Agent
-- Google OAuth แบบ authorization code เก็บ client secret และ Airtable PAT ฝั่งเซิร์ฟเวอร์
-- ตรวจสิทธิ์และเจ้าของงานทุกคำขอ ผูกตัวตนด้วย Google Subject (`sub`) ที่ได้จาก Google UserInfo ฝั่งเซิร์ฟเวอร์
-- รองรับ Airtable offset pagination, cache 30 วินาที, shared rate pacing และ retry เมื่อได้ HTTP 429
-- Operation journal และ upsert keys ช่วยให้คำขอเดิมทำต่อหลังบันทึกได้บางส่วน โดยไม่สร้างงาน / ประวัติซ้ำในกรณีที่ทดสอบ
-- คิวอีเมลเปลี่ยนสถานะ และสรุปประจำวันสำหรับเลขาฯ เวลา 08:00 น. เปิดใช้ภายหลังตามคู่มือ
-- สรุป LINE รอบ 08:00 และ 18:00 เวลาไทย ผ่าน OA: Admin / เลขาฯ รับภาพรวม ส่วน Agent รับเฉพาะงานตัวเอง
-- ปุ่มเชื่อมบัญชี LINE ผ่าน LINE Login และเปิด / หยุดรับสรุป พร้อมคิวป้องกันส่งซ้ำด้วย LINE retry key
-
-ตั้งค่าเพิ่มเติมตาม [คู่มือ LINE OA และสรุปเช้า–เย็น](docs/line-oa-setup.md) ฟังก์ชันส่งจริงจะเริ่มหลังตั้ง credentials, ผู้รับ และติดตั้ง trigger ในบัญชีเจ้าของเท่านั้น
-
-## ติดตั้งใช้งานจริง
-
-แอป Next.js ใน `web/` มี deployment แรกบน Vercel แล้ว ดู [วิธีรันและทดสอบ](web/README.md), [สถานะพัฒนาล่าสุด](docs/vercel-progress.md), [แผนพัฒนา](docs/vercel-development-plan.md) และ [แผน Deploy / Cutover / Rollback](docs/vercel-deployment-plan.md) ยังไม่ตั้ง backend cloud หรือสลับผู้ใช้จริง ระบบใช้งานจริงด้านล่างยังเป็น Google Apps Script
-
-1. สร้างตารางตาม [โครงสร้าง Airtable](docs/database-schema.md)
-2. ทำตาม [คู่มือติดตั้ง Google Apps Script และ Google OAuth](docs/deployment.md)
-3. ทดสอบ Google Login อย่างน้อยสองบัญชี / ต่างโดเมน และตรวจสิทธิ์ตาม [รายการทดสอบก่อนเปิดใช้](docs/security-and-testing.md)
-
-นำเข้าเฉพาะไฟล์ใน `apps-script/` ไปยัง Google Apps Script โปรเจกต์แบบ standalone ทุกหน้าและ Backend อยู่บน Apps Script โปรเจกต์เดียวกัน
-
-สร้าง schema จริงใน Airtable ครบ 5 ตาราง ตั้ง PAT / OAuth client และ [Deploy Web App](https://script.google.com/macros/s/AKfycbxyQsNe8I4psZUgv0lcIzUZKDWj8Yb_sUCcRllxGD8Hj9F3WF3iMEhgoh7P85UR2zTp/exec) แล้ว ทดสอบ Google Login ของ Admin, callback, Dashboard, หน้าทีม และอ่าน Airtable จริงผ่านทั้ง 5 ตาราง ดู [สถานะติดตั้งและรายการที่ยังต้องทดสอบ](docs/deployment.md) OAuth ยังเป็น External / Testing สมาชิกทีมอื่นยังต้องเพิ่มใน Users และ Test users การแจ้งเตือนยังปิดไว้
-
-ใช้ `npm run package:apps-script` เตรียมไฟล์ production 5 ไฟล์สำหรับนำเข้าผ่าน editor ใน `artifacts/apps-script/` backend จะรวมเป็น `Code.gs` พร้อม HTML 3 ไฟล์และ manifest เลือก `initializeProject` ในเมนู Run เพื่อเติมค่าเริ่มต้นที่ขาด หรือ `checkDeployment` เพื่อตรวจค่าติดตั้งและสิทธิ์อ่าน Airtable ทั้งคู่ตรวจบัญชี Google ของผู้รันก่อนทำงานและไม่แสดง secrets หรือส่งแจ้งเตือน
-
-## ขอบเขตรุ่นแรก
-
-เอกสารอ้างอิงรองรับลิงก์ HTTPS และอ่านไฟล์ในฟิลด์ Attachments ของ Airtable ได้ การอัปโหลดไฟล์โดยตรงยังให้ทำผ่าน Airtable ไม่มีการลบงานถาวร ใช้สถานะยกเลิกแทน ผู้ดูแลจัดการสมาชิกจาก Users ใน Airtable ส่วนรายงานขั้นสูงอยู่นอกขอบเขตรุ่นนี้
-
-ไม่มี Firebase Hosting, Cloud Functions หรือโฮสต์อื่นในระบบจริง
-
-## โครงสร้าง
-
-```text
-apps-script/   Backend .gs + Index / Styles / Scripts HTML + appsscript.json
-web/           Next.js + TypeScript สำหรับ Vercel; อยู่ระหว่างพัฒนาบนเครื่อง
-preview/       ตัวจำลองสำหรับทดลองบนเครื่องเท่านั้น
-tools/         build / preview / syntax check
-tests/         ทดสอบสิทธิ์ OAuth ticket, pagination, retry และประวัติ
-docs/          โครงสร้างฐานข้อมูล การติดตั้ง และการทดสอบบนบัญชีจริง
-dist/          ตัวอย่างเว็บที่ประกอบแล้ว (สร้างด้วย npm run build)
+```powershell
+npm run lint
+npm run typecheck
+npm test
+npm run test:integration
+npm run build
+npm run test:e2e
 ```
 
-ตรวจสอบด้วย `npm run check` และ `npm test` ทดสอบ Backend โดยจำลองบริการ Google Apps Script และ Airtable ไม่มีการส่งข้อมูลออกไปยังบัญชีจริง
+การทดสอบ PostgreSQL, API และโหลดมีขั้นตอนเตรียมเฉพาะใน `web/README.md` ผล viewport จำลองไม่ใช่หลักฐานการทดสอบอุปกรณ์จริง
 
-## แหล่งอ้างอิง
+## โครงสร้าง repository
 
-- [Google Apps Script Web Apps](https://developers.google.com/apps-script/guides/web)
-- [HTML Service iframe restrictions](https://developers.google.com/apps-script/guides/html/restrictions)
-- [Google OAuth authorization code flow](https://developers.google.com/identity/protocols/oauth2/web-server)
-- [Google OpenID Connect และ UserInfo](https://developers.google.com/identity/openid-connect/openid-connect)
-- [Airtable Web API และ pagination](https://support.airtable.com/docs/getting-started-with-airtables-web-api)
-- [Airtable API rate limits](https://support.airtable.com/docs/managing-api-call-limits-in-airtable)
+| ที่อยู่ | หน้าที่ |
+| --- | --- |
+| `web/src/app/`, `web/src/components/` | Routes และหน้าจอเว็บ |
+| `web/src/domain/`, `web/src/server/` | กฎ workflow, สิทธิ์, services และ integrations |
+| `web/db/migrations/`, `web/tests/`, `web/tools/` | Schema, tests และเครื่องมือปฏิบัติงาน |
+| `integrations/n8n/` | Workflow LINE AI; เก็บเฉพาะไฟล์ที่ไม่มี credentials |
+| `docs/` | แผน สถานะ schema และ runbooks |
+| `apps-script/`, `preview/`, root `tools/` และ `tests/` | ระบบเดิมและตัวอย่างออฟไลน์ |
+| `artifacts/`, `output/`, `pic/` | ไฟล์ทำงานส่วนตัว สื่อคู่มือที่ส่งมอบ และภาพอ้างอิง |
+
+## เอกสารที่ควรอ่าน
+
+- [แนวทาง contributor](AGENTS.md) และ [การรันเว็บ](web/README.md)
+- [Production และประวัติ cutover](docs/vercel-production.md), [Recovery](docs/vercel-recovery.md)
+- [Schema Airtable และข้อมูลใน Neon](docs/database-schema.md), [ลงทะเบียนและอนุมัติ Agent](docs/agent-registration.md)
+- [แผนคลังเอกสาร](docs/forms-production-plan.md), [ผลตรวจรับล่าสุด](docs/forms-production-progress.md), [การจัดการเอกสาร](docs/forms-library.md)
+- [ค้นงานด้วย AI](docs/ai-task-search.md), [LINE แจ้งงานเข้าใหม่](docs/line-new-task-notifications.md)
+
+## ตัวอย่างและระบบเดิม
+
+คำสั่งจาก root `npm run preview`, `npm run build`, `npm run check` และ `npm test` ใช้กับ legacy demo/Apps Script ไม่ใช่เว็บ Vercel ตัวอย่างเปิดที่ `http://127.0.0.1:4173/` ใช้ข้อมูลสมมติและ localStorage
+
+[ขั้นตอนติดตั้ง Apps Script](docs/deployment.md) และ [LINE รุ่นเดิม](docs/line-oa-setup.md) เก็บไว้สำหรับอ้างอิงประวัติ ไม่ใช้สถานะในเอกสารเก่าแทนผลตรวจ Production ปัจจุบัน

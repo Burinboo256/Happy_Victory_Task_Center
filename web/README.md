@@ -1,10 +1,14 @@
-# Happy Victory Web
+# RINLYN Secretary Web
 
 Next.js App Router + TypeScript สำหรับ Vercel ใช้ Airtable เก็บบัญชีและงาน และ Neon PostgreSQL เก็บ session, OAuth state, operation journal, LINE bindings/AI memory รวมถึงทะเบียนเอกสาร ฉบับ และรายการโปรด เอกสารจริงเปิดจาก Allianz/Google Drive เท่านั้น
+
+Production ใช้งานที่ `https://happy-victory-task-center.vercel.app` จาก branch `main` และ Root Directory `web/` สถานะตรวจวันที่ 15 พฤศจิกายน 2569: migrations 001–012, คลังเอกสาร 44 รายการ (Allianz 43 + Drive 1), เจ้าของยืนยันชุดทดสอบเอกสาร/Drive/favorites ผ่าน LINE บน iPhone ดู [ผลตรวจและงานค้าง](../docs/forms-production-progress.md) ก่อนสรุปว่าผ่านทุกบทบาทหรือทุกอุปกรณ์
 
 ## คลังเอกสาร
 
 `/forms` ใช้ `FORMS_ENABLED`; ค้นผ่าน LINE ใช้ `AI_FORMS_ENABLED` เพิ่ม ทั้งสองเริ่มปิด ต้องรัน migration ถึง `011_ai_documents.sql` ก่อน deploy โค้ดรุ่นนี้ เพราะ memory ใช้คอลัมน์ใหม่แม้ยังปิดฟีเจอร์เอกสาร
+
+ค่าเริ่มต้น false เป็นค่าใน config สำหรับการติดตั้งใหม่ Production เปิดทั้งสอง flag แล้ว และเปิด `AI_TASK_SEARCH_ENABLED` สำหรับ [ค้นงานด้วย AI](../docs/ai-task-search.md) ซึ่งใช้ migration 012 คงการตั้งค่า staging แยกจาก Production และตรวจ flag ใน deployment ที่ใช้งานจริงก่อนทดสอบ LINE
 
 Admin/Secretary ที่ Active สร้างร่างได้ เลขาแก้ร่างตนเอง Admin เผยแพร่/พักใช้ Agent อ่านฉบับเผยแพร่ที่มีสิทธิ์ ทุกบทบาทจัด favorites ส่วนตัวใน Neon ได้ ใช้ transaction และ revision สำหรับการเผยแพร่ ไม่เพิ่มตาราง Airtable หรืออัปโหลดไฟล์
 

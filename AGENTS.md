@@ -2,7 +2,7 @@
 
 ## Project Structure & Architecture
 
-RINLYN Secretary runs from `web/` on Vercel. Airtable stores business records; Neon PostgreSQL stores sessions, operation journals, LINE bindings, and AI memory.
+RINLYN Secretary runs from `web/` on Vercel. Airtable stores business records; Neon PostgreSQL stores sessions, operation journals, workflows, LINE bindings, AI memory, and document metadata, versions, and favorites. Documents open from Allianz or Google Drive URLs; do not store file contents in the application.
 
 - `web/src/app/`: routes; `components/`: interface; `domain/`: workflow rules; `server/`: authentication, integrations, and services.
 - `web/db/migrations/`, `web/tests/`, and `web/tools/`: migrations, tests, and operational utilities.
