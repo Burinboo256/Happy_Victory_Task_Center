@@ -1,6 +1,6 @@
 # หลาย Workspace ใน RINLYN Secretary
 
-สถานะ: พัฒนาและทดสอบบนเครื่องแล้ว กำลังเปิดใช้บน Staging; ยังไม่เปิดใช้บน Production เอกสารนี้แทนแนวทาง Base ร่วมกัน: **หนึ่งเว็บไซต์, หนึ่ง Control Base, หนึ่ง Airtable Base ต่อ Space**
+สถานะ: Deploy รุ่นหลาย Space บน Staging แล้ว รอทดสอบ Login/สิทธิ์จริง; ยังไม่เปิดใช้บน Production เอกสารนี้แทนแนวทาง Base ร่วมกัน: **หนึ่งเว็บไซต์, หนึ่ง Control Base, หนึ่ง Airtable Base ต่อ Space**
 
 ## แหล่งข้อมูลและอำนาจการจัดการ
 
@@ -109,3 +109,6 @@ Migration ใหม่ต้องระบุว่าเป็น control-plan
 - สำรอง records ของ Base ทดสอบทั้ง 5 ตารางและ environment แบบเข้ารหัสก่อน bootstrap: Users 8, Tasks 15, Updates 30, Follow-ups 4, Notifications 5
 - Apply migration 013 และ bootstrap RINLYN สำเร็จ สมาชิกเดิม 8 บัญชี; พัก writes ของ Staging ระหว่าง deploy และล้าง sessions ตามขั้นตอน ให้ Login ใหม่หลังเปิดใช้
 - ข้อมูลการเชื่อมต่อและกุญแจอยู่ใน ignored private artifacts; ไม่ใส่ใน Git เอกสารนี้ไม่ถือเป็นการยืนยัน Production rollout
+- Deploy app commit `355a9de` เป็น Preview `dpl_HfdmwSUc4YXUfa3mZLQmEJpKeygW` และผูก staging alias แล้ว `/api/health`, `/login`, `/spaces` ตอบ 200; `/api/spaces`, `/api/bootstrap` แบบไม่ Login ตอบ 401/no-store ตรวจ Production alias ยังเป็น deployment เดิม
+- ตรวจหลัง bootstrap: งาน 15, updates 30, follow-ups 4 และ notifications 5 ตรงกับสำรองทุก record; roles/Active ของสมาชิก 8 บัญชีตรงเดิม และ Lookup คืน central record IDs ถูกต้อง
+- ชุดทดสอบ PostgreSQL จริงผ่าน 11 กรณี หลังปรับ migration fixture ให้ใช้ฐานข้อมูลทดสอบแยก (รองรับ control tables ใน public) แทน search_path schema อย่างเดียว ยังรอ CI รอบถัดไปและการยืนยัน Google Login จริง

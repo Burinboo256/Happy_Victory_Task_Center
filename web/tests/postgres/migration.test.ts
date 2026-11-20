@@ -28,10 +28,14 @@ test('migration CLI is idempotent, binds the environment and rolls back changed-
   assert.ok(raw, 'TEST_DATABASE_URL is required');
   assert.match(new URL(raw).pathname, /test/i);
   assert.notEqual(raw, process.env.DATABASE_URL);
-  const schema = 'hvr_test_' + randomUUID().replaceAll('-', '');
+  // The control plane intentionally uses public, so isolate the whole database.
+  // A search_path-only fixture cannot exercise the production migration layout.
+  const database = 'hvr_test_' + randomUUID().replaceAll('-', '');
   const db = new Pool({ connectionString: raw, max: 1 });
   const url = new URL(raw);
-  url.searchParams.set('options', '-c search_path=' + schema);
+  assert.ok(['localhost', '127.0.0.1', '[::1]'].includes(url.hostname));
+  url.pathname = '/' + database;
+  url.searchParams.delete('options');
   const env = {
     ...environment,
     DATABASE_URL: url.href,
@@ -44,7 +48,7 @@ test('migration CLI is idempotent, binds the environment and rolls back changed-
   };
   const query = new Pool({ connectionString: url.href, max: 1 });
   try {
-    await db.query('CREATE SCHEMA ' + schema);
+    await db.query('CREATE DATABASE ' + database);
     const first = await migrate(env);
     assert.equal(first.code, 0, first.output);
     const second = await migrate(env);
@@ -71,8 +75,8 @@ test('migration CLI is idempotent, binds the environment and rolls back changed-
     assert.equal(bad.output.includes('test-secret-never-live'), false);
   } finally {
     await query.end();
-    assert.match(schema, /^hvr_test_[a-f0-9]{32}$/);
-    await db.query('DROP SCHEMA IF EXISTS ' + schema + ' CASCADE');
+    assert.match(database, /^hvr_test_[a-f0-9]{32}$/);
+    await db.query('DROP DATABASE IF EXISTS ' + database);
     await db.end();
   }
 });
