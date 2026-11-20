@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { services } from '@/server/context';
 import { json, readBody, route } from '@/server/http';
 import { replyAi } from '@/server/ai/line';
+import { replySpaceAi } from '@/server/workspaces/line-routing';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -10,8 +11,10 @@ const input = z
   .strict();
 export function POST(request: Request) {
   return route(async () => {
-    const c = services();
+    const c = await services();
     const body = input.parse(await readBody(request));
+    if (c.control)
+      return json(await replySpaceAi(c.db, c.config, c.control, body.ticket, body.text));
     return json(await replyAi(c.db, c.config, c.repo, body.ticket, body.text));
   });
 }

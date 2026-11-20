@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { documentScore, normalizeDocumentText, type DocumentEntry } from '../../domain/documents';
 import type { User } from '../../domain/model';
 import type { Config } from '../config';
+import { workspaceUrl } from '../workspaces/url';
 import type { Sql } from '../db';
 import { publishedDocuments } from '../documents/service';
 import type { DocumentRef, MemoryTurn } from './memory';
@@ -34,7 +35,10 @@ const documentCode = /\b(?:hc\d+|w-8ben-e|w-8ben|w-9|fatca|crs|opd|ipd)\b/i;
 export function documentIntent(question: string, memory: MemoryTurn[] = []) {
   if (/^(?:ช่วย)?(?:ส่งงาน|สร้างงาน|เพิ่มงาน|งานใหม่)|^(ดูร่าง|ยกเลิก|ยืนยันสร้างงาน)$/.test(question))
     return false;
-  if (/(?:งาน|เคส).*(?:รอ|ขาด|ติดตาม).*เอกสาร/.test(question) && !/ฟอร์ม|ขอ(?:ลิงก์|เอกสาร)|หาเอกสาร/.test(question))
+  if (
+    /(?:งาน|เคส).*(?:รอ|ขาด|ติดตาม).*เอกสาร/.test(question) &&
+    !/ฟอร์ม|ขอ(?:ลิงก์|เอกสาร)|หาเอกสาร/.test(question)
+  )
     return false;
   const explicit =
     /แบบฟอร์ม|ฟอร์ม|ขอ(?:ลิงก์|เอกสาร|ประวัติ)|เปิดเอกสาร|หาเอกสาร|มีเอกสาร|เอกสาร.*(?:อะไร|ไหน|บ้าง)|ติดดาว|ใช้บ่อย|รายการโปรด|\bhc\d+\b|fatca|crs|w-8ben|w-9|ใบหักบัญชี/i.test(
@@ -216,7 +220,7 @@ export async function renderDocumentReply(
     );
     selected.forEach((d, i) => {
       parts.push(
-        `${i + 1}. ${d.version.data.title}\n${d.version.data.category} · ${d.version.source === 'drive' ? 'Google Drive' : 'Allianz'}\n${d.version.data.description.slice(0, 180)}\nเปิดเอกสาร: ${c.APP_ORIGIN}/forms/${d.id}/open`,
+        `${i + 1}. ${d.version.data.title}\n${d.version.data.category} · ${d.version.source === 'drive' ? 'Google Drive' : 'Allianz'}\n${d.version.data.description.slice(0, 180)}\nเปิดเอกสาร: ${workspaceUrl(c, '/forms/' + d.id + '/open')}`,
       );
     });
     if (semantic)
@@ -225,7 +229,7 @@ export async function renderDocumentReply(
       );
   }
   parts.push(
-    `ค้นต่อในเว็บ: ${c.APP_ORIGIN}/forms${context.query && !changed ? '?q=' + encodeURIComponent(context.query) : ''}`,
+    `ค้นต่อในเว็บ: ${workspaceUrl(c, '/forms' + (context.query && !changed ? '?q=' + encodeURIComponent(context.query) : ''))}`,
   );
   const answer = parts.join('\n\n');
   return {

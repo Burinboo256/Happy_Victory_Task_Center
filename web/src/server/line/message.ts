@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { priorities, priorityNames } from '../../domain/model';
 import { categoryColors } from '../../domain/task-colors';
+import type { Config } from '../config';
+import { workspaceUrl } from '../workspaces/url';
 
 export const summarySchema = z.object({
   title: z.string().min(1).max(180),
@@ -17,6 +19,7 @@ export function completedTaskMessage(
   taskId: string,
   summary: z.infer<typeof completionSummarySchema>,
   sender: string,
+  workspace?: Config['workspace'],
 ) {
   const color = categoryColors[summary.category] || '#475569';
   const text = (value: string, extra: Record<string, unknown> = {}) => ({
@@ -27,7 +30,8 @@ export function completedTaskMessage(
   });
   return {
     type: 'flex',
-    altText: '✅ งานของคุณเสร็จสิ้นแล้ว · ' + summary.category,
+    altText:
+      (workspace ? '[' + workspace.name + '] ' : '') + '✅ งานของคุณเสร็จสิ้นแล้ว · ' + summary.category,
     contents: {
       type: 'bubble',
       header: {
@@ -41,6 +45,7 @@ export function completedTaskMessage(
         layout: 'vertical',
         spacing: 'md',
         contents: [
+          ...(workspace ? [text('Space: ' + workspace.name, { size: 'sm' })] : []),
           text(summary.category, { color, weight: 'bold', size: 'sm' }),
           text(summary.title, { weight: 'bold', size: 'lg' }),
           text('อัปเดตโดย: ' + sender.slice(0, 200), { size: 'sm' }),
@@ -66,7 +71,9 @@ export function completedTaskMessage(
             action: {
               type: 'uri',
               label: 'เปิดดูงาน',
-              uri: origin + '/tasks/' + taskId + '?openExternalBrowser=1',
+              uri: workspace
+                ? workspaceUrl({ APP_ORIGIN: origin, workspace }, '/tasks/' + taskId)
+                : origin + '/tasks/' + taskId + '?openExternalBrowser=1',
             },
           },
         ],
@@ -79,6 +86,7 @@ export function newTaskMessage(
   taskId: string,
   summary: z.infer<typeof summarySchema>,
   sender: string,
+  workspace?: Config['workspace'],
 ) {
   const urgent = summary.priority === 'Urgent';
   const color = categoryColors[summary.category] || '#475569';
@@ -90,7 +98,7 @@ export function newTaskMessage(
   });
   return {
     type: 'flex',
-    altText: `${urgent ? '🔴 ' : ''}งานเข้าใหม่ · ${priorityNames[summary.priority]} · ${summary.category}`,
+    altText: `${workspace ? '[' + workspace.name + '] ' : ''}${urgent ? '🔴 ' : ''}งานเข้าใหม่ · ${priorityNames[summary.priority]} · ${summary.category}`,
     contents: {
       type: 'bubble',
       header: {
@@ -109,6 +117,7 @@ export function newTaskMessage(
         layout: 'vertical',
         spacing: 'md',
         contents: [
+          ...(workspace ? [text('Space: ' + workspace.name, { size: 'sm' })] : []),
           text(summary.category, { color, weight: 'bold', size: 'sm' }),
           text(summary.title, { weight: 'bold', size: 'lg' }),
           text('ผู้ส่ง: ' + sender.slice(0, 200), { size: 'sm' }),
@@ -133,7 +142,9 @@ export function newTaskMessage(
             action: {
               type: 'uri',
               label: 'เปิดดูงาน',
-              uri: origin + '/tasks/' + taskId + '?openExternalBrowser=1',
+              uri: workspace
+                ? workspaceUrl({ APP_ORIGIN: origin, workspace }, '/tasks/' + taskId)
+                : origin + '/tasks/' + taskId + '?openExternalBrowser=1',
             },
           },
         ],

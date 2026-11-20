@@ -16,6 +16,7 @@ import { formulaValue, type AirtableRepository } from '../airtable/client';
 import { taskDto, taskSummaryFields, publicUserFields, userDto } from '../airtable/dto';
 import type { Sql } from '../db';
 import type { Config } from '../config';
+import { workspaceUrl } from '../workspaces/url';
 import { forbidden } from '../errors';
 import { authorizedMemory, type MemoryTurn, type Conversation } from './memory';
 
@@ -167,7 +168,7 @@ export async function aiContext(
       ...(isManager(user) ? { followupDate: t.followupDate } : {}),
       completedAt: t.completedAt,
       workflow,
-      url: config.APP_ORIGIN + '/tasks/' + t.id,
+      url: workspaceUrl(config, '/tasks/' + t.id),
     };
   });
   return {
@@ -182,7 +183,9 @@ export async function aiContext(
       asOf: new Date().toISOString(),
       timezone: 'Asia/Bangkok',
       today,
-      scope: isManager(user) ? 'งานทั้งหมดที่มีสิทธิ์' : 'งานของฉันเท่านั้น',
+      scope:
+        (config.workspace ? 'Space: ' + config.workspace.name + ' · ' : '') +
+        (isManager(user) ? 'งานทั้งหมดที่มีสิทธิ์' : 'งานของฉันเท่านั้น'),
       totals,
       matched,
       included: items.length,

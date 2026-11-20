@@ -1,6 +1,6 @@
 'use client';
 import { useState, type FormEvent } from 'react';
-export function RegistrationForm() {
+export function RegistrationForm({ workspaceId }: { workspaceId?: string }) {
   const [busy, setBusy] = useState(false),
     [error, setError] = useState('');
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -17,6 +17,7 @@ export function RegistrationForm() {
           fullName: fields.get('fullName'),
           agentCode: fields.get('agentCode'),
           phone: fields.get('phone'),
+          ...(workspaceId ? { workspaceId } : {}),
         }),
       });
       const result = await response.json();

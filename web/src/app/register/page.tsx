@@ -1,15 +1,31 @@
 import type { Metadata } from 'next';
 import { Brand } from '@/components/brand';
 import { RegistrationForm } from '@/components/registration-form';
-import { configured } from '@/server/config';
+import { configured, readConfig } from '@/server/config';
+import { services } from '@/server/context';
+import { spaceServices } from '@/server/workspaces/service';
 export const metadata: Metadata = { title: 'ลงทะเบียนตัวแทน' };
 export const dynamic = 'force-dynamic';
 export default async function Register({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; error?: string }>;
+  searchParams: Promise<{ status?: string; error?: string; space?: string }>;
 }) {
   const params = await searchParams;
+  let ready = configured(),
+    workspaceName = '',
+    workspaceId = params.space;
+  if (ready && readConfig().WORKSPACES_ENABLED) {
+    try {
+      const context = await services();
+      if (!context.control) throw new Error('Space unavailable');
+      const space = await spaceServices(context.db, context.config, context.control, workspaceId);
+      workspaceName = space.config.workspace?.name || '';
+      workspaceId = space.row.id;
+    } catch {
+      ready = false;
+    }
+  }
   const status = ['pending', 'existing', 'review'].includes(params.status || '')
     ? params.status
     : '';
@@ -17,6 +33,11 @@ export default async function Register({
     <main className="registration-page">
       <section className="registration-card">
         <Brand />
+        {workspaceName && (
+          <p>
+            ลงทะเบียนเข้า Space: <strong>{workspaceName}</strong>
+          </p>
+        )}
         <h1>
           {status === 'pending'
             ? 'ส่งคำขอแล้ว รอผู้ดูแลอนุมัติ'
@@ -38,14 +59,14 @@ export default async function Register({
           </div>
         ) : (
           <>
-            <p>สำหรับตัวแทนที่ต้องการใช้งาน Happy Victory</p>
+            <p>สำหรับตัวแทนที่ต้องการใช้งาน RINLYN Secretary</p>
             {params.error && (
               <div className="form-error" role="alert">
                 ยืนยันบัญชีหรือลงทะเบียนไม่สำเร็จ กรุณาลองใหม่หรือติดต่อผู้ดูแล
               </div>
             )}
-            {configured() ? (
-              <RegistrationForm />
+            {ready ? (
+              <RegistrationForm workspaceId={workspaceId} />
             ) : (
               <p role="status">ระบบอยู่ระหว่างเตรียมเปิดลงทะเบียน กรุณาติดต่อผู้ดูแล</p>
             )}

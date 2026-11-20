@@ -91,6 +91,7 @@ export interface TaskUpdate {
   newStatus: string;
 }
 export interface Bootstrap {
+  workspace?: { id: string; name: string };
   user: Pick<User, 'id' | 'name' | 'email' | 'role'>;
   users: PublicUser[];
   tasks: TaskSummary[];

@@ -9,12 +9,18 @@ import { createSession } from './session';
 import { verifyInstance } from '../runtime';
 import { registrationSchema, type Registration } from '../../domain/registration';
 import { registerAgent } from './registration';
+import { ControlPlane } from '../workspaces/control';
+import { spaceServices, enrollMember } from '../workspaces/service';
+import { userDto } from '../airtable/dto';
+import { formulaValue } from '../airtable/client';
+import { requireWrites } from '../runtime';
 
 const configurations = new Map<string, Promise<oidc.Configuration>>();
 export class GoogleLoginError extends AppError {
   constructor(
     public returnTo: string,
     public registration = false,
+    public workspaceId?: string,
   ) {
     super(401, 'OAUTH_INVALID', 'ไม่สามารถเข้าสู่ระบบได้ กรุณาเริ่มใหม่');
   }
@@ -105,28 +111,52 @@ export async function finishGoogle(
     if (!claims?.sub) throw invalid();
     const info = await oidc.fetchUserInfo(client, tokens.access_token, claims.sub);
     if (typeof info.email !== 'string' || info.email_verified !== true) throw invalid();
+    const email = info.email.toLowerCase();
     if (stored.registration) {
-      const status = await registerAgent(
-        repo,
-        db,
-        config,
-        info as unknown as Identity,
-        registrationSchema.parse(stored.registration),
-      );
+      const profile = registrationSchema.parse(stored.registration);
+      const control = config.WORKSPACES_ENABLED ? new ControlPlane(config, db) : undefined;
+      const space = control
+        ? await spaceServices(db, config, control, profile.workspaceId)
+        : undefined;
+      if (space) await requireWrites(space.db, space.config);
+      let status = await registerAgent(repo, db, config, info as unknown as Identity, profile);
+      if (control && space && status !== 'review') {
+        const records = (
+          await control.users.list('users', `LOWER({Email})=${formulaValue(email)}`)
+        ).filter((row) => String(row.fields.Email || '').toLowerCase() === email);
+        if (records.length !== 1) throw invalid();
+        status = await enrollMember(
+          db,
+          config,
+          control,
+          space.row.id,
+          userDto(records[0]),
+          profile.fullName,
+        );
+      }
       return {
         kind: 'registration' as const,
         status,
         token: '',
-        returnTo: '/register?status=' + status,
+        returnTo:
+          '/register?' + new URLSearchParams({ status, ...(space ? { space: space.row.id } : {}) }),
       };
     }
     const user = await findIdentity(repo, db, config, info as unknown as Identity);
     return {
       kind: 'login' as const,
       ...(await createSession(db, config, user)),
-      returnTo: safeReturnTo(stored.return_to),
+      returnTo:
+        config.WORKSPACES_ENABLED && stored.return_to === '/'
+          ? '/spaces'
+          : safeReturnTo(stored.return_to),
     };
   } catch {
-    throw new GoogleLoginError(safeReturnTo(stored.return_to), !!stored.registration);
+    const profile = registrationSchema.safeParse(stored.registration);
+    throw new GoogleLoginError(
+      safeReturnTo(stored.return_to),
+      !!stored.registration,
+      profile.success ? profile.data.workspaceId : undefined,
+    );
   }
 }

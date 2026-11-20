@@ -7,7 +7,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export function GET(request: Request) {
   return route(async () => {
-    const c = services();
+    const c = await services();
     try {
       const { url, binding } = await startGoogle(
         c.db,

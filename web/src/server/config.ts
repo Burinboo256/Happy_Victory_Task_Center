@@ -41,6 +41,28 @@ const schema = z.object({
   FORMS_ENABLED: flag,
   AI_FORMS_ENABLED: flag,
   AI_TASK_SEARCH_ENABLED: flag,
+  WORKSPACES_ENABLED: flag.optional(),
+  WORKSPACE_ENCRYPTION_KEY: z
+    .string()
+    .regex(/^[a-f0-9]{64}$/i)
+    .optional(),
+  AIRTABLE_CONTROL_BASE_ID: z
+    .string()
+    .regex(/^app[a-zA-Z0-9]{14}$/)
+    .optional(),
+  AIRTABLE_CONTROL_TOKEN: z.string().min(12).optional(),
+  AIRTABLE_CONTROL_USERS_TABLE: z
+    .string()
+    .regex(/^tbl[a-zA-Z0-9]{14}$/)
+    .optional(),
+  AIRTABLE_WORKSPACES_TABLE: z
+    .string()
+    .regex(/^tbl[a-zA-Z0-9]{14}$/)
+    .optional(),
+  AIRTABLE_WORKSPACE_MEMBERS_TABLE: z
+    .string()
+    .regex(/^tbl[a-zA-Z0-9]{14}$/)
+    .optional(),
   AI_LINE_CHANNEL_ACCESS_TOKEN: z.string().min(20).optional(),
   AI_LINE_CHANNEL_SECRET: z.string().min(16).optional(),
   AI_LINE_OA_ID: z
@@ -52,7 +74,7 @@ const schema = z.object({
     .regex(/^U[a-f0-9]{32}$/)
     .optional(),
 });
-export type Config = z.infer<typeof schema>;
+export type Config = z.infer<typeof schema> & { workspace?: { id: string; name: string } };
 export const productionBase = 'appDS1Ji5cqIohPq3';
 const invalid = () => new AppError(503, 'NOT_CONFIGURED', 'ระบบยังตั้งค่าบริการไม่ครบ กรุณาติดต่อผู้ดูแล');
 
@@ -108,6 +130,19 @@ export function readConfig(env: Record<string, string | undefined> = process.env
       throw invalid();
     validateDatabase(config.DATABASE_URL);
     validateBinding(config, env.VERCEL_ENV);
+    if (
+      config.WORKSPACES_ENABLED &&
+      (!config.WORKSPACE_ENCRYPTION_KEY ||
+        !config.AIRTABLE_WORKSPACES_TABLE ||
+        !config.AIRTABLE_WORKSPACE_MEMBERS_TABLE)
+    )
+      throw invalid();
+    if (
+      config.AIRTABLE_CONTROL_BASE_ID &&
+      config.AIRTABLE_CONTROL_BASE_ID !== config.AIRTABLE_BASE_ID &&
+      (!config.AIRTABLE_CONTROL_TOKEN || !config.AIRTABLE_CONTROL_USERS_TABLE)
+    )
+      throw invalid();
     if (
       config.APP_ENV !== 'production' &&
       (config.JOBS_ENABLED || config.ENABLE_EMAIL_NOTIFICATIONS || config.ENABLE_LINE_NOTIFICATIONS)

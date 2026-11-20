@@ -6,6 +6,8 @@ type State = {
   oaId: string;
   account: string;
   candidate: { id: string; name: string } | null;
+  workspace?: { id: string; name: string };
+  selected?: boolean;
 };
 export function AiLineSettings({
   data,
@@ -72,6 +74,27 @@ export function AiLineSettings({
             </p>
           )}
           <fieldset disabled={busy || !data.writesEnabled}>
+            {state.workspace && (
+              <div className="line-link-code">
+                <p>
+                  LINE AI {state.selected ? 'กำลังใช้' : 'ยังไม่ได้เลือก'} Space:{' '}
+                  <strong>{state.workspace.name}</strong>
+                </p>
+                <p>
+                  การสลับ Space ในเว็บไม่เปลี่ยน Space ใน LINE เมื่อยืนยันการเชื่อมต่อจะใช้ Space นี้
+                  ถ้าจะเปลี่ยนให้กดปุ่มด้านล่าง ความจำและร่างเดิมจะไม่ถูกนำข้ามทีม
+                </p>
+                {state.account && !state.selected && (
+                  <button
+                    className="btn small"
+                    type="button"
+                    onClick={() => void act('select-workspace')}
+                  >
+                    ใช้ Space นี้ใน LINE AI
+                  </button>
+                )}
+              </div>
+            )}
             {state.oaId && (
               <p>
                 <a

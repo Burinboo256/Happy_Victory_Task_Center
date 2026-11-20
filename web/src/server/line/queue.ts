@@ -86,12 +86,19 @@ export async function drainLineQueue(
             const summary = completion || summarySchema.parse(row.summary);
             const sender = userDto(await repo.get('users', summary.senderId));
             message = completion
-              ? completedTaskMessage(config.APP_ORIGIN, row.task_id, completion, sender.name)
+              ? completedTaskMessage(
+                  config.APP_ORIGIN,
+                  row.task_id,
+                  completion,
+                  sender.name,
+                  config.workspace,
+                )
               : newTaskMessage(
                   config.APP_ORIGIN,
                   row.task_id,
                   summarySchema.parse(row.summary),
                   sender.name,
+                  config.workspace,
                 );
           }
           // Persist the EXACT payload and first attempt before any external call.

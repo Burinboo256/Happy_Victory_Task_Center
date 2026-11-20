@@ -11,6 +11,7 @@ import {
 } from '../../domain/model';
 import type { Sql } from '../db';
 import type { Config } from '../config';
+import { workspaceUrl } from '../workspaces/url';
 import type { AirtableRepository } from '../airtable/client';
 import { userDto } from '../airtable/dto';
 import { forbidden } from '../errors';
@@ -403,6 +404,6 @@ async function completedReply(
   return {
     created: true,
     taskId: id,
-    text: `สร้างงานแล้ว: ${task.code || task.title}\n${c.APP_ORIGIN}/tasks/${id}\nตรวจรายละเอียดและติดตามสถานะได้ในเว็บ`,
+    text: `สร้างงานแล้ว: ${task.code || task.title}\n${workspaceUrl(c, '/tasks/' + id)}\nตรวจรายละเอียดและติดตามสถานะได้ในเว็บ`,
   };
 }

@@ -91,6 +91,7 @@ const eventSchema = z.object({
     )
     .max(100),
 });
+export const notificationEnvelope = eventSchema;
 export async function receiveWebhook(db: Sql, config: Config, input: unknown) {
   const body = eventSchema.parse(input);
   if (body.destination !== config.LINE_BOT_USER_ID) throw forbidden();

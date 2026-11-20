@@ -7,9 +7,9 @@ import { cookieName, cookieOptions, readBinding } from '@/server/auth/security';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export async function GET(request: Request) {
-  let c: ReturnType<typeof services>;
+  let c: Awaited<ReturnType<typeof services>>;
   try {
-    c = services();
+    c = await services();
   } catch (error) {
     return failure(error);
   }
@@ -37,6 +37,8 @@ export async function GET(request: Request) {
       c.config.APP_ORIGIN,
     );
     if (error instanceof GoogleLoginError) login.searchParams.set('returnTo', error.returnTo);
+    if (error instanceof GoogleLoginError && error.registration && error.workspaceId)
+      login.searchParams.set('space', error.workspaceId);
     const response = NextResponse.redirect(login, 303);
     response.cookies.set(cookieName(c.config, 'oauth'), '', cookieOptions(c.config, 0));
     return response;

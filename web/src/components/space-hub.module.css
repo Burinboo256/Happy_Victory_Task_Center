@@ -1,0 +1,112 @@
+.hub {
+  max-width: 1050px;
+  margin: auto;
+  padding: 24px 18px 60px;
+}
+.hub header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.hub h1 {
+  margin-top: 32px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 18px;
+}
+.card {
+  border: 1px solid #e2d7e0;
+  background: white;
+  border-radius: 16px;
+  padding: 22px;
+  margin-top: 20px;
+}
+.card button {
+  margin: 5px 8px 5px 0;
+}
+.form {
+  display: grid;
+  gap: 15px;
+  max-width: 620px;
+  margin-top: 20px;
+}
+.form label {
+  display: grid;
+  gap: 6px;
+}
+.form input:not([type="checkbox"]),
+.form select {
+  min-width: 0;
+  width: 100%;
+  padding: 11px;
+  border: 1px solid #bcaebe;
+  border-radius: 8px;
+  font: inherit;
+}
+.form input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+}
+.error {
+  padding: 14px;
+  background: #fff0f0;
+  color: #9b2929;
+  border-radius: 8px;
+}
+.table {
+  overflow-x: auto;
+}
+.table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.table td,
+.table th {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #e2d7e0;
+}
+@media (max-width: 550px) {
+  .hub header {
+    align-items: flex-start;
+  }
+  .card {
+    padding: 16px;
+  }
+  .table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .table table,
+  .table tbody {
+    display: block;
+  }
+  .table tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    border-bottom: 1px solid #e2d7e0;
+    padding: 12px 0;
+  }
+  .table td {
+    min-width: 0;
+    border: 0;
+    padding: 6px 0;
+    overflow-wrap: anywhere;
+  }
+  .table td:first-child,
+  .table td:last-child {
+    grid-column: 1 / -1;
+  }
+  .table td:nth-child(2)::before {
+    content: "บทบาท: ";
+  }
+  .table td:nth-child(3)::before {
+    content: "สถานะ: ";
+  }
+}

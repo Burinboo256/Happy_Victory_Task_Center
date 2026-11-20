@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 export const registrationSchema = z
   .object({
+    workspaceId: z.uuid().optional(),
     fullName: z.string().trim().min(2).max(120),
     agentCode: z
       .string()

@@ -37,9 +37,25 @@ const paths = new Set([
   '/history',
   '/notifications',
   '/forms',
+  '/spaces',
 ]);
 export function safeReturnTo(value: string | null | undefined): string {
   if (!value) return '/';
+  if (value.startsWith('/spaces/open?')) {
+    const params = new URLSearchParams(value.slice('/spaces/open?'.length));
+    const space = params.get('space') || '',
+      next = params.get('next') || '/';
+    if (
+      /^[a-f0-9-]{36}$/.test(space) &&
+      !next.startsWith('/spaces') &&
+      safeReturnTo(next) === next &&
+      [...params.keys()].every((key) => key === 'space' || key === 'next') &&
+      params.getAll('space').length === 1 &&
+      params.getAll('next').length <= 1
+    )
+      return '/spaces/open?' + new URLSearchParams({ space, next });
+    return '/';
+  }
   if (
     paths.has(value) ||
     /^\/tasks\/rec[a-zA-Z0-9]{14}$/.test(value) ||

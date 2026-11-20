@@ -167,6 +167,13 @@ const envelope = z.object({
     )
     .max(100),
 });
+export async function verifyAiEnvelope(c: Config, raw: string, signature: string) {
+  requireSetup(c);
+  verifySignature(raw, signature, c.AI_LINE_CHANNEL_SECRET || '');
+  const body = envelope.parse(JSON.parse(raw));
+  if (body.destination !== (c.AI_LINE_BOT_USER_ID || (await botIdentity(c)))) throw forbidden();
+  return body;
+}
 export type AiJob = {
   ticket: string;
   needsAi: boolean;
@@ -188,11 +195,9 @@ export async function receiveAi(
   raw: string,
   signature: string,
   now = Date.now(),
+  routing?: { eventId: string; allowAccount: boolean },
 ) {
-  requireSetup(c);
-  verifySignature(raw, signature, c.AI_LINE_CHANNEL_SECRET || '');
-  const body = envelope.parse(JSON.parse(raw));
-  if (body.destination !== (c.AI_LINE_BOT_USER_ID || (await botIdentity(c)))) throw forbidden();
+  const body = await verifyAiEnvelope(c, raw, signature);
   await verifyInstance(db, c);
   await cleanMemory(db, c);
   await db.query(
@@ -202,6 +207,7 @@ export async function receiveAi(
   const jobs: AiJob[] = [];
   let taskConfirmed = false;
   for (const e of body.events) {
+    if (routing && routing.eventId !== e.webhookEventId) continue;
     if (Math.abs(now - e.timestamp) > 120000 || e.source?.type !== 'user' || !e.source.userId)
       continue;
     const sender = e.source.userId;
@@ -260,6 +266,9 @@ export async function receiveAi(
           answer = linked.rows.length
             ? 'รับรหัสแล้ว กลับไปที่เว็บ กดตรวจการเชื่อมต่อ แล้วตรวจชื่อ LINE และยืนยันบัญชีของคุณ'
             : 'รหัสไม่ถูกต้อง หมดอายุ หรือถูกใช้แล้ว กรุณาสร้างรหัสใหม่ในเว็บ';
+        } else if (routing && !routing.allowAccount) {
+          answer =
+            'กรุณาเลือก Space สำหรับ LINE AI ในหน้าแจ้งเตือนของเว็บก่อน\n' + c.APP_ORIGIN + '/spaces';
         } else {
           const account = (
             await db.query(
@@ -499,7 +508,10 @@ export async function replyAi(
       body: JSON.stringify({
         replyToken: row.reply_token,
         messages: [
-          { type: 'text', text: answer },
+          {
+            type: 'text',
+            text: (c.workspace ? '[Space: ' + c.workspace.name + ']\n' : '') + answer,
+          },
           ...(buttons?.length
             ? [
                 {

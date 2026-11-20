@@ -17,6 +17,8 @@ Apps Script เป็นระบบเดิมที่พักการเ�
 
 ## พัฒนาและทดสอบเว็บ
 
+ฟีเจอร์หลาย Space อยู่ระหว่างเตรียมเปิดใช้: ใช้ Airtable **Control Base** กลางสำหรับ Users / Workspaces / Workspace Members และ Base งานแยกต่อ Space พร้อมสิทธิ์ Admin รายทีม ค่าเริ่มต้น `WORKSPACES_ENABLED=false` ดู [โครงสร้างและขั้นตอนย้ายระบบหลาย Space](docs/multi-workspace.md) ก่อน bootstrap; ยังไม่ใช่สถานะเปิดใช้ Production
+
 ใช้ Node.js 24 รันคำสั่งใน `web/`:
 
 ```powershell
@@ -27,7 +29,7 @@ npm run db:migrate
 npm run dev
 ```
 
-เปิด `http://localhost:3000` รายละเอียดการตั้งค่าอยู่ใน [web/README.md](web/README.md) โค้ดปัจจุบันมี migrations ถึง `012_ai_task_search.sql` ตรวจ environment/Base ก่อนใช้คำสั่งฐานข้อมูล เก็บ secrets ในไฟล์ที่ Git ignore หรือ Vercel Environment Variables เท่านั้น
+เปิด `http://localhost:3000` รายละเอียดการตั้งค่าอยู่ใน [web/README.md](web/README.md) โค้ดมี migrations ถึง `013_workspaces.sql` (ทะเบียน Space ส่วนกลาง) ตรวจ environment/Base ก่อนใช้คำสั่งฐานข้อมูล เก็บ secrets ในไฟล์ที่ Git ignore หรือ Vercel Environment Variables เท่านั้น
 
 ```powershell
 npm run lint

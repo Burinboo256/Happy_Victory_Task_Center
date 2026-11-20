@@ -4,10 +4,11 @@ import { hash, safeEqual, cookieName, cookieOptions } from '@/server/auth/securi
 import { revokeSession } from '@/server/auth/session';
 import { AppError } from '@/server/errors';
 import { route, json } from '@/server/http';
+import { workspaceCookie, workspaceCsrf } from '@/server/workspaces/service';
 export const runtime = 'nodejs';
 export function POST(request: Request) {
   return route(async () => {
-    const c = services();
+    const c = await services();
     if (request.headers.get('origin') !== c.config.APP_ORIGIN)
       throw new AppError(403, 'CSRF', 'คำขอไม่ถูกต้อง');
     const token = (await cookies()).get(cookieName(c.config, 'session'))?.value;
@@ -17,15 +18,20 @@ export function POST(request: Request) {
         'SELECT csrf_token FROM hvr_sessions WHERE environment=$1 AND token_hash=$2',
         [c.config.APP_ENV, hash(token)],
       );
+      const selected = (await cookies()).get(workspaceCookie(c.config))?.value;
+      const scoped =
+        selected && result.rows[0] ? workspaceCsrf(result.rows[0].csrf_token, selected) : '';
       if (
         result.rows[0] &&
-        !safeEqual(request.headers.get('x-csrf-token') || '', result.rows[0].csrf_token)
+        !safeEqual(request.headers.get('x-csrf-token') || '', result.rows[0].csrf_token) &&
+        !(scoped && safeEqual(request.headers.get('x-csrf-token') || '', scoped))
       )
         throw new AppError(403, 'CSRF', 'คำขอไม่ถูกต้อง');
       await revokeSession(c.db, c.config, token);
     }
     const response = json({ ok: true });
     response.cookies.set(cookieName(c.config, 'session'), '', cookieOptions(c.config, 0));
+    response.cookies.set(workspaceCookie(c.config), '', cookieOptions(c.config, 0));
     return response;
   });
 }

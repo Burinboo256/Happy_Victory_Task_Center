@@ -5,15 +5,21 @@ import { registrationSchema } from '@/domain/registration';
 import { requireWrites } from '@/server/runtime';
 import { AppError } from '@/server/errors';
 import { json, readBody, route } from '@/server/http';
+import { spaceServices } from '@/server/workspaces/service';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export function POST(request: Request) {
   return route(async () => {
-    const c = services();
+    const c = await services();
     if (request.headers.get('origin') !== c.config.APP_ORIGIN)
       throw new AppError(403, 'CSRF', 'กรุณาเริ่มลงทะเบียนจากหน้าเว็บนี้');
     const profile = registrationSchema.parse(await readBody(request));
     await requireWrites(c.db, c.config);
+    if (c.control) {
+      const space = await spaceServices(c.db, c.config, c.control, profile.workspaceId);
+      await requireWrites(space.db, space.config);
+      profile.workspaceId = space.row.id;
+    }
     const { url, binding } = await startGoogle(c.db, c.config, '/', undefined, profile);
     const response = json({ url: url.href });
     response.cookies.set(

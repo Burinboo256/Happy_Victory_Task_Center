@@ -4,11 +4,12 @@ import { AppError } from '@/server/errors';
 import { verifyInstance } from '@/server/runtime';
 import { receiveWebhook } from '@/server/line/accounts';
 import { lineConfigured, verifySignature } from '@/server/line/client';
+import { receiveSpaceNotifications } from '@/server/workspaces/line-routing';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export async function POST(request: Request) {
   return route(async () => {
-    const c = services();
+    const c = await services();
     if (!lineConfigured(c.config)) throw new AppError(503, 'LINE_SETUP', 'ยังไม่ได้ตั้งค่า OA');
     const reader = request.body?.getReader();
     if (!reader) throw new AppError(400, 'LINE_BODY', 'ไม่พบข้อมูล');
@@ -31,7 +32,8 @@ export async function POST(request: Request) {
       c.config.LINE_CHANNEL_SECRET || '',
     );
     await verifyInstance(c.db, c.config);
-    await receiveWebhook(c.db, c.config, JSON.parse(raw));
+    if (c.control) await receiveSpaceNotifications(c.db, c.config, c.control, JSON.parse(raw));
+    else await receiveWebhook(c.db, c.config, JSON.parse(raw));
     return json({ received: true });
   });
 }

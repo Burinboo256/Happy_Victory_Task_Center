@@ -148,6 +148,7 @@ export function Workspace({
   const [mobile, setMobile] = useState(false);
   const hasWorkspace = data !== null;
   const loadSequence = useRef(0);
+  const activeSpace = useRef<string | undefined>(undefined);
   const sidebarRef = useRef<HTMLDivElement>(null),
     menuButtonRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
@@ -223,6 +224,10 @@ export function Workspace({
           ...options,
           cache: 'no-store',
           credentials: 'same-origin',
+          headers: {
+            ...Object.fromEntries(new Headers(options?.headers)),
+            ...(activeSpace.current ? { 'X-Workspace-Id': activeSpace.current } : {}),
+          },
         });
       } catch (error) {
         if (options?.signal?.aborted) throw error;
@@ -239,6 +244,16 @@ export function Workspace({
       });
       if (!body || typeof body !== 'object' || Array.isArray(body))
         throw new Error('ระบบตอบกลับไม่สมบูรณ์ กรุณาลองอีกครั้ง');
+      if (
+        [
+          'WORKSPACE_REQUIRED',
+          'WORKSPACE_PENDING',
+          'WORKSPACE_PAUSED',
+          'WORKSPACE_CHANGED',
+        ].includes(body.error?.code)
+      ) {
+        router.replace('/spaces');
+      }
       if (response.status === 403 && body.error?.code === 'FORBIDDEN') {
         setData(null);
         setDetail(null);
@@ -258,6 +273,8 @@ export function Workspace({
             : '/api/bootstrap',
           { signal },
         );
+        if (signal?.aborted || sequence !== loadSequence.current) return;
+        activeSpace.current = value.workspace?.id;
         const nextDetail = taskId ? await request('/api/tasks/' + taskId, { signal }) : null;
         if (signal?.aborted || sequence !== loadSequence.current) return;
         setData(value);
@@ -302,7 +319,15 @@ export function Workspace({
         new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(body))),
         (byte) => byte.toString(16).padStart(2, '0'),
       ).join('');
-      const storageKey = 'hvr-request:' + data.user.id + ':' + endpoint + ':' + fingerprint;
+      const storageKey =
+        'hvr-request:' +
+        (data.workspace?.id || 'legacy') +
+        ':' +
+        data.user.id +
+        ':' +
+        endpoint +
+        ':' +
+        fingerprint;
       const previous = JSON.parse(sessionStorage.getItem(storageKey) || 'null');
       const key = previous?.fingerprint === fingerprint ? previous.key : crypto.randomUUID();
       sessionStorage.setItem(storageKey, JSON.stringify({ fingerprint, key }));
@@ -1426,7 +1451,13 @@ export function Workspace({
             >
               ☰
             </button>
-            <span className="muted">Workspace</span>
+            {data.workspace ? (
+              <a href="/spaces" className="muted" title="เลือก Space / จัดการสมาชิก">
+                {data.workspace.name} · เปลี่ยน Space
+              </a>
+            ) : (
+              <span className="muted">Workspace</span>
+            )}
             <span className="breadcrumb-arrow">›</span>
             <span>{names[page]}</span>
           </div>

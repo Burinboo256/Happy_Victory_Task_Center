@@ -61,13 +61,13 @@ export async function registerAgent(
       'Agent Code': profile.agentCode,
       Phone: profile.phone,
       Role: 'Agent',
-      Active: false,
+      Active: !!config.WORKSPACES_ENABLED,
       'LINE Notifications': false,
     });
     if (
       user.fields['Google Subject'] !== identity.sub ||
       user.fields.Role !== 'Agent' ||
-      user.fields.Active === true
+      (!config.WORKSPACES_ENABLED && user.fields.Active === true)
     )
       throw new AppError(503, 'REGISTRATION_REVIEW', 'กรุณาติดต่อผู้ดูแลเพื่อตรวจสอบการลงทะเบียน');
     await db.query(

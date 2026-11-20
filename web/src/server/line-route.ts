@@ -15,6 +15,7 @@ import {
   setAgentPreference,
 } from './line/accounts';
 import { safelyDrainLineQueue } from './line/queue';
+import { registerLineCode } from './workspaces/line-routing';
 
 export function lineRead() {
   return route(async () => {
@@ -75,7 +76,11 @@ export function lineWrite(request: Request) {
     requireCsrf(request, c.csrfToken, c.config);
     await requireWrites(c.db, c.config);
     const input = actionSchema.parse(await readBody(request));
-    if (input.action === 'start') return json(await startLink(c.db, c.config, c.user));
+    if (input.action === 'start') {
+      const link = await startLink(c.db, c.config, c.user);
+      await registerLineCode(c.rootDb, c.config, 'notifications', link.code);
+      return json(link);
+    }
     if (input.action === 'confirm') await confirmLink(c.db, c.config, c.user, input.candidateId);
     else if (input.action === 'disconnect') await disconnectLine(c.db, c.config, c.user);
     else if (input.action === 'preference')
