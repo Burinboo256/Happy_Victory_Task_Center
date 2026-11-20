@@ -2,6 +2,7 @@ import { z } from 'zod';
 import {
   AirtableClient,
   formulaValue,
+  recordId,
   type AirtableRepository,
   type RecordData,
 } from '../airtable/client';
@@ -185,6 +186,16 @@ export function workspaceRepository(
       );
     },
     async get(table, id) {
+      if (table === 'tasks') {
+        // A direct record GET may return 403 for an ID from another Base.
+        // Query only the selected Base so absence is distinct from a permission failure.
+        const taskId = recordId(id);
+        const records = await raw.list('tasks', 'RECORD_ID()=' + formulaValue(taskId));
+        const task = records.find((record) => record.id === taskId);
+        if (!task)
+          throw new AppError(404, 'TASK_NOT_FOUND', 'ไม่พบงานใน Space นี้ กรุณาตรวจ Space ที่เลือก');
+        return task;
+      }
       if (table !== 'users') return raw.get(table, id);
       return project(await raw.get('users', id), await control.roster(spaceRecordId));
     },

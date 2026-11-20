@@ -39,6 +39,7 @@ import { bootstrap, ownTask } from '../../src/server/services/reads';
 import { atomic } from '../../src/server/db';
 import { requireCsrf, hash, safeReturnTo } from '../../src/server/auth/security';
 import { sqlStatements } from '../../tools/sql-statements';
+import { AppError } from '../../src/server/errors';
 import { schemaFixture } from '../schema-fixture';
 
 const a = '00000000-0000-4000-8000-000000000001';
@@ -186,6 +187,29 @@ test('central membership overrides local roles; Base isolation, fresh revocation
     assert.equal(second.user.role, 'Agent');
     assert.equal((await ownTask(first.repo, first.user, rid(11))).title, 'SPACE A ONLY');
     assert.equal((await ownTask(second.repo, second.user, rid(11))).title, 'SPACE B ONLY');
+    h.second.tables.tasks.push({ id: rid(90), fields: { ...h.second.tables.tasks[0].fields } });
+    assert.equal((await ownTask(second.repo, second.user, rid(90))).title, 'SPACE B ONLY');
+    await assert.rejects(ownTask(first.repo, first.user, rid(90)), {
+      status: 404,
+      code: 'TASK_NOT_FOUND',
+      message: 'ไม่พบงานใน Space นี้ กรุณาตรวจ Space ที่เลือก',
+    });
+    const listCalls: string[] = [];
+    const unavailable = workspaceRepository(
+      {
+        ...h.first.repo,
+        async list(_table, formula) {
+          listCalls.push(formula || '');
+          throw new AppError(503, 'AIRTABLE_ERROR', 'บริการข้อมูลไม่พร้อมใช้งาน');
+        },
+      },
+      h.control,
+      rid(101),
+    );
+    await assert.rejects(unavailable.get('tasks', '../other-base'));
+    assert.equal(listCalls.length, 0);
+    await assert.rejects(unavailable.get('tasks', rid(90)), { status: 503, code: 'AIRTABLE_ERROR' });
+    assert.deepEqual(listCalls, ['RECORD_ID()="' + rid(90) + '"']);
     await assert.rejects(ownTask(second.repo, second.user, rid(12)));
     await assert.rejects(authorizeSpace(h.db, c, h.control, userDto(h.central.tables.users[1]), b));
     await assert.rejects(h.control.requireOwner(rid(3)));

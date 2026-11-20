@@ -116,4 +116,14 @@ Migration ใหม่ต้องระบุว่าเป็น control-plan
 - ทดสอบ service กับสอง Base จริง: Owner มี 2 Space, Agent A เห็นเพียง RINLYN และถูกปฏิเสธ Space B; Users mirror ใช้ record IDs ต่างกัน งาน 15/0 และเอกสาร 44/0 แยกถูกต้อง ตรวจ Neon schema ของ Space B และ PAT ที่ถอดรหัสเข้าถึง Base เป้าหมายได้ หลักฐาน `artifacts/vercel/workspaces-live-isolation.json`
 - [CI ของ commit 95ffdc1 ผ่านครบ](https://github.com/Burinboo256/Happy_Victory_Task_Center/actions/runs/44761820760): lint/typecheck, unit, integration, PostgreSQL, audit, build, E2E, API, load และ legacy checks รอบแรกของ commit นี้ล้มด้วย V8 `jit_page.has_value()` ก่อน assertions; rerun ผ่านโดยไม่เปลี่ยน source เพื่อแก้ native crash
 - Staging alias ผูก release `dpl_C1MFvM6QifsJxKBRNwRsEAb1xpWe` / app commit `95ffdc1` แล้ว เปิด writes ทั้ง RINLYN และ Space B; jobs ยังปิด ตรวจ Production deployment ตรง baseline ก่อนเริ่มงาน
-- ยังรอยืนยัน Google Login จริง/การใช้หน้าเลือก Space และสร้างงานผ่าน browser; ผล service ข้างต้นไม่แทนขั้นนี้ LINE OA จริงยังไม่ได้เปลี่ยนให้ใช้รุ่นหลาย Space
+- ผลข้างต้นเป็นการตรวจ service ก่อนทดสอบ browser; ดูผล Google Login จริงด้านล่าง LINE OA จริงยังไม่ได้เปลี่ยนให้ใช้รุ่นหลาย Space
+
+## ทดสอบ browser บน Staging 21 พฤศจิกายน 2569
+
+- Owner ยืนยัน Google Login ด้วยตนเองแล้ว หน้า `/spaces` แสดง RINLYN และ Space B พร้อมเครื่องมือ Owner และจัดการสมาชิกตามสิทธิ์
+- เพิ่มสมาชิกสมมติ `space-b.agent@example.invalid` ผ่านหน้าเว็บเป็น Agent รออนุมัติ แล้วอนุมัติใน Space B สำเร็จ ไม่เพิ่มสิทธิ์ให้บัญชีจริงอื่น
+- ส่งงาน `[SPACE B TEST] ตรวจส่งงานแยก Workspace` พร้อมชื่อบุคคลของเคสและ Agent สมมติผ่านเว็บสำเร็จ: `recgZTvrtKAfHxjfY` บันทึก Checklist แล้วโหลดหน้าใหม่ยังอยู่ครบ
+- ตรวจ Airtable/Neon: งาน RINLYN ยังคง 15 รายการ, Space B มี 1 รายการใหม่; Agent ใช้ Users mirror ของ Base B และ workflow อยู่เฉพาะ schema ของ Space B หน้าเอกสารแยกเป็น 44/0 รายการ
+- พบว่าลิงก์งาน Space B เมื่อเปิดใน RINLYN ถูกปฏิเสธ แต่เดิมแสดงบริการข้อมูลขัดข้อง จึงปรับ lookup ให้ค้น `RECORD_ID()` เฉพาะ Base ที่เลือก คืน `TASK_NOT_FOUND` เมื่อไม่พบ พร้อมลิงก์กลับไปเลือก Space; upstream error จริงยังแสดงบริการไม่พร้อมใช้งาน
+- หลังปรับ lookup: lint/typecheck/build, integration 73 และ Playwright `spaces` 6 กรณีผ่าน (desktop/mobile emulation) หลักฐาน browser และ read-only verification อยู่ใน ignored `artifacts/workspaces/` และ `artifacts/vercel/workspaces-browser-acceptance.json`
+- ยังต้องตรวจบัญชี Admin/เลขา/Agent จริงแยก session, LINE OA หลาย Space และอุปกรณ์จริงก่อนพิจารณา Production; ยังไม่มีการเปลี่ยน Production หรือ webhook จริง

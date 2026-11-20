@@ -392,6 +392,7 @@ export function Workspace({
             <button className="btn" type="button" onClick={() => void load()}>
               ลองอีกครั้ง
             </button>
+            {activeSpace.current && <Link href="/spaces">เลือก Space</Link>}
             <Link href="/login">กลับไปเข้าสู่ระบบ</Link>
           </>
         ) : (

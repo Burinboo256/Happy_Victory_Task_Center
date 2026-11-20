@@ -115,3 +115,35 @@ test('explicit Space link selects its target and a stale request redirects to se
   await page.getByRole('button', { name: 'โหลดข้อมูลล่าสุด', exact: true }).click();
   await expect(page).toHaveURL(/\/spaces$/);
 });
+
+test('a task outside the selected Space offers a route back to Space selection', async ({ page }) => {
+  const h = repository();
+  await page.route('**/api/bootstrap*', (route) =>
+    route.fulfill({
+      json: {
+        user: h.agent,
+        workspace: { id, name: 'ทีมตัวอย่าง A' },
+      },
+    }),
+  );
+  await page.route('**/api/tasks/rec00000000000090', (route) => {
+    expect(route.request().headers()['x-workspace-id']).toBe(id);
+    return route.fulfill({
+      status: 404,
+      json: {
+        error: {
+          code: 'TASK_NOT_FOUND',
+          message: 'ไม่พบงานใน Space นี้ กรุณาตรวจ Space ที่เลือก',
+        },
+      },
+    });
+  });
+  await page.goto('/tasks/rec00000000000090');
+  await expect(page.getByRole('main').getByRole('alert')).toHaveText(
+    'ไม่พบงานใน Space นี้ กรุณาตรวจ Space ที่เลือก',
+  );
+  await expect(page.getByRole('link', { name: 'เลือก Space', exact: true })).toHaveAttribute(
+    'href',
+    '/spaces',
+  );
+});
