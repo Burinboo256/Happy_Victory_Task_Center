@@ -126,4 +126,7 @@ Migration ใหม่ต้องระบุว่าเป็น control-plan
 - ตรวจ Airtable/Neon: งาน RINLYN ยังคง 15 รายการ, Space B มี 1 รายการใหม่; Agent ใช้ Users mirror ของ Base B และ workflow อยู่เฉพาะ schema ของ Space B หน้าเอกสารแยกเป็น 44/0 รายการ
 - พบว่าลิงก์งาน Space B เมื่อเปิดใน RINLYN ถูกปฏิเสธ แต่เดิมแสดงบริการข้อมูลขัดข้อง จึงปรับ lookup ให้ค้น `RECORD_ID()` เฉพาะ Base ที่เลือก คืน `TASK_NOT_FOUND` เมื่อไม่พบ พร้อมลิงก์กลับไปเลือก Space; upstream error จริงยังแสดงบริการไม่พร้อมใช้งาน
 - หลังปรับ lookup: lint/typecheck/build, integration 73 และ Playwright `spaces` 6 กรณีผ่าน (desktop/mobile emulation) หลักฐาน browser และ read-only verification อยู่ใน ignored `artifacts/workspaces/` และ `artifacts/vercel/workspaces-browser-acceptance.json`
+- Deploy commit `4899bc3` เป็น Preview `dpl_J5wYQGYuAQQVbzEtA2oFeRDSakdy` และผูก staging alias แล้ว ทดสอบ browser ซ้ำ: เลือก RINLYN เปิดลิงก์งาน Space B แล้วแสดง “ไม่พบงานใน Space นี้” พร้อมทางกลับไปเลือก Space; สลับ Space B แล้วเปิดงานเดิมและ Checklist ที่บันทึกไว้ได้
+- ตรวจ Production alias ยังเป็น `dpl_EkvvhmQC8TX3dVaaVT7rFsdZjtoi` ตาม baseline ก่อนงานนี้
+- [CI ของ commit 4899bc3](https://github.com/Burinboo256/Happy_Victory_Task_Center/actions/runs/44789096892) ณ บันทึกนี้ผ่าน lint/typecheck, unit, integration, PostgreSQL, audit และ build; ยังรอขั้นติดตั้ง Chromium/E2E/API/load/legacy ไม่ถือว่าผ่าน CI ครบจน run สำเร็จ
 - ยังต้องตรวจบัญชี Admin/เลขา/Agent จริงแยก session, LINE OA หลาย Space และอุปกรณ์จริงก่อนพิจารณา Production; ยังไม่มีการเปลี่ยน Production หรือ webhook จริง
