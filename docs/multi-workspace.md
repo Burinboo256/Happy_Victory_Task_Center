@@ -99,7 +99,7 @@ Migration ใหม่ต้องระบุว่าเป็น control-plan
 - Unit tests 32 และ integration tests 73 ผ่าน ใช้ข้อมูลสมมติและ PGlite ไม่เรียกบริการจริง
 - Playwright เฉพาะ `spaces`, `ai-line`, `workspace` ผ่าน 12 กรณีบน desktop/mobile emulation; หลังปรับตารางสมาชิกมือถือ รัน `spaces` ซ้ำผ่าน 4 กรณี
 - ตรวจภาพ `artifacts/workspaces/spaces-desktop.png` และ `spaces-mobile.png` แล้ว ภาพเป็นข้อมูลสมมติและอยู่ในไฟล์ทำงานที่ Git ignore
-- ยังไม่ได้ทดสอบสอง Base จริง หรือยืนยันบนอุปกรณ์จริงสำหรับรุ่นหลาย Space
+- ผลบนเครื่องไม่แทนการยืนยัน Google Login/หน้าจอจริงและอุปกรณ์จริงสำหรับรุ่นหลาย Space
 
 ## การตั้งค่า Staging จริง 20 พฤศจิกายน 2569
 
@@ -111,4 +111,9 @@ Migration ใหม่ต้องระบุว่าเป็น control-plan
 - ข้อมูลการเชื่อมต่อและกุญแจอยู่ใน ignored private artifacts; ไม่ใส่ใน Git เอกสารนี้ไม่ถือเป็นการยืนยัน Production rollout
 - Deploy app commit `355a9de` เป็น Preview `dpl_HfdmwSUc4YXUfa3mZLQmEJpKeygW` และผูก staging alias แล้ว `/api/health`, `/login`, `/spaces` ตอบ 200; `/api/spaces`, `/api/bootstrap` แบบไม่ Login ตอบ 401/no-store ตรวจ Production alias ยังเป็น deployment เดิม
 - ตรวจหลัง bootstrap: งาน 15, updates 30, follow-ups 4 และ notifications 5 ตรงกับสำรองทุก record; roles/Active ของสมาชิก 8 บัญชีตรงเดิม และ Lookup คืน central record IDs ถูกต้อง
-- ชุดทดสอบ PostgreSQL จริงผ่าน 11 กรณี หลังปรับ migration fixture ให้ใช้ฐานข้อมูลทดสอบแยก (รองรับ control tables ใน public) แทน search_path schema อย่างเดียว ยังรอ CI รอบถัดไปและการยืนยัน Google Login จริง
+- ชุดทดสอบ PostgreSQL จริงผ่าน 11 กรณี หลังปรับ migration fixture ให้ใช้ฐานข้อมูลทดสอบแยก (รองรับ control tables ใน public) แทน search_path schema อย่างเดียว
+- เพิ่ม **Space B — ทดสอบการแยกทีม** (`e023892a-33a9-485d-8e5a-b352eb0e480f`), Base `appv1jANFCKDkhBW8` จาก schema ของ Base ทดสอบโดยปิด Duplicate records ตรวจ 5 ตารางงานว่างก่อนสร้าง Space ผ่าน operator service ที่ตรวจ System Role=Owner; ไม่ใช่ผลทดสอบปุ่มสร้าง Space ผ่าน browser
+- ทดสอบ service กับสอง Base จริง: Owner มี 2 Space, Agent A เห็นเพียง RINLYN และถูกปฏิเสธ Space B; Users mirror ใช้ record IDs ต่างกัน งาน 15/0 และเอกสาร 44/0 แยกถูกต้อง ตรวจ Neon schema ของ Space B และ PAT ที่ถอดรหัสเข้าถึง Base เป้าหมายได้ หลักฐาน `artifacts/vercel/workspaces-live-isolation.json`
+- [CI ของ commit 95ffdc1 ผ่านครบ](https://github.com/Burinboo256/Happy_Victory_Task_Center/actions/runs/44761820760): lint/typecheck, unit, integration, PostgreSQL, audit, build, E2E, API, load และ legacy checks รอบแรกของ commit นี้ล้มด้วย V8 `jit_page.has_value()` ก่อน assertions; rerun ผ่านโดยไม่เปลี่ยน source เพื่อแก้ native crash
+- Staging alias ผูก release `dpl_C1MFvM6QifsJxKBRNwRsEAb1xpWe` / app commit `95ffdc1` แล้ว เปิด writes ทั้ง RINLYN และ Space B; jobs ยังปิด ตรวจ Production deployment ตรง baseline ก่อนเริ่มงาน
+- ยังรอยืนยัน Google Login จริง/การใช้หน้าเลือก Space และสร้างงานผ่าน browser; ผล service ข้างต้นไม่แทนขั้นนี้ LINE OA จริงยังไม่ได้เปลี่ยนให้ใช้รุ่นหลาย Space

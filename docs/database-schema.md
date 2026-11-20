@@ -1,5 +1,7 @@
 # โครงสร้าง Airtable
 
+สำหรับฟีเจอร์หลาย Space ที่ยังไม่เปิด Production ให้ใช้ 5 ตารางด้านล่างแยกใน Base ของแต่ละ Space และเพิ่ม **Control Base: Users, Workspaces, Workspace Members** ตาม [schema และ runbook หลาย Space](multi-workspace.md) บทบาท/Active รายทีมอ่านจาก Workspace Members; Users ใน Base งานเป็น mirror สำหรับ linked records
+
 ทะเบียน **เอกสารและแบบฟอร์ม** รุ่น Vercel อยู่ใน Neon แยกจาก schema Airtable นี้: `hvr_documents`, `hvr_document_versions`, `hvr_document_favorites`, `hvr_document_events` ใช้ migrations 010–011 เก็บเฉพาะ metadata/URL ไม่มีไฟล์ PDF หรือ Google Drive ในฐานข้อมูล ดู [คู่มือคลังเอกสาร](forms-library.md) และ [สถานะเปิดใช้งาน](forms-production-progress.md)
 
 ตั้งชื่อ Base เป็น **Happy Victory Rinlyn Task Center** ใช้ Base เดิมได้ โดยสำรองข้อมูลและเพิ่มฟิลด์ตามคู่มือนี้ก่อน ตั้งชื่อฟิลด์ให้ตรงทุกตัวอักษร หรือปรับ mapping ในโค้ดก่อนใช้งาน อย่าเปลี่ยนชื่อฟิลด์เดิมที่ระบบอื่นใช้อยู่โดยไม่ตรวจผลกระทบ
