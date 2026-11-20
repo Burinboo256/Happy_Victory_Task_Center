@@ -128,5 +128,5 @@ Migration ใหม่ต้องระบุว่าเป็น control-plan
 - หลังปรับ lookup: lint/typecheck/build, integration 73 และ Playwright `spaces` 6 กรณีผ่าน (desktop/mobile emulation) หลักฐาน browser และ read-only verification อยู่ใน ignored `artifacts/workspaces/` และ `artifacts/vercel/workspaces-browser-acceptance.json`
 - Deploy commit `4899bc3` เป็น Preview `dpl_J5wYQGYuAQQVbzEtA2oFeRDSakdy` และผูก staging alias แล้ว ทดสอบ browser ซ้ำ: เลือก RINLYN เปิดลิงก์งาน Space B แล้วแสดง “ไม่พบงานใน Space นี้” พร้อมทางกลับไปเลือก Space; สลับ Space B แล้วเปิดงานเดิมและ Checklist ที่บันทึกไว้ได้
 - ตรวจ Production alias ยังเป็น `dpl_EkvvhmQC8TX3dVaaVT7rFsdZjtoi` ตาม baseline ก่อนงานนี้
-- [CI ของ commit 4899bc3](https://github.com/Burinboo256/Happy_Victory_Task_Center/actions/runs/44789096892) ณ บันทึกนี้ผ่าน lint/typecheck, unit, integration, PostgreSQL, audit และ build; ยังรอขั้นติดตั้ง Chromium/E2E/API/load/legacy ไม่ถือว่าผ่าน CI ครบจน run สำเร็จ
+- [CI ของ commit 4899bc3 ผ่านครบ](https://github.com/Burinboo256/Happy_Victory_Task_Center/actions/runs/44789096892): lint/typecheck, unit, integration, PostgreSQL, audit, build, Chromium/E2E, API, load และ legacy checks ตรวจยืนยันผล run สำเร็จวันที่ 21 พฤศจิกายน 2569
 - ยังต้องตรวจบัญชี Admin/เลขา/Agent จริงแยก session, LINE OA หลาย Space และอุปกรณ์จริงก่อนพิจารณา Production; ยังไม่มีการเปลี่ยน Production หรือ webhook จริง
