@@ -13,6 +13,7 @@ import { type ControlPlane, workspaceRepository, controlFingerprint } from './co
 import { baseCredentials, decryptCredentials, encryptCredentials } from './credentials';
 import { workspaceDatabase, createOperationalSchema } from './database';
 import { verifyInstance } from '../runtime';
+import { isSpaceSlug } from '../../domain/space-link';
 
 export const workspaceCookie = (c: Config) =>
   `${c.APP_ORIGIN.startsWith('https:') ? '__Host-' : ''}hvr-space`;
@@ -24,6 +25,7 @@ export { workspaceUrl } from './url';
 export type SpaceRow = {
   id: string;
   name: string;
+  slug: string;
   schema_name: string;
   base_id: string;
   control_id: string;
@@ -127,6 +129,7 @@ export async function listSpaces(root: Sql, c: Config, control: ControlPlane, us
     const member = members.find((m) => m.workspace === row.control_id);
     return {
       id: row.id,
+      slug: row.slug,
       name: String(record.fields.Name || row.name),
       active:
         row.active && record.fields.Active === true && record.fields['Base ID'] === row.base_id,
@@ -142,6 +145,13 @@ export const createSpaceInput = z
   .object({
     requestId: z.uuid(),
     name: z.string().trim().min(1).max(80),
+    slug: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .max(48)
+      .refine(isSpaceSlug, 'ใช้ชื่อ URL ภาษาอังกฤษ ตัวเลข หรือขีดกลาง และไม่ใช้ชื่อเมนูระบบ')
+      .optional(),
     adminEmail: z.email().transform((v) => v.toLowerCase()),
     credentials: baseCredentials,
     schemaToken: z.string().min(12).max(1000),
@@ -207,7 +217,7 @@ export async function createSpace(
     });
     await atomic(root, async (db) => {
       await db.query(
-        'INSERT INTO public.hvr_workspaces(environment,id,name,schema_name,base_id,control_id,credentials,active) VALUES($1,$2,$3,$4,$5,$6,$7,false)',
+        'INSERT INTO public.hvr_workspaces(environment,id,name,schema_name,base_id,control_id,credentials,active,slug) VALUES($1,$2,$3,$4,$5,$6,$7,false,$8)',
         [
           c.APP_ENV,
           id,
@@ -216,6 +226,7 @@ export async function createSpace(
           data.credentials.AIRTABLE_BASE_ID,
           spaceRecord.id,
           encrypted,
+          data.slug || null,
         ],
       );
       await createOperationalSchema(db, schemaName, c.APP_ENV, data.credentials.AIRTABLE_BASE_ID);

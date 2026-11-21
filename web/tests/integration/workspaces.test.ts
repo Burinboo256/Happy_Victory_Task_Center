@@ -1,4 +1,5 @@
 import test from 'node:test';
+import { PGlite } from '@electric-sql/pglite';
 import assert from 'node:assert/strict';
 import { createHash, createHmac, randomUUID } from 'node:crypto';
 import { readFile, readdir } from 'node:fs/promises';
@@ -17,6 +18,7 @@ import {
 } from '../../src/server/workspaces/credentials';
 import {
   authorizeSpace,
+  listSpaces,
   spaceServices,
   updateMember,
   modeGuard,
@@ -41,6 +43,7 @@ import { requireCsrf, hash, safeReturnTo } from '../../src/server/auth/security'
 import { sqlStatements } from '../../tools/sql-statements';
 import { AppError } from '../../src/server/errors';
 import { schemaFixture } from '../schema-fixture';
+import { isSpaceSlug, reservedSpaceSlugs } from '../../src/domain/space-link';
 import {
   rememberSpace,
   resumeSpace,
@@ -165,7 +168,12 @@ test('workspace migrations match sources and credentials bind to environment and
   const source = (await readdir('db/migrations'))
     .filter(
       (n) =>
-        n.endsWith('.sql') && !['013_workspaces.sql', '014_workspace_preferences.sql'].includes(n),
+        n.endsWith('.sql') &&
+        ![
+          '013_workspaces.sql',
+          '014_workspace_preferences.sql',
+          '015_workspace_slugs.sql',
+        ].includes(n),
     )
     .sort();
   assert.deepEqual(
@@ -183,6 +191,84 @@ test('workspace migrations match sources and credentials bind to environment and
   assert.throws(() => decryptCredentials(c, a, encrypted));
   assert.throws(() => decryptCredentials({ ...c, APP_ENV: 'staging' }, b, encrypted));
   assert.throws(() => decryptCredentials(c, b, encrypted.slice(0, -8) + 'aaaaaaaa'));
+});
+
+test('slug migration backfills populated Spaces without changing their identities', async () => {
+  const engine = new PGlite();
+  try {
+    for (const file of (await readdir('db/migrations'))
+      .filter((n) => n.endsWith('.sql') && n < '015_workspace_slugs.sql')
+      .sort())
+      await engine.exec(await readFile('db/migrations/' + file, 'utf8'));
+    await engine.query('INSERT INTO hvr_instances(environment,base_id) VALUES($1,$2)', [
+      c.APP_ENV,
+      c.AIRTABLE_BASE_ID,
+    ]);
+    await engine.query(
+      `INSERT INTO hvr_workspaces(environment,id,name,schema_name,base_id,control_id,is_default,credentials)
+      VALUES($1,$2,'RINLYN','public',$3,'first',true,NULL),($1,$4,'RINLYN',$5,$6,'second',false,'fixture')`,
+      [c.APP_ENV, a, c.AIRTABLE_BASE_ID, b, schemaB, baseB],
+    );
+    await engine.exec(await readFile('db/migrations/015_workspace_slugs.sql', 'utf8'));
+    const result = await engine.query('SELECT id,slug FROM hvr_workspaces ORDER BY id');
+    assert.deepEqual(result.rows, [
+      { id: a, slug: 'rinlyn' },
+      { id: b, slug: 'rinlyn-2' },
+    ]);
+  } finally {
+    await engine.close();
+  }
+});
+
+test('Space short links are stable, unique and cannot collide with app routes', async () => {
+  const f = await fixture();
+  try {
+    const insert = async (name: string, slug?: string) => {
+      const id = randomUUID();
+      const result = await f.db.query(
+        `INSERT INTO hvr_workspaces(environment,id,name,schema_name,base_id,control_id,credentials,slug)
+        VALUES($1,$2,$3,$4,$5,$6,'test-encrypted-placeholder',$7) RETURNING id,slug`,
+        [
+          c.APP_ENV,
+          id,
+          name,
+          'hvr_ws_' + id.replaceAll('-', ''),
+          'base-' + id,
+          'control-' + id,
+          slug || null,
+        ],
+      );
+      return result.rows[0];
+    };
+    const first = await insert('RINLYN'),
+      second = await insert('RINLYN');
+    assert.equal(first.slug, 'rinlyn');
+    assert.equal(second.slug, 'rinlyn-2');
+    assert.equal((await insert('ทีมภาษาไทย', 'team-thai')).slug, 'team-thai');
+    assert.ok(isSpaceSlug((await insert('ภาษาไทย')).slug));
+    assert.equal((await insert('Other team', 'rinlyn')).slug, 'rinlyn-3');
+    for (const name of reservedSpaceSlugs) assert.equal((await insert(name)).slug, 'space-' + name);
+    await f.db.query('UPDATE hvr_workspaces SET name=$1 WHERE id=$2', [
+      'New display name',
+      first.id,
+    ]);
+    assert.equal(
+      (await f.db.query('SELECT slug FROM hvr_workspaces WHERE id=$1', [first.id])).rows[0].slug,
+      'rinlyn',
+    );
+    const member = userDto(f.central.tables.users[1]);
+    const listed = await listSpaces(f.db, c, f.control, member);
+    assert.deepEqual(
+      listed.items.map((s) => ({ id: s.id, slug: s.slug })),
+      [{ id: a, slug: 'a' }],
+    );
+    assert.equal(
+      (await f.db.query(`SELECT to_regclass('${schemaB}.hvr_workspaces') AS name`)).rows[0].name,
+      null,
+    );
+  } finally {
+    await f.engine.close();
+  }
 });
 
 test('last Space persists per account and environment; restoration rechecks authorization', async () => {

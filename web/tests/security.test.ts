@@ -68,6 +68,15 @@ test('migration config permits database setup before web credentials while prese
 
 test('return destinations allow only known local paths', () => {
   assert.equal(safeReturnTo('/tasks/new'), '/tasks/new');
+  assert.equal(safeReturnTo('/rinlyn'), '/rinlyn');
+  assert.equal(safeReturnTo('/team-2'), '/team-2');
+  assert.equal(
+    safeReturnTo(
+      '/spaces/open?' +
+        new URLSearchParams({ space: '00000000-0000-4000-8000-000000000001', next: '/rinlyn' }),
+    ),
+    '/',
+  );
   const form = '/forms/12345678-1234-1234-1234-123456789abc/open';
   assert.equal(safeReturnTo(form), form);
   assert.equal(safeReturnTo('/forms?q=HC1'), '/forms?q=HC1');
@@ -76,6 +85,10 @@ test('return destinations allow only known local paths', () => {
     'https://evil.test',
     '/\\evil.test',
     '/api/tasks',
+    '/api',
+    '/rinlyn?next=https://evil.test',
+    '/rinlyn/../../api',
+    '/rinlyn%2fevil',
     '/tasks/new?next=evil',
     '%2f%2fevil',
     '/forms?q=HC1&next=https://evil.test',

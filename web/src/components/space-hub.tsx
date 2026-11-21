@@ -7,6 +7,7 @@ import styles from './space-hub.module.css';
 type Space = {
   id: string;
   name: string;
+  slug?: string;
   active: boolean;
   approved: boolean;
   role: string | null;
@@ -105,6 +106,7 @@ export function SpaceHub({ target, next = '/' }: { target?: string; next?: strin
     const ok = await act('create', undefined, {
       requestId: creationId.current,
       name: data.get('name'),
+      ...(data.get('slug') ? { slug: data.get('slug') } : {}),
       adminEmail: data.get('adminEmail'),
       schemaToken: String(data.get('schemaToken') || '').trim(),
       credentials,
@@ -162,6 +164,27 @@ export function SpaceHub({ target, next = '/' }: { target?: string; next?: strin
               .map((space) => (
                 <section key={space.id} className={styles.card}>
                   <h2>{space.name}</h2>
+                  {space.slug && (
+                    <p>
+                      <Link href={'/' + space.slug}>/{space.slug}</Link>{' '}
+                      <button
+                        type="button"
+                        className="btn secondary small"
+                        onClick={async () => {
+                          try {
+                            await navigator.clipboard.writeText(
+                              window.location.origin + '/' + space.slug,
+                            );
+                            setMessage('คัดลอกลิงก์ Space แล้ว');
+                          } catch {
+                            setError('คัดลอกไม่สำเร็จ กรุณาคัดลอกจากลิงก์ชื่อ Space');
+                          }
+                        }}
+                      >
+                        คัดลอกลิงก์
+                      </button>
+                    </p>
+                  )}
                   <p>
                     {space.role || 'เจ้าของระบบ (ยังไม่เป็นสมาชิก)'} ·{' '}
                     {!space.active ? 'พักใช้งาน' : space.approved ? 'พร้อมใช้งาน' : 'รออนุมัติ'}
@@ -288,6 +311,16 @@ export function SpaceHub({ target, next = '/' }: { target?: string; next?: strin
                 <label>
                   ชื่อ Space
                   <input name="name" required maxLength={80} />
+                </label>
+                <label>
+                  ชื่อสำหรับ URL (อังกฤษ เช่น rinlyn-team)
+                  <input
+                    name="slug"
+                    maxLength={48}
+                    pattern="[a-z0-9]+(-[a-z0-9]+)*"
+                    placeholder="เว้นว่างเพื่อสร้างจากชื่อ Space"
+                  />
+                  <small>ชื่อซ้ำจะเติมเลขท้าย ลิงก์คงเดิมเมื่อเปลี่ยนชื่อ Space</small>
                 </label>
                 <label>
                   อีเมล Google ของ Admin

@@ -3,7 +3,11 @@ import { createHash } from 'node:crypto';
 import { sqlStatements } from './sql-statements';
 
 // Control-plane migrations must never be installed in a Space's operational schema.
-const controlMigrations = new Set(['013_workspaces.sql', '014_workspace_preferences.sql']);
+const controlMigrations = new Set([
+  '013_workspaces.sql',
+  '014_workspace_preferences.sql',
+  '015_workspace_slugs.sql',
+]);
 const names = (await readdir('db/migrations'))
   .filter((n) => /^\d+_[a-z_]+\.sql$/.test(n) && !controlMigrations.has(n))
   .sort();

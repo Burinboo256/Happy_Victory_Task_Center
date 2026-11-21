@@ -45,7 +45,7 @@ test('Space Admin sees own membership tools and approves pending users; mobile l
         owner: false,
         csrfToken: csrf,
         items: [
-          { id, name: 'ทีมตัวอย่าง A', active: true, approved: true, role: 'Admin' },
+          { id, slug: 'team-a', name: 'ทีมตัวอย่าง A', active: true, approved: true, role: 'Admin' },
           { id: second, name: 'ทีมตัวอย่าง B', active: true, approved: true, role: 'Agent' },
         ],
       },
@@ -53,6 +53,11 @@ test('Space Admin sees own membership tools and approves pending users; mobile l
   });
   await page.goto('/spaces');
   await expect(page.getByRole('heading', { name: 'Space ของคุณ' })).toBeVisible();
+  await expect(page.getByRole('link', { name: '/team-a', exact: true })).toHaveAttribute(
+    'href',
+    '/team-a',
+  );
+  await expect(page.getByRole('button', { name: 'คัดลอกลิงก์', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'จัดการสมาชิก' })).toHaveCount(1);
   await expect(page.getByRole('heading', { name: 'สร้าง Space ใหม่' })).toHaveCount(0);
   await page.getByRole('button', { name: 'จัดการสมาชิก' }).click();
@@ -67,6 +72,89 @@ test('Space Admin sees own membership tools and approves pending users; mobile l
     path: resolve('../artifacts/workspaces/spaces-' + info.project.name + '.png'),
     fullPage: true,
   });
+});
+
+test('short Space URL automatically selects its own team rather than the last-used team', async ({
+  page,
+}) => {
+  const h = repository();
+  let selected = false;
+  await page.route('**/api/spaces', async (route) => {
+    if (route.request().method() === 'POST') {
+      expect(route.request().postDataJSON()).toEqual({ action: 'select', id: second });
+      expect(route.request().headers()['x-csrf-token']).toBe(csrf);
+      selected = true;
+      return route.fulfill({ json: { selected: second } });
+    }
+    return route.fulfill({
+      json: {
+        enabled: true,
+        csrfToken: csrf,
+        items: [
+          { id, slug: 'last-team', approved: true, active: true },
+          { id: second, slug: 'rinlyn', approved: true, active: true },
+        ],
+      },
+    });
+  });
+  const data = {
+    ...(await bootstrap(h.repo, h.agent)),
+    workspace: { id: second, name: 'ทีมตัวอย่าง B' },
+    csrfToken: csrf,
+    writesEnabled: true,
+  };
+  await page.route('**/api/bootstrap*', (route) => {
+    expect(selected).toBe(true);
+    return route.fulfill({ json: data });
+  });
+  await page.goto('/rinlyn');
+  await expect(page.getByRole('link', { name: 'ทีมตัวอย่าง B · เปลี่ยน Space' })).toBeVisible();
+  await expect(page).toHaveURL(/\/$/);
+});
+
+test('short Space URL survives the login return path', async ({ page }) => {
+  await page.route('**/api/spaces', (route) =>
+    route.fulfill({ status: 401, json: { error: { message: 'Login required' } } }),
+  );
+  await page.goto('/rinlyn');
+  await expect(page).toHaveURL(/\/login\?returnTo=%2Frinlyn$/);
+  await expect(page.getByRole('heading', { name: 'ยินดีต้อนรับกลับมา' })).toBeVisible();
+});
+
+test('short links do not enter unknown, paused, pending or newly revoked Spaces', async ({
+  page,
+}) => {
+  for (const mode of ['unknown', 'paused', 'pending', 'revoked']) {
+    let writes = 0;
+    await page.route('**/api/spaces', (route) => {
+      if (route.request().method() === 'POST') {
+        writes++;
+        return route.fulfill({ status: 403, json: { error: { message: 'สิทธิ์ถูกถอนแล้ว' } } });
+      }
+      return route.fulfill({
+        json: {
+          enabled: true,
+          csrfToken: csrf,
+          items:
+            mode === 'unknown'
+              ? []
+              : [
+                  {
+                    id: second,
+                    slug: 'rinlyn',
+                    active: mode !== 'paused',
+                    approved: mode !== 'pending',
+                  },
+                ],
+        },
+      });
+    });
+    await page.goto('/rinlyn');
+    await expect(page.getByRole('main').getByRole('alert')).toBeVisible();
+    await expect(page).toHaveURL(/\/rinlyn$/);
+    expect(writes).toBe(mode === 'revoked' ? 1 : 0);
+    await page.unroute('**/api/spaces');
+  }
 });
 
 test('explicit Space link selects its target and a stale request redirects to selection', async ({
@@ -116,7 +204,9 @@ test('explicit Space link selects its target and a stale request redirects to se
   await expect(page).toHaveURL(/\/spaces$/);
 });
 
-test('a task outside the selected Space offers a route back to Space selection', async ({ page }) => {
+test('a task outside the selected Space offers a route back to Space selection', async ({
+  page,
+}) => {
   const h = repository();
   await page.route('**/api/bootstrap*', (route) =>
     route.fulfill({
