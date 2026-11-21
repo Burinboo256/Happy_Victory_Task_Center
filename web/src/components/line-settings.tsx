@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import type { Bootstrap } from '@/domain/model';
+import { spacePath } from '@/domain/space-link';
 
 type LineState = {
   configured: boolean;
@@ -275,8 +276,10 @@ export function LineSettings({
               <ul className="line-deliveries">
                 {state.deliveries.map((delivery) => (
                   <li key={delivery.id}>
-                    <Link href={'/tasks/' + delivery.task_id}>เปิดงาน</Link> ·{' '}
-                    {name(delivery.user_id)} ·{' '}
+                    <Link href={spacePath(data.workspace?.slug, '/tasks/' + delivery.task_id)}>
+                      เปิดงาน
+                    </Link>{' '}
+                    · {name(delivery.user_id)} ·{' '}
                     {delivery.event_type === 'task_completed' ? 'งานเสร็จสิ้น' : 'งานเข้าใหม่'} ·{' '}
                     {stateNames[delivery.state] || delivery.state}
                     <small>

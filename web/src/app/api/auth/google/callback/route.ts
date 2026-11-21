@@ -27,7 +27,12 @@ export async function GET(request: Request) {
         : undefined;
     const destination =
       result.kind === 'login'
-        ? spaceLoginDestination(result.returnTo, !!c.config.WORKSPACES_ENABLED, space?.row.id)
+        ? spaceLoginDestination(
+            result.returnTo,
+            !!c.config.WORKSPACES_ENABLED,
+            space?.row.id,
+            space?.row.slug,
+          )
         : result.returnTo;
     const response = NextResponse.redirect(new URL(destination, c.config.APP_ORIGIN), 303);
     if (result.kind === 'login') {

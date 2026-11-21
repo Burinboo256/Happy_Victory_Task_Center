@@ -1,7 +1,7 @@
 import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import type { Config } from '../config';
 import { AppError } from '../errors';
-import { isSpaceSlug } from '../../domain/space-link';
+import { parseSpacePath, isWorkspacePath } from '../../domain/space-link';
 
 export const randomToken = () => randomBytes(32).toString('hex');
 export const hash = (value: string) => createHash('sha256').update(value).digest('hex');
@@ -42,7 +42,7 @@ const paths = new Set([
 ]);
 export function safeReturnTo(value: string | null | undefined): string {
   if (!value) return '/';
-  if (value.startsWith('/') && isSpaceSlug(value.slice(1))) return value;
+  if (parseSpacePath(value) || isWorkspacePath(value)) return value;
   if (value.startsWith('/spaces/open?')) {
     const params = new URLSearchParams(value.slice('/spaces/open?'.length));
     const space = params.get('space') || '',
@@ -50,7 +50,7 @@ export function safeReturnTo(value: string | null | undefined): string {
     if (
       /^[a-f0-9-]{36}$/.test(space) &&
       !next.startsWith('/spaces') &&
-      !(next.startsWith('/') && isSpaceSlug(next.slice(1))) &&
+      !parseSpacePath(next) &&
       safeReturnTo(next) === next &&
       [...params.keys()].every((key) => key === 'space' || key === 'next') &&
       params.getAll('space').length === 1 &&

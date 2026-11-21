@@ -6,7 +6,7 @@ import { authenticate } from './auth/session';
 import { cookieName } from './auth/security';
 import { ControlPlane } from './workspaces/control';
 import { modeGuard, workspaceCookie, workspaceCsrf } from './workspaces/service';
-import { resumeSpace } from './workspaces/preference';
+import { requestSpace } from './workspaces/request';
 import { AppError } from './errors';
 
 export async function services() {
@@ -25,21 +25,24 @@ export async function protectedIdentity() {
     token: token || '',
   };
 }
-export async function protectedContext() {
+export async function protectedContext(explicitSlug?: string) {
   const identity = await protectedIdentity();
-  if (!identity.control) return { ...identity, rootDb: identity.db, globalUser: identity.user };
+  const requestHeaders = await headers();
+  const slug = explicitSlug ?? requestHeaders.get('x-workspace-slug') ?? undefined;
+  if (!identity.control) {
+    if (slug !== undefined) throw new AppError(403, 'WORKSPACE_REQUIRED', 'ยังไม่เปิดใช้งาน Space');
+    return { ...identity, rootDb: identity.db, globalUser: identity.user };
+  }
   const selected = (await cookies()).get(workspaceCookie(identity.config))?.value;
-  const context = await resumeSpace(
+  const context = await requestSpace(
     identity.db,
     identity.config,
     identity.control,
     identity.user,
     selected,
+    slug,
+    requestHeaders.get('x-workspace-id') || undefined,
   );
-  if (!context) throw new AppError(403, 'WORKSPACE_REQUIRED', 'กรุณาเลือก Space ก่อนเปิดงาน');
-  const expected = (await headers()).get('x-workspace-id');
-  if (expected && expected !== context.row.id)
-    throw new AppError(409, 'WORKSPACE_CHANGED', 'Space เปลี่ยนแล้ว กรุณาเลือก Space และเปิดหน้าใหม่');
   return {
     ...identity,
     ...context,

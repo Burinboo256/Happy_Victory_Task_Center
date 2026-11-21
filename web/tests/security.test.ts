@@ -70,6 +70,15 @@ test('return destinations allow only known local paths', () => {
   assert.equal(safeReturnTo('/tasks/new'), '/tasks/new');
   assert.equal(safeReturnTo('/rinlyn'), '/rinlyn');
   assert.equal(safeReturnTo('/team-2'), '/team-2');
+  for (const path of [
+    '/rinlyn/tasks',
+    '/rinlyn/inbox',
+    '/rinlyn/tasks/new',
+    '/rinlyn/forms?q=HC1',
+    '/rinlyn/tasks?status=open',
+    '/rinlyn/forms/12345678-1234-1234-1234-123456789abc/open',
+  ])
+    assert.equal(safeReturnTo(path), path);
   assert.equal(
     safeReturnTo(
       '/spaces/open?' +
@@ -89,6 +98,10 @@ test('return destinations allow only known local paths', () => {
     '/rinlyn?next=https://evil.test',
     '/rinlyn/../../api',
     '/rinlyn%2fevil',
+    '/rinlyn/api/tasks',
+    '/rinlyn/tasks?status=open&redirect=https://evil.test',
+    '/rinlyn/forms?q=HC1&q=HC2',
+    '/rinlyn/tasks/new?next=https://evil.test',
     '/tasks/new?next=evil',
     '%2f%2fevil',
     '/forms?q=HC1&next=https://evil.test',

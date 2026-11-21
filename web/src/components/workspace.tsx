@@ -11,6 +11,7 @@ import { TaskEditPanel } from './task-edit';
 import { LineSettings } from './line-settings';
 import { AiLineSettings } from './ai-line-settings';
 import { FormsLibrary } from './forms';
+import { spacePath } from '@/domain/space-link';
 import {
   isManager,
   isOpen,
@@ -117,12 +118,14 @@ function Empty({
 
 export function Workspace({
   page,
+  spaceSlug,
   taskId,
   initialStatus = 'all',
   formId,
   initialFormQuery,
 }: {
   page: Page;
+  spaceSlug?: string;
   taskId?: string;
   initialStatus?: string;
   formId?: string;
@@ -206,7 +209,8 @@ export function Workspace({
         'aria-modal': menu ? true : undefined,
       }
     : { role: 'complementary' as const, 'aria-label': 'เมนูพื้นที่ทำงาน' };
-  const destination =
+  const href = useCallback((path: string) => spacePath(spaceSlug, path), [spaceSlug]);
+  const baseDestination =
     page === 'detail'
       ? '/tasks/' + taskId
       : page === 'new'
@@ -215,7 +219,10 @@ export function Workspace({
           ? '/forms/' + formId
           : page === 'forms' && initialFormQuery
             ? '/forms?' + new URLSearchParams({ q: initialFormQuery }).toString()
-            : nav.find((n) => n.page === page)?.href || '/';
+            : page === 'tasks' && initialStatus !== 'all'
+              ? '/tasks?' + new URLSearchParams({ status: initialStatus })
+              : nav.find((n) => n.page === page)?.href || '/';
+  const destination = href(baseDestination);
   const request = useCallback(
     async (url: string, options?: RequestInit) => {
       let response: Response;
@@ -227,6 +234,7 @@ export function Workspace({
           headers: {
             ...Object.fromEntries(new Headers(options?.headers)),
             ...(activeSpace.current ? { 'X-Workspace-Id': activeSpace.current } : {}),
+            ...(spaceSlug ? { 'X-Workspace-Slug': spaceSlug } : {}),
           },
         });
       } catch (error) {
@@ -261,7 +269,7 @@ export function Workspace({
       if (!response.ok) throw new Error(body.error?.message || 'เชื่อมต่อไม่สำเร็จ กรุณาลองอีกครั้ง');
       return body;
     },
-    [router, destination],
+    [router, destination, spaceSlug],
   );
   const load = useCallback(
     async (signal?: AbortSignal) => {
@@ -274,6 +282,12 @@ export function Workspace({
           { signal },
         );
         if (signal?.aborted || sequence !== loadSequence.current) return;
+        if (!spaceSlug && value.workspace?.slug) {
+          router.replace(spacePath(value.workspace.slug, baseDestination));
+          return;
+        }
+        if (spaceSlug && value.workspace?.slug !== spaceSlug)
+          throw new Error('ข้อมูล Space ไม่ตรงกับ URL กรุณาเปิดหน้าใหม่');
         activeSpace.current = value.workspace?.id;
         const nextDetail = taskId ? await request('/api/tasks/' + taskId, { signal }) : null;
         if (signal?.aborted || sequence !== loadSequence.current) return;
@@ -289,7 +303,7 @@ export function Workspace({
         }
       }
     },
-    [request, taskId, page],
+    [request, taskId, page, spaceSlug, router, baseDestination],
   );
   useEffect(() => {
     const controller = new AbortController();
@@ -348,7 +362,7 @@ export function Workspace({
           form.reset();
           setMessage(endpoint === '/api/tasks' ? 'ส่งงานเรียบร้อยแล้ว' : 'บันทึกเรียบร้อยแล้ว');
           if (endpoint === '/api/tasks') {
-            router.push('/tasks/' + result.id);
+            router.push(href('/tasks/' + result.id));
             return;
           }
           await load();
@@ -602,7 +616,7 @@ export function Workspace({
                 (isOpen(t) && t.priority === 'Urgent' ? ' urgency-urgent' : '')
               }
               key={t.id}
-              href={'/tasks/' + t.id}
+              href={href('/tasks/' + t.id)}
             >
               <span className="task-row-main">
                 <span className="task-title">
@@ -685,7 +699,7 @@ export function Workspace({
         },
         { label: 'งานเสร็จสิ้น', count: completed.length, symbol: '✓', filter: 'Completed' },
       ].map((stat) => (
-        <Link className="stat" key={stat.label} href={'/tasks?status=' + stat.filter}>
+        <Link className="stat" key={stat.label} href={href('/tasks?status=' + stat.filter)}>
           <span>{stat.label}</span>
           <span className="stat-icon" aria-hidden="true">
             {stat.symbol}
@@ -816,7 +830,7 @@ export function Workspace({
                 <small>ใส่ลิงก์เอกสารที่ทีมมีสิทธิ์เข้าถึง · ไฟล์แนบจัดการผ่าน Airtable</small>
               </label>
               <div className="form-actions">
-                <Link className="btn" href="/tasks">
+                <Link className="btn" href={href('/tasks')}>
                   ยกเลิก
                 </Link>
                 <button className="btn primary" type="submit">
@@ -1263,7 +1277,7 @@ export function Workspace({
                             categoryClass(t.category) +
                             (t.priority === 'Urgent' ? ' urgency-urgent' : '')
                           }
-                          href={'/tasks/' + t.id}
+                          href={href('/tasks/' + t.id)}
                           key={t.id}
                         >
                           <span className="calendar-event-category">
@@ -1311,7 +1325,7 @@ export function Workspace({
                       (t.priority === 'Urgent' ? ' urgency-urgent' : '')
                     }
                     key={t.id}
-                    href={'/tasks/' + t.id}
+                    href={href('/tasks/' + t.id)}
                   >
                     <strong>{t.title}</strong>
                     <CategoryBadge category={t.category} /> <PriorityBadge priority={t.priority} />
@@ -1323,7 +1337,7 @@ export function Workspace({
               ) : (
                 <Empty title="ไม่มีนัดค้างวันนี้" message="ทุกนัดติดตามได้รับการดูแลแล้ว" />
               )}
-              <Link className="panel-bottom" href="/followups">
+              <Link className="panel-bottom" href={href('/followups')}>
                 ดูนัดติดตามทั้งหมด →
               </Link>
             </section>
@@ -1395,7 +1409,7 @@ export function Workspace({
               <Link
                 className={page === n.page ? 'active' : ''}
                 aria-current={page === n.page ? 'page' : undefined}
-                href={n.href}
+                href={href(n.href)}
                 onClick={() => setMenu(false)}
                 key={n.page}
               >
@@ -1495,7 +1509,7 @@ export function Workspace({
               </p>
             </div>
             {page !== 'new' && page !== 'forms' && (
-              <Link className="btn primary" href="/tasks/new">
+              <Link className="btn primary" href={href('/tasks/new')}>
                 + ส่งงานใหม่
               </Link>
             )}

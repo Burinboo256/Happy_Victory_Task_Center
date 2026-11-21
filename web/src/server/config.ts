@@ -74,7 +74,9 @@ const schema = z.object({
     .regex(/^U[a-f0-9]{32}$/)
     .optional(),
 });
-export type Config = z.infer<typeof schema> & { workspace?: { id: string; name: string } };
+export type Config = z.infer<typeof schema> & {
+  workspace?: { id: string; name: string; slug?: string };
+};
 export const productionBase = 'appDS1Ji5cqIohPq3';
 const invalid = () => new AppError(503, 'NOT_CONFIGURED', 'ระบบยังตั้งค่าบริการไม่ครบ กรุณาติดต่อผู้ดูแล');
 

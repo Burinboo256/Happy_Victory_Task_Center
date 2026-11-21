@@ -18,7 +18,11 @@ export function POST(request: Request) {
         'SELECT csrf_token FROM hvr_sessions WHERE environment=$1 AND token_hash=$2',
         [c.config.APP_ENV, hash(token)],
       );
-      const selected = (await cookies()).get(workspaceCookie(c.config))?.value;
+      // A different tab may have changed the cookie; validate against this tab's Space ID.
+      // This only revokes the caller's session, so it must also work after membership revocation.
+      const selected =
+        request.headers.get('x-workspace-id') ||
+        (await cookies()).get(workspaceCookie(c.config))?.value;
       const scoped =
         selected && result.rows[0] ? workspaceCsrf(result.rows[0].csrf_token, selected) : '';
       if (

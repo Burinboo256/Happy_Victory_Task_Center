@@ -7,6 +7,9 @@ import { attachCaseSummaries } from '@/server/services/case-workflow';
 import { isManager } from '@/domain/model';
 import { after } from 'next/server';
 import { safelyDrainLineQueue } from '@/server/line/queue';
+import { rememberAuthorizedSpace } from '@/server/workspaces/preference';
+import { workspaceCookie } from '@/server/workspaces/service';
+import { cookieOptions } from '@/server/auth/security';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -21,12 +24,21 @@ export function GET(request: Request) {
     if (isManager(c.user)) data.tasks = await attachCaseSummaries(c.db, c.config, data.tasks);
     if (isManager(c.user) && c.config.ENABLE_LINE_NOTIFICATIONS)
       after(() => safelyDrainLineQueue(c.db, c.config, c.repo));
-    return json({
+    const response = json({
       ...data,
       csrfToken: c.csrfToken,
       writesEnabled: state.writes,
       formsEnabled: c.config.FORMS_ENABLED,
       workspace: c.config.workspace,
     });
+    if (request.headers.has('x-workspace-slug') && c.config.workspace) {
+      await rememberAuthorizedSpace(c.rootDb, c.config, c.globalUser, c.config.workspace.id);
+      response.cookies.set(
+        workspaceCookie(c.config),
+        c.config.workspace.id,
+        cookieOptions(c.config, 21600),
+      );
+    }
+    return response;
   });
 }

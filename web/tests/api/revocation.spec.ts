@@ -6,6 +6,7 @@ import { rid } from '../fixtures';
 import { hash } from '../../src/server/auth/security';
 import { createSession } from '../../src/server/auth/session';
 import { readConfig } from '../../src/server/config';
+import { workspaceCsrf } from '../../src/server/workspaces/service';
 
 const origin = 'http://127.0.0.1:4181';
 async function controls(value: unknown = {}) {
@@ -120,6 +121,34 @@ test('disabled Active, replaced subject and invalid role fail closed; logout sti
   expect(
     (
       await page.request.get('/api/bootstrap', { headers: { Cookie: 'hvr-session=' + token } })
+    ).status(),
+  ).toBe(401);
+});
+
+test('logout from one Space tab works after another tab changes the cookie, but mismatched CSRF is rejected', async ({
+  page,
+}) => {
+  const agent = await login(page, 'AGENT');
+  const first = '00000000-0000-4000-8000-000000000001',
+    second = '00000000-0000-4000-8000-000000000002';
+  await page
+    .context()
+    .addCookies([{ name: 'hvr-space', value: second, url: origin, httpOnly: true }]);
+  await controls({ users: { [rid(2)]: { Active: false } } });
+  const scoped = workspaceCsrf(agent.csrfToken, first);
+  const wrong = await page.request.post('/api/auth/logout', {
+    headers: { Origin: origin, 'X-CSRF-Token': scoped, 'X-Workspace-Id': second },
+  });
+  expect(wrong.status()).toBe(403);
+  const correct = await page.request.post('/api/auth/logout', {
+    headers: { Origin: origin, 'X-CSRF-Token': scoped, 'X-Workspace-Id': first },
+  });
+  expect(correct.status()).toBe(200);
+  expect(
+    (
+      await page.request.get('/api/bootstrap', {
+        headers: { Cookie: 'hvr-session=' + agent.testToken },
+      })
     ).status(),
   ).toBe(401);
 });

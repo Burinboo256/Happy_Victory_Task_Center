@@ -93,7 +93,7 @@ test('Google flow verifies signed JWT, PKCE, nonce, audience and expiry; state i
     }
     assert.equal((await db.query('SELECT * FROM hvr_sessions')).rows.length, 1);
     mode = '';
-    const shortLink = await startGoogle(db, config, '/rinlyn', getClient);
+    const shortLink = await startGoogle(db, config, '/rinlyn/tasks/new', getClient);
     nonce = shortLink.url.searchParams.get('nonce') || '';
     callback.searchParams.set('state', shortLink.url.searchParams.get('state') || '');
     const shortLogin = await finishGoogle(
@@ -104,7 +104,7 @@ test('Google flow verifies signed JWT, PKCE, nonce, audience and expiry; state i
       shortLink.binding,
       getClient,
     );
-    assert.equal(shortLogin.returnTo, '/rinlyn');
+    assert.equal(shortLogin.returnTo, '/rinlyn/tasks/new');
     signup = true;
     const registration = await startGoogle(db, config, '/', getClient, {
       fullName: 'New Agent',

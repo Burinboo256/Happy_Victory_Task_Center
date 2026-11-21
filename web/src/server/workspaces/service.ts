@@ -87,7 +87,7 @@ export async function spaceServices(root: Sql, c: Config, control: ControlPlane,
   const name = z.string().trim().min(1).max(80).parse(record.fields.Name);
   const credentials = row.credentials ? decryptCredentials(c, row.id, row.credentials) : c;
   if (credentials.AIRTABLE_BASE_ID !== row.base_id) throw forbidden();
-  const config: Config = { ...c, ...credentials, workspace: { id: row.id, name } };
+  const config: Config = { ...c, ...credentials, workspace: { id: row.id, name, slug: row.slug } };
   const db = workspaceDatabase(root, row.schema_name);
   await verifyInstance(db, config);
   // Rate limiting is shared by Base ID in the control database, never split by Workspace schema.

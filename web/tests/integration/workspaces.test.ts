@@ -44,6 +44,7 @@ import { sqlStatements } from '../../tools/sql-statements';
 import { AppError } from '../../src/server/errors';
 import { schemaFixture } from '../schema-fixture';
 import { isSpaceSlug, reservedSpaceSlugs } from '../../src/domain/space-link';
+import { requestSpace } from '../../src/server/workspaces/request';
 import {
   rememberSpace,
   resumeSpace,
@@ -271,6 +272,54 @@ test('Space short links are stable, unique and cannot collide with app routes', 
   }
 });
 
+test('URL Space overrides cookies while membership, expected ID and scoped CSRF remain enforced', async () => {
+  const f = await fixture();
+  try {
+    const owner = userDto(f.central.tables.users[0]),
+      agent = userDto(f.central.tables.users[1]);
+    const first = await requestSpace(f.db, c, f.control, owner, b, 'a', a);
+    const second = await requestSpace(f.db, c, f.control, owner, a, 'b', b);
+    assert.equal(first.row.id, a);
+    assert.equal(second.row.id, b);
+    assert.equal((await ownTask(first.repo, first.user, rid(11))).title, 'SPACE A ONLY');
+    assert.equal((await ownTask(second.repo, second.user, rid(11))).title, 'SPACE B ONLY');
+    assert.equal(second.user.role, 'Agent');
+    await assert.rejects(requestSpace(f.db, c, f.control, agent, a, 'b'), {
+      code: 'WORKSPACE_REQUIRED',
+    });
+    await assert.rejects(requestSpace(f.db, c, f.control, owner, a, 'missing'), {
+      code: 'WORKSPACE_REQUIRED',
+    });
+    await assert.rejects(requestSpace(f.db, c, f.control, owner, a, '../b'), {
+      code: 'WORKSPACE_REQUIRED',
+    });
+    await assert.rejects(requestSpace(f.db, c, f.control, owner, a, 'b', a), {
+      code: 'WORKSPACE_CHANGED',
+    });
+    assert.throws(() =>
+      requireCsrf(
+        new Request(c.APP_ORIGIN + '/api/tasks', {
+          method: 'POST',
+          headers: { origin: c.APP_ORIGIN, 'x-csrf-token': workspaceCsrf('session', a) },
+        }),
+        workspaceCsrf('session', b),
+        c,
+      ),
+    );
+    f.spaces.tables.users[1].fields.Active = false;
+    await assert.rejects(requestSpace(f.db, c, f.control, owner, a, 'b'), {
+      code: 'WORKSPACE_REQUIRED',
+    });
+    f.spaces.tables.users[1].fields.Active = true;
+    f.central.tables.users[0].fields.Active = false;
+    await assert.rejects(requestSpace(f.db, c, f.control, owner, a, 'b'), {
+      code: 'WORKSPACE_REQUIRED',
+    });
+  } finally {
+    await f.engine.close();
+  }
+});
+
 test('last Space persists per account and environment; restoration rechecks authorization', async () => {
   const f = await fixture();
   const user = userDto(f.central.tables.users[0]);
@@ -334,6 +383,14 @@ test('login resumes last Space without overriding explicit destinations or the m
   assert.equal(spaceLoginDestination('/', true, a), '/');
   assert.equal(spaceLoginDestination('/', true), '/spaces');
   assert.equal(spaceLoginDestination('/', false), '/');
+  assert.equal(spaceLoginDestination('/', true, a, 'team-a'), '/team-a');
+  assert.equal(spaceLoginDestination('/tasks/new', true, a, 'team-a'), '/team-a/tasks/new');
+  assert.equal(spaceLoginDestination('/team-b/inbox', true, a, 'team-a'), '/team-b/inbox');
+  assert.equal(spaceLoginDestination('/spaces', true, a, 'team-a'), '/spaces');
+  assert.equal(
+    workspaceUrl({ ...c, workspace: { id: b, name: 'B', slug: 'team-b' } }, '/tasks/' + rid(11)),
+    c.APP_ORIGIN + '/team-b/tasks/' + rid(11),
+  );
   for (const destination of [
     '/tasks/new',
     '/forms?q=HC1',

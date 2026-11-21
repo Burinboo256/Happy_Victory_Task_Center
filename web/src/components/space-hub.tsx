@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState, useRef, type FormEvent } from 'react'
 import Link from 'next/link';
 import { Brand } from './brand';
 import styles from './space-hub.module.css';
+import { spacePath } from '@/domain/space-link';
 
 type Space = {
   id: string;
@@ -69,7 +70,9 @@ export function SpaceHub({ target, next = '/' }: { target?: string; next?: strin
       const body = await response.json();
       if (!response.ok) throw new Error(body.error?.message || 'บันทึกไม่สำเร็จ');
       if (action === 'select') {
-        window.location.assign(target === id ? next : '/');
+        window.location.assign(
+          spacePath(state.items.find((s) => s.id === id)?.slug, target === id ? next : '/'),
+        );
         return true;
       }
       setMessage('บันทึกเรียบร้อย');

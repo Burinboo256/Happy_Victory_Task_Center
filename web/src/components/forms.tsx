@@ -9,6 +9,7 @@ import {
 } from '@/domain/documents';
 import type { Bootstrap } from '@/domain/model';
 import styles from './forms.module.css';
+import { spacePath } from '@/domain/space-link';
 
 type Details = { document: DocumentEntry; versions: DocumentVersion[] };
 type EditorState = {
@@ -464,7 +465,7 @@ export function FormsLibrary({
                   {doc.currentId === doc.version.id && doc.status === 'active' && (
                     <a
                       className={styles.primary}
-                      href={`/forms/${doc.id}/open`}
+                      href={spacePath(data.workspace?.slug, `/forms/${doc.id}/open`)}
                       target="_blank"
                       rel="noopener noreferrer"
                     >
@@ -590,7 +591,9 @@ export function FormsLibrary({
                     <a
                       className={styles.primary}
                       href={
-                        v.status === 'published' ? `/forms/${details.document.id}/open` : v.data.url
+                        v.status === 'published'
+                          ? spacePath(data.workspace?.slug, `/forms/${details.document.id}/open`)
+                          : v.data.url
                       }
                       target="_blank"
                       rel="noopener noreferrer"

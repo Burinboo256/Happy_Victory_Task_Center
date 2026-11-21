@@ -5,13 +5,19 @@ import { AppError } from '@/server/errors';
 import { failure } from '@/server/http';
 import { readConfig } from '@/server/config';
 import { z } from 'zod';
+import { isSpaceSlug, spacePath } from '@/domain/space-link';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const id = (await params).id;
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ id: string; view?: string }> },
+) {
+  const { id, view } = await params;
   try {
     z.uuid().parse(id);
-    const c = await protectedContext();
+    if (view !== undefined && !isSpaceSlug(view))
+      throw new AppError(404, 'NOT_FOUND', 'ไม่พบเอกสาร');
+    const c = await protectedContext(view);
     const doc = await publishedDocument(c.db, c.config, c.user, id);
     const response = NextResponse.redirect(doc.version.data.url, 307);
     response.headers.set('Cache-Control', 'private, no-store');
@@ -20,7 +26,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   } catch (error) {
     if (error instanceof AppError && error.status === 401) {
       const url = new URL('/login', readConfig().APP_ORIGIN);
-      url.searchParams.set('returnTo', `/forms/${id}/open`);
+      url.searchParams.set('returnTo', spacePath(view, `/forms/${id}/open`));
       const response = NextResponse.redirect(url, 307);
       response.headers.set('Cache-Control', 'private, no-store');
       return response;
