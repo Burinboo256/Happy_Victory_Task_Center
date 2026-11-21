@@ -1,8 +1,8 @@
 # หลาย Workspace ใน RINLYN Secretary
 
-สถานะ: รุ่นหลาย Space บน Staging ผ่าน CI และทดสอบ Google Login/สิทธิ์ Owner, เลขา และ Agent A/B จริงแล้ว; ยังไม่เปิดใช้บน Production เจ้าของระบบเลือกทดสอบ LINE จริงเองภายหลังบน Production ดู [ผลตรวจและรายการทดสอบที่เหลือ](multi-workspace-acceptance.md) เอกสารนี้แทนแนวทาง Base ร่วมกัน: **หนึ่งเว็บไซต์, หนึ่ง Control Base, หนึ่ง Airtable Base ต่อ Space**
+สถานะวันที่ 22 พฤศจิกายน 2569: เปิดรุ่นหลาย Space บน Production แล้ว ย้ายสมาชิกเดิมครบ Owner Login และเข้า RINLYN ผ่าน เปิดการส่ง/แก้ไขงานแล้ว ดู [ผล cutover และสถานะเปิดรับงาน](multi-workspace-production-cutover.md) ก่อนใช้งาน
 
-สำรอง Production และเตรียม Control Base แยกแล้ววันที่ 21 พฤศจิกายน 2569; ยังไม่ bootstrap/deploy ดู [ผลเตรียม Production และข้อจำกัดของ backup](multi-workspace-production-preparation.md) ก่อนเริ่ม cutover
+โครงสร้าง: **หนึ่งเว็บไซต์, หนึ่ง Control Base, หนึ่ง Airtable Base ต่อ Space** รุ่น Staging ผ่าน CI และ Google Login/สิทธิ์ Owner, เลขา, Agent A/B จริงแล้ว เจ้าของเลือกทดสอบ LINE หลาย Space บนอุปกรณ์จริงภายหลังบน Production ดู [รายการตรวจรับ](multi-workspace-acceptance.md)
 
 ## แหล่งข้อมูลและอำนาจการจัดการ
 

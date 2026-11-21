@@ -1,5 +1,9 @@
 # สถานะ production
 
+## รุ่นหลาย Space — 22 พฤศจิกายน 2569
+
+เปิดรุ่นหลาย Space และย้ายสมาชิกเดิมแล้ว Owner Login/เข้า RINLYN ผ่าน งานเดิม 27 รายการครบ เปิด runtime writes=true และคง jobs=false แล้ว ดู [สถานะ cutover ล่าสุดและจุดกู้คืน](multi-workspace-production-cutover.md) สำหรับ deployment, migration 013, Control Base และหลักฐานสำรอง สถานะวันที่ 15 พฤศจิกายนด้านล่างเป็นประวัติก่อนเปลี่ยนเป็นหลาย Space
+
 ## สถานะตรวจล่าสุด 15 พฤศจิกายน 2569
 
 Vercel เป็นระบบใช้งานจริง Google Login/รับงานเปิดแล้ว และ Apps Script เดิมพักการเขียน ข้อมูลในหัวข้อ cutover ด้านล่างเป็นประวัติวันที่ 9 พฤศจิกายน ไม่ใช่สถานะล่าสุดของ migrations หรือฟีเจอร์ LINE
