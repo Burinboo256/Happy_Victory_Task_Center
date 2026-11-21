@@ -146,10 +146,8 @@ export async function finishGoogle(
     return {
       kind: 'login' as const,
       ...(await createSession(db, config, user)),
-      returnTo:
-        config.WORKSPACES_ENABLED && stored.return_to === '/'
-          ? '/spaces'
-          : safeReturnTo(stored.return_to),
+      user,
+      returnTo: safeReturnTo(stored.return_to),
     };
   } catch {
     const profile = registrationSchema.safeParse(stored.registration);

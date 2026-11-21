@@ -41,6 +41,11 @@ import { requireCsrf, hash, safeReturnTo } from '../../src/server/auth/security'
 import { sqlStatements } from '../../tools/sql-statements';
 import { AppError } from '../../src/server/errors';
 import { schemaFixture } from '../schema-fixture';
+import {
+  rememberSpace,
+  resumeSpace,
+  spaceLoginDestination,
+} from '../../src/server/workspaces/preference';
 
 const a = '00000000-0000-4000-8000-000000000001';
 const b = '00000000-0000-4000-8000-000000000002';
@@ -158,7 +163,10 @@ async function fixture() {
 
 test('workspace migrations match sources and credentials bind to environment and Space', async () => {
   const source = (await readdir('db/migrations'))
-    .filter((n) => n.endsWith('.sql') && n !== '013_workspaces.sql')
+    .filter(
+      (n) =>
+        n.endsWith('.sql') && !['013_workspaces.sql', '014_workspace_preferences.sql'].includes(n),
+    )
     .sort();
   assert.deepEqual(
     operationalMigrations.map((m) => m.name),
@@ -175,6 +183,79 @@ test('workspace migrations match sources and credentials bind to environment and
   assert.throws(() => decryptCredentials(c, a, encrypted));
   assert.throws(() => decryptCredentials({ ...c, APP_ENV: 'staging' }, b, encrypted));
   assert.throws(() => decryptCredentials(c, b, encrypted.slice(0, -8) + 'aaaaaaaa'));
+});
+
+test('last Space persists per account and environment; restoration rechecks authorization', async () => {
+  const f = await fixture();
+  const user = userDto(f.central.tables.users[0]);
+  const agent = userDto(f.central.tables.users[1]);
+  try {
+    assert.equal(await resumeSpace(f.db, c, f.control, user), undefined);
+    await rememberSpace(f.db, c, f.control, user, b);
+    assert.equal((await resumeSpace(f.db, c, f.control, user))?.row.id, b);
+    assert.equal((await resumeSpace(f.db, c, f.control, user))?.user.role, 'Agent');
+    assert.equal(await resumeSpace(f.db, c, f.control, agent), undefined);
+    assert.equal(await resumeSpace(f.db, { ...c, APP_ENV: 'staging' }, f.control, user), undefined);
+    assert.equal(
+      await resumeSpace(f.db, c, f.control, { ...user, sub: 'other-account' }),
+      undefined,
+    );
+    // Existing tabs keep their explicitly selected Space when another device changes preference.
+    assert.equal((await resumeSpace(f.db, c, f.control, user, a))?.row.id, a);
+    await rememberSpace(f.db, c, f.control, user, a);
+    await rememberSpace(f.db, c, f.control, agent, a);
+    assert.equal((await resumeSpace(f.db, c, f.control, user))?.row.id, a);
+    await assert.rejects(rememberSpace(f.db, c, f.control, agent, b));
+    assert.equal((await resumeSpace(f.db, c, f.control, agent))?.row.id, a);
+    // Preference is outside both operational schemas and never changes LINE routing.
+    assert.equal((await f.db.query('SELECT * FROM hvr_workspace_line_routes')).rows.length, 0);
+    assert.equal(
+      (await f.db.query(`SELECT to_regclass('${schemaB}.hvr_workspace_preferences') AS name`))
+        .rows[0].name,
+      null,
+    );
+    await rememberSpace(f.db, c, f.control, user, b);
+    f.spaces.tables.users[1].fields.Active = false;
+    assert.equal(await resumeSpace(f.db, c, f.control, user), undefined);
+    f.spaces.tables.users[1].fields.Active = true;
+    const member = f.members.tables.users.find(
+      (m) =>
+        Array.isArray(m.fields.Workspace) &&
+        m.fields.Workspace[0] === rid(102) &&
+        Array.isArray(m.fields.User) &&
+        m.fields.User[0] === user.id,
+    );
+    assert.ok(member);
+    member.fields.Active = false;
+    assert.equal(await resumeSpace(f.db, c, f.control, user), undefined);
+    member.fields.Active = true;
+    f.central.tables.users[0].fields.Active = false;
+    assert.equal(await resumeSpace(f.db, c, f.control, user), undefined);
+    await assert.rejects(resumeSpace(f.db, c, f.control, { ...user, active: false }));
+    f.central.tables.users[0].fields.Active = true;
+    f.members.tables.users.splice(f.members.tables.users.indexOf(member), 1);
+    assert.equal(await resumeSpace(f.db, c, f.control, user), undefined);
+    f.control.member = async () => {
+      throw new AppError(503, 'AIRTABLE_UNAVAILABLE', 'temporary outage');
+    };
+    await assert.rejects(resumeSpace(f.db, c, f.control, user), { status: 503 });
+  } finally {
+    await f.engine.close();
+  }
+});
+
+test('login resumes last Space without overriding explicit destinations or the manual chooser', () => {
+  assert.equal(spaceLoginDestination('/', true, a), '/');
+  assert.equal(spaceLoginDestination('/', true), '/spaces');
+  assert.equal(spaceLoginDestination('/', false), '/');
+  for (const destination of [
+    '/tasks/new',
+    '/forms?q=HC1',
+    '/spaces',
+    '/spaces/open?' + new URLSearchParams({ space: b, next: '/tasks/new' }),
+  ])
+    assert.equal(spaceLoginDestination(destination, true, a), destination);
+  assert.equal(spaceLoginDestination('https://example.test/', true, a), '/');
 });
 
 test('central membership overrides local roles; Base isolation, fresh revocation and last Admin checks', async () => {
@@ -208,7 +289,10 @@ test('central membership overrides local roles; Base isolation, fresh revocation
     );
     await assert.rejects(unavailable.get('tasks', '../other-base'));
     assert.equal(listCalls.length, 0);
-    await assert.rejects(unavailable.get('tasks', rid(90)), { status: 503, code: 'AIRTABLE_ERROR' });
+    await assert.rejects(unavailable.get('tasks', rid(90)), {
+      status: 503,
+      code: 'AIRTABLE_ERROR',
+    });
     assert.deepEqual(listCalls, ['RECORD_ID()="' + rid(90) + '"']);
     await assert.rejects(ownTask(second.repo, second.user, rid(12)));
     await assert.rejects(authorizeSpace(h.db, c, h.control, userDto(h.central.tables.users[1]), b));

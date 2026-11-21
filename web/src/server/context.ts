@@ -5,7 +5,8 @@ import { AirtableClient } from './airtable/client';
 import { authenticate } from './auth/session';
 import { cookieName } from './auth/security';
 import { ControlPlane } from './workspaces/control';
-import { authorizeSpace, modeGuard, workspaceCookie, workspaceCsrf } from './workspaces/service';
+import { modeGuard, workspaceCookie, workspaceCsrf } from './workspaces/service';
+import { resumeSpace } from './workspaces/preference';
 import { AppError } from './errors';
 
 export async function services() {
@@ -28,14 +29,14 @@ export async function protectedContext() {
   const identity = await protectedIdentity();
   if (!identity.control) return { ...identity, rootDb: identity.db, globalUser: identity.user };
   const selected = (await cookies()).get(workspaceCookie(identity.config))?.value;
-  if (!selected) throw new AppError(403, 'WORKSPACE_REQUIRED', 'กรุณาเลือก Space ก่อนเปิดงาน');
-  const context = await authorizeSpace(
+  const context = await resumeSpace(
     identity.db,
     identity.config,
     identity.control,
     identity.user,
     selected,
   );
+  if (!context) throw new AppError(403, 'WORKSPACE_REQUIRED', 'กรุณาเลือก Space ก่อนเปิดงาน');
   const expected = (await headers()).get('x-workspace-id');
   if (expected && expected !== context.row.id)
     throw new AppError(409, 'WORKSPACE_CHANGED', 'Space เปลี่ยนแล้ว กรุณาเลือก Space และเปิดหน้าใหม่');

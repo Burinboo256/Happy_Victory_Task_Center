@@ -4,7 +4,6 @@ import { requireCsrf, cookieOptions } from '@/server/auth/security';
 import { json, readBody, route } from '@/server/http';
 import { AppError } from '@/server/errors';
 import {
-  authorizeSpace,
   createSpace,
   listSpaces,
   spaceServices,
@@ -13,6 +12,7 @@ import {
   audit,
   getSpace,
 } from '@/server/workspaces/service';
+import { rememberSpace } from '@/server/workspaces/preference';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -61,7 +61,7 @@ export function POST(request: Request) {
       return json(await createSpace(c.db, c.config, c.control, c.user, body.data));
     const id = z.uuid().parse(body.id);
     if (body.action === 'select') {
-      await authorizeSpace(c.db, c.config, c.control, c.user, id);
+      await rememberSpace(c.db, c.config, c.control, c.user, id);
       const response = json({ selected: id });
       response.cookies.set(workspaceCookie(c.config), id, cookieOptions(c.config, 21600));
       return response;

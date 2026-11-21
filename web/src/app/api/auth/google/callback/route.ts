@@ -4,6 +4,8 @@ import { services } from '@/server/context';
 import { finishGoogle, GoogleLoginError } from '@/server/auth/google';
 import { failure } from '@/server/http';
 import { cookieName, cookieOptions, readBinding } from '@/server/auth/security';
+import { resumeSpace, spaceLoginDestination } from '@/server/workspaces/preference';
+import { workspaceCookie } from '@/server/workspaces/service';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export async function GET(request: Request) {
@@ -19,13 +21,28 @@ export async function GET(request: Request) {
       c.config.AUTH_SECRET,
     );
     const result = await finishGoogle(c.db, c.repo, c.config, new URL(request.url), binding);
-    const response = NextResponse.redirect(new URL(result.returnTo, c.config.APP_ORIGIN), 303);
-    if (result.kind === 'login')
+    const space =
+      result.kind === 'login' && c.control
+        ? await resumeSpace(c.db, c.config, c.control, result.user)
+        : undefined;
+    const destination =
+      result.kind === 'login'
+        ? spaceLoginDestination(result.returnTo, !!c.config.WORKSPACES_ENABLED, space?.row.id)
+        : result.returnTo;
+    const response = NextResponse.redirect(new URL(destination, c.config.APP_ORIGIN), 303);
+    if (result.kind === 'login') {
       response.cookies.set(
         cookieName(c.config, 'session'),
         result.token,
         cookieOptions(c.config, 21600),
       );
+      // Account switches must not inherit a previous user's Space cookie.
+      response.cookies.set(
+        workspaceCookie(c.config),
+        space?.row.id || '',
+        cookieOptions(c.config, space ? 21600 : 0),
+      );
+    }
     response.cookies.set(cookieName(c.config, 'oauth'), '', cookieOptions(c.config, 0));
     response.headers.set('Cache-Control', 'private, no-store');
     return response;
