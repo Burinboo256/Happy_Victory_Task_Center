@@ -1,6 +1,6 @@
 # หลาย Workspace ใน RINLYN Secretary
 
-สถานะ: Deploy รุ่นหลาย Space บน Staging แล้ว รอทดสอบ Login/สิทธิ์จริง; ยังไม่เปิดใช้บน Production เอกสารนี้แทนแนวทาง Base ร่วมกัน: **หนึ่งเว็บไซต์, หนึ่ง Control Base, หนึ่ง Airtable Base ต่อ Space**
+สถานะ: รุ่นหลาย Space บน Staging ผ่าน CI และทดสอบ Google Login/สิทธิ์ Owner, เลขา และ Agent A/B จริงแล้ว; ยังไม่เปิดใช้บน Production เจ้าของระบบเลือกทดสอบ LINE จริงเองภายหลังบน Production ดู [ผลตรวจและรายการทดสอบที่เหลือ](multi-workspace-acceptance.md) เอกสารนี้แทนแนวทาง Base ร่วมกัน: **หนึ่งเว็บไซต์, หนึ่ง Control Base, หนึ่ง Airtable Base ต่อ Space**
 
 ## แหล่งข้อมูลและอำนาจการจัดการ
 
@@ -83,7 +83,7 @@ Users ใน Base งานยังจำเป็นสำหรับ linked 
 
 ## ตรวจสอบก่อนเปิดจริงและการกู้คืน
 
-รัน `npm run lint`, `npm run typecheck`, `npm test`, `npm run test:integration`, `npm run build` และ `npm run test:e2e` ทดสอบบัญชีเดียวต่างบทบาทในสอง Space, ห้ามเห็นงาน/เอกสาร/สมาชิกข้ามทีม, ปิดสมาชิก/Space, ทดสอบ LINE tickets/drafts และ notification แยกทีม รวมทั้งข้อมูลเดิมหลัง bootstrap ใช้สอง Base ทดสอบและโทรศัพท์จริงก่อนเปิด Production
+รัน `npm run lint`, `npm run typecheck`, `npm test`, `npm run test:integration`, `npm run build` และ `npm run test:e2e` ทดสอบบัญชีเดียวต่างบทบาทในสอง Space, ห้ามเห็นงาน/เอกสาร/สมาชิกข้ามทีม, ปิดสมาชิก/Space, ทดสอบ LINE tickets/drafts และ notification แยกทีม รวมทั้งข้อมูลเดิมหลัง bootstrap ใช้สอง Base ทดสอบ โดยวันที่ 21 พฤศจิกายน 2569 เจ้าของระบบเลือกเลื่อนการทดสอบ LINE บนโทรศัพท์จริงไปทำเองบน Production ต้องบันทึกแยกจากผล automated tests และไม่อ้างว่าผ่านแล้ว
 
 `WORKSPACE_SETUP_REVIEW` หมายถึงคำขออาจทำบางขั้นสำเร็จแล้ว อย่ากดสร้างด้วยรหัสใหม่หรือเปลี่ยน Base เพื่อเลี่ยง ตรวจ `hvr_workspace_setups`, `hvr_workspaces`, Control Workspaces/Members และ schema ที่เกี่ยวข้องก่อนกู้ด้วยผู้ดูแล ระบบไม่ retry external writes ที่ผลไม่แน่นอนโดยอัตโนมัติ ปุ่มเปิด Space ไม่สามารถแก้การ setup ที่ยังไม่ครบได้
 
@@ -129,4 +129,4 @@ Migration ใหม่ต้องระบุว่าเป็น control-plan
 - Deploy commit `4899bc3` เป็น Preview `dpl_J5wYQGYuAQQVbzEtA2oFeRDSakdy` และผูก staging alias แล้ว ทดสอบ browser ซ้ำ: เลือก RINLYN เปิดลิงก์งาน Space B แล้วแสดง “ไม่พบงานใน Space นี้” พร้อมทางกลับไปเลือก Space; สลับ Space B แล้วเปิดงานเดิมและ Checklist ที่บันทึกไว้ได้
 - ตรวจ Production alias ยังเป็น `dpl_EkvvhmQC8TX3dVaaVT7rFsdZjtoi` ตาม baseline ก่อนงานนี้
 - [CI ของ commit 4899bc3 ผ่านครบ](https://github.com/Burinboo256/Happy_Victory_Task_Center/actions/runs/44789096892): lint/typecheck, unit, integration, PostgreSQL, audit, build, Chromium/E2E, API, load และ legacy checks ตรวจยืนยันผล run สำเร็จวันที่ 21 พฤศจิกายน 2569
-- ยังต้องตรวจบัญชี Admin/เลขา/Agent จริงแยก session, LINE OA หลาย Space และอุปกรณ์จริงก่อนพิจารณา Production; ยังไม่มีการเปลี่ยน Production หรือ webhook จริง
+- ต่อมาทดสอบ Google Login/หน้าจอจริงครบ Owner, เลขา, Agent A และ Agent B ผ่าน รวมการส่งงาน อัปเดตสถานะ บันทึกภายใน เอกสารร่าง และปฏิเสธการเข้าถึงข้าม Space รายละเอียดใน [acceptance](multi-workspace-acceptance.md) LINE จริงเลื่อนไปให้เจ้าของระบบทดสอบเองบน Production ตามคำสั่งล่าสุด; ยังไม่มีการเปลี่ยน Production หรือ webhook จริง
