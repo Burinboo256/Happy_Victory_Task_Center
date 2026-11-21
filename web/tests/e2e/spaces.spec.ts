@@ -46,7 +46,14 @@ test('Space Admin sees own membership tools and approves pending users; mobile l
         csrfToken: csrf,
         items: [
           { id, slug: 'team-a', name: 'ทีมตัวอย่าง A', active: true, approved: true, role: 'Admin' },
-          { id: second, name: 'ทีมตัวอย่าง B', active: true, approved: true, role: 'Agent' },
+          {
+            id: second,
+            slug: 'x'.repeat(48),
+            name: 'ทีมตัวอย่าง B',
+            active: true,
+            approved: true,
+            role: 'Agent',
+          },
         ],
       },
     });
@@ -57,7 +64,7 @@ test('Space Admin sees own membership tools and approves pending users; mobile l
     'href',
     '/team-a',
   );
-  await expect(page.getByRole('button', { name: 'คัดลอกลิงก์', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'คัดลอกลิงก์', exact: true })).toHaveCount(2);
   await expect(page.getByRole('button', { name: 'จัดการสมาชิก' })).toHaveCount(1);
   await expect(page.getByRole('heading', { name: 'สร้าง Space ใหม่' })).toHaveCount(0);
   await page.getByRole('button', { name: 'จัดการสมาชิก' }).click();

@@ -12,6 +12,9 @@
 .hub h1 {
   margin-top: 32px;
 }
+.hub p {
+  overflow-wrap: anywhere;
+}
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
