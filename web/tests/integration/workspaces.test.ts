@@ -24,6 +24,7 @@ import {
   modeGuard,
   createSpace,
   workspaceCsrf,
+  enrollMember,
 } from '../../src/server/workspaces/service';
 import { workspaceUrl } from '../../src/server/workspaces/url';
 import { initializeSpaces } from '../../src/server/workspaces/bootstrap';
@@ -45,6 +46,7 @@ import { AppError } from '../../src/server/errors';
 import { schemaFixture } from '../schema-fixture';
 import { isSpaceSlug, reservedSpaceSlugs } from '../../src/domain/space-link';
 import { requestSpace } from '../../src/server/workspaces/request';
+import { registrationSpace } from '../../src/server/workspaces/registration';
 import {
   rememberSpace,
   resumeSpace,
@@ -414,6 +416,50 @@ test('Owner enters every active Space and manages Admins without leaving implici
     assert.equal(revoked.role, 'Agent');
     // An explicitly granted membership is preserved after losing the global Owner role.
     assert.equal((await authorizeSpace(h.db, c, h.control, owner, a)).user.role, 'Admin');
+  } finally {
+    await h.engine.close();
+  }
+});
+
+test('public registration slug selects one Space and never falls back to a conflicting ID or default', async () => {
+  const h = await fixture();
+  try {
+    const target = await registrationSpace(h.db, c, h.control, a, 'b');
+    assert.equal(target.row.id, b);
+    assert.equal((await registrationSpace(h.db, c, h.control, b)).row.slug, 'b');
+    assert.equal((await registrationSpace(h.db, c, h.control)).row.id, a);
+    for (const slug of ['missing', '../a', 'register', 'a/register'])
+      await assert.rejects(registrationSpace(h.db, c, h.control, a, slug), {
+        code: 'SPACE_NOT_FOUND',
+      });
+    await assert.rejects(registrationSpace(h.db, { ...c, APP_ENV: 'staging' }, h.control, a, 'b'), {
+      code: 'SPACE_NOT_FOUND',
+    });
+    const agent = userDto(h.central.tables.users[1]);
+    assert.equal(
+      await enrollMember(h.db, c, h.control, target.row.id, agent, agent.name),
+      'pending',
+    );
+    const signup = await h.control.member(rid(102), agent.id);
+    assert.equal(signup.role, 'Agent');
+    assert.equal(signup.active, false);
+    assert.equal((await h.control.member(rid(101), agent.id)).active, true);
+    assert.equal(
+      await enrollMember(h.db, c, h.control, target.row.id, agent, agent.name),
+      'pending',
+    );
+    h.spaces.tables.users[1].fields.Active = false;
+    await assert.rejects(registrationSpace(h.db, c, h.control, undefined, 'b'), {
+      code: 'WORKSPACE_PAUSED',
+    });
+    await assert.rejects(enrollMember(h.db, c, h.control, b, agent, agent.name), {
+      code: 'WORKSPACE_PAUSED',
+    });
+    h.spaces.tables.users[1].fields.Active = true;
+    h.spaces.tables.users[1].fields['Base ID'] = c.AIRTABLE_BASE_ID;
+    await assert.rejects(registrationSpace(h.db, c, h.control, undefined, 'b'), {
+      code: 'WORKSPACE_PAUSED',
+    });
   } finally {
     await h.engine.close();
   }

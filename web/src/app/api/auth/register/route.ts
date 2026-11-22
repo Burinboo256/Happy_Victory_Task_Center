@@ -6,6 +6,7 @@ import { requireWrites } from '@/server/runtime';
 import { AppError } from '@/server/errors';
 import { json, readBody, route } from '@/server/http';
 import { spaceServices } from '@/server/workspaces/service';
+import { spacePath } from '@/domain/space-link';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export function POST(request: Request) {
@@ -14,13 +15,15 @@ export function POST(request: Request) {
     if (request.headers.get('origin') !== c.config.APP_ORIGIN)
       throw new AppError(403, 'CSRF', 'กรุณาเริ่มลงทะเบียนจากหน้าเว็บนี้');
     const profile = registrationSchema.parse(await readBody(request));
+    let returnTo = '/';
     await requireWrites(c.db, c.config);
     if (c.control) {
       const space = await spaceServices(c.db, c.config, c.control, profile.workspaceId);
       await requireWrites(space.db, space.config);
       profile.workspaceId = space.row.id;
+      returnTo = spacePath(space.row.slug, '/');
     }
-    const { url, binding } = await startGoogle(c.db, c.config, '/', undefined, profile);
+    const { url, binding } = await startGoogle(c.db, c.config, returnTo, undefined, profile);
     const response = json({ url: url.href });
     response.cookies.set(
       cookieName(c.config, 'oauth'),

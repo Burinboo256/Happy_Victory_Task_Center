@@ -8,6 +8,7 @@
 | รายการงาน | `/rinlyn/tasks` |
 | งานเข้าใหม่ | `/rinlyn/inbox` |
 | ส่งงานใหม่ | `/rinlyn/tasks/new` |
+| ลงทะเบียนตัวแทน | `/rinlyn/register` |
 | รายละเอียดงาน | `/rinlyn/tasks/rec…` |
 | เอกสาร | `/rinlyn/forms` |
 | เปิดเอกสาร | `/rinlyn/forms/<document-id>/open` |

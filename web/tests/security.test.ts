@@ -12,6 +12,20 @@ import {
 } from '../src/server/auth/security';
 import { todayBangkok } from '../src/domain/model';
 import { environment, config } from './fixtures';
+import { registrationPath, registrationErrorPath } from '../src/domain/space-link';
+
+test('registration links and OAuth errors keep the intended Space without accepting redirects', () => {
+  const id = '00000000-0000-4000-8000-000000000002';
+  assert.equal(registrationPath('team-b', id), '/team-b/register');
+  assert.equal(registrationPath(undefined, id), '/register?space=' + id);
+  assert.equal(registrationErrorPath('/team-b', id), '/team-b/register?error=google');
+  assert.equal(registrationErrorPath('/', id), '/register?space=' + id + '&error=google');
+  assert.equal(
+    registrationErrorPath('https://evil.test', id),
+    '/register?space=' + id + '&error=google',
+  );
+  assert.equal(registrationPath('../other'), '/register');
+});
 
 test('configuration rejects production data in development and unsafe origins without disclosing values', () => {
   for (const override of [

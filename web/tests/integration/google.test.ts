@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { generateKeyPairSync, sign } from 'node:crypto';
 import * as oidc from 'openid-client';
-import { startGoogle, finishGoogle } from '../../src/server/auth/google';
+import { startGoogle, finishGoogle, GoogleLoginError } from '../../src/server/auth/google';
 import { authenticate } from '../../src/server/auth/session';
 import { database, repository, config } from '../fixtures';
 
@@ -106,6 +106,24 @@ test('Google flow verifies signed JWT, PKCE, nonce, audience and expiry; state i
     );
     assert.equal(shortLogin.returnTo, '/rinlyn/tasks/new');
     signup = true;
+    const rejectedSignup = await startGoogle(db, config, '/team-b', getClient, {
+      fullName: 'New Agent',
+      agentCode: '1234',
+      phone: '0812345678',
+      workspaceId: '00000000-0000-4000-8000-000000000002',
+    });
+    nonce = rejectedSignup.url.searchParams.get('nonce') || '';
+    callback.searchParams.set('state', rejectedSignup.url.searchParams.get('state') || '');
+    callback.searchParams.set('error', 'access_denied');
+    await assert.rejects(
+      finishGoogle(db, h.repo, config, callback, rejectedSignup.binding, getClient),
+      (error) =>
+        error instanceof GoogleLoginError &&
+        error.registration &&
+        error.returnTo === '/team-b' &&
+        error.workspaceId === '00000000-0000-4000-8000-000000000002',
+    );
+    callback.searchParams.delete('error');
     const registration = await startGoogle(db, config, '/', getClient, {
       fullName: 'New Agent',
       agentCode: '1234',

@@ -62,3 +62,15 @@ export function parseSpacePath(value: string) {
 export function spacePath(slug: string | undefined, path: string) {
   return slug ? '/' + slug + (path === '/' ? '' : path) : path;
 }
+
+export function registrationPath(slug?: string, id?: string) {
+  return slug && isSpaceSlug(slug)
+    ? '/' + slug + '/register'
+    : '/register' + (id ? '?' + new URLSearchParams({ space: id }) : '');
+}
+
+export function registrationErrorPath(returnTo: string, id?: string) {
+  const space = parseSpacePath(returnTo);
+  const path = registrationPath(space?.path === '/' ? space.slug : undefined, id);
+  return path + (path.includes('?') ? '&' : '?') + 'error=google';
+}

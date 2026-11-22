@@ -66,6 +66,10 @@ test('Owner can enter unjoined Spaces and edit their Admins', async ({ page }, i
   });
   await page.goto('/spaces');
   await expect(page.getByRole('button', { name: 'เข้า Space', exact: true })).toBeEnabled();
+  await expect(page.getByRole('link', { name: 'ลิงก์ลงทะเบียนของ Space นี้' })).toHaveAttribute(
+    'href',
+    '/team-b/register',
+  );
   await page.getByRole('button', { name: 'จัดการ Admin / สมาชิก', exact: true }).click();
   const member = page.getByRole('row').filter({ hasText: 'member@example.test' });
   const owner = page.getByRole('row').filter({ hasText: 'owner@example.test' });
@@ -204,6 +208,10 @@ test('scoped deep link survives Login; old URLs canonicalize to the selected Spa
   );
   await page.goto('/rinlyn/tasks/new');
   await expect(page).toHaveURL(/\/login[?]returnTo=%2Frinlyn%2Ftasks%2Fnew$/);
+  await expect(page.getByRole('link', { name: 'ยังไม่มีบัญชี? ลงทะเบียนตัวแทน' })).toHaveAttribute(
+    'href',
+    '/rinlyn/register',
+  );
   await page.unroute('**/api/bootstrap*');
   const h = repository();
   const data = {

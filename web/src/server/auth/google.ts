@@ -14,6 +14,7 @@ import { spaceServices, enrollMember } from '../workspaces/service';
 import { userDto } from '../airtable/dto';
 import { formulaValue } from '../airtable/client';
 import { requireWrites } from '../runtime';
+import { registrationPath } from '../../domain/space-link';
 
 const configurations = new Map<string, Promise<oidc.Configuration>>();
 export class GoogleLoginError extends AppError {
@@ -138,8 +139,7 @@ export async function finishGoogle(
         kind: 'registration' as const,
         status,
         token: '',
-        returnTo:
-          '/register?' + new URLSearchParams({ status, ...(space ? { space: space.row.id } : {}) }),
+        returnTo: registrationPath(space?.row.slug) + '?' + new URLSearchParams({ status }),
       };
     }
     const user = await findIdentity(repo, db, config, info as unknown as Identity);

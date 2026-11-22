@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Brand } from '@/components/brand';
 import { configured } from '@/server/config';
 import { safeReturnTo } from '@/server/auth/security';
+import { parseSpacePath, registrationPath } from '@/domain/space-link';
 
 export const metadata: Metadata = { title: 'เข้าสู่ระบบ' };
 export const dynamic = 'force-dynamic';
@@ -13,7 +14,8 @@ export default async function Login({
   const params = await searchParams,
     returnTo = safeReturnTo(params.returnTo),
     ready = configured();
-  const creating = returnTo === '/tasks/new';
+  const space = parseSpacePath(returnTo);
+  const creating = (space?.path || returnTo) === '/tasks/new';
   return (
     <main className="login-page">
       <section className="login-story">
@@ -73,7 +75,7 @@ export default async function Login({
             </p>
           </div>
           <p>
-            <a href="/register">ยังไม่มีบัญชี? ลงทะเบียนตัวแทน</a>
+            <a href={registrationPath(space?.slug)}>ยังไม่มีบัญชี? ลงทะเบียนตัวแทน</a>
           </p>
           <div className="login-bottom">
             ทุกงานสำคัญ ทุกความคืบหน้ามีค่า <span aria-hidden="true">✦</span>

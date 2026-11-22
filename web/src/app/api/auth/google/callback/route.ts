@@ -6,6 +6,7 @@ import { failure } from '@/server/http';
 import { cookieName, cookieOptions, readBinding } from '@/server/auth/security';
 import { resumeSpace, spaceLoginDestination } from '@/server/workspaces/preference';
 import { workspaceCookie } from '@/server/workspaces/service';
+import { registrationErrorPath } from '@/domain/space-link';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export async function GET(request: Request) {
@@ -54,13 +55,12 @@ export async function GET(request: Request) {
   } catch (error) {
     const login = new URL(
       error instanceof GoogleLoginError && error.registration
-        ? '/register?error=google'
+        ? registrationErrorPath(error.returnTo, error.workspaceId)
         : '/login?error=google',
       c.config.APP_ORIGIN,
     );
-    if (error instanceof GoogleLoginError) login.searchParams.set('returnTo', error.returnTo);
-    if (error instanceof GoogleLoginError && error.registration && error.workspaceId)
-      login.searchParams.set('space', error.workspaceId);
+    if (error instanceof GoogleLoginError && !error.registration)
+      login.searchParams.set('returnTo', error.returnTo);
     const response = NextResponse.redirect(login, 303);
     response.cookies.set(cookieName(c.config, 'oauth'), '', cookieOptions(c.config, 0));
     return response;

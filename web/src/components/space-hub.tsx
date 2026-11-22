@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState, useRef, type FormEvent } from 'react'
 import Link from 'next/link';
 import { Brand } from './brand';
 import styles from './space-hub.module.css';
-import { spacePath } from '@/domain/space-link';
+import { spacePath, registrationPath } from '@/domain/space-link';
 
 type Space = {
   id: string;
@@ -232,7 +232,9 @@ export function SpaceHub({ target, next = '/' }: { target?: string; next?: strin
                   )}
                   {(state.owner || space.role === 'Admin') && (
                     <p>
-                      <Link href={'/register?space=' + space.id}>ลิงก์ลงทะเบียนของ Space นี้</Link>
+                      <Link href={registrationPath(space.slug, space.id)}>
+                        ลิงก์ลงทะเบียนของ Space นี้
+                      </Link>
                     </p>
                   )}
                 </section>
