@@ -9,7 +9,12 @@ import { AppError, forbidden } from '../errors';
 import type { User } from '../../domain/model';
 import { roles } from '../../domain/model';
 import { hash } from '../auth/security';
-import { type ControlPlane, workspaceRepository, controlFingerprint } from './control';
+import {
+  type ControlPlane,
+  workspaceRepository,
+  controlFingerprint,
+  isSystemOwner,
+} from './control';
 import { baseCredentials, decryptCredentials, encryptCredentials } from './credentials';
 import { workspaceDatabase, createOperationalSchema } from './database';
 import { verifyInstance } from '../runtime';
@@ -74,13 +79,19 @@ export async function getSpace(root: Sql, c: Config, id?: string) {
     throw new AppError(403, 'WORKSPACE_REQUIRED', 'กรุณาเลือก Space ที่คุณเป็นสมาชิก');
   return rows.rows[0];
 }
-export async function spaceServices(root: Sql, c: Config, control: ControlPlane, id?: string) {
+export async function spaceServices(
+  root: Sql,
+  c: Config,
+  control: ControlPlane,
+  id?: string,
+  allowPaused = false,
+) {
   const row = await getSpace(root, c, id);
   const record = await control.workspace(row.id);
   if (
     !row.active ||
     record.id !== row.control_id ||
-    record.fields.Active !== true ||
+    (!allowPaused && record.fields.Active !== true) ||
     record.fields['Base ID'] !== row.base_id
   )
     throw new AppError(403, 'WORKSPACE_PAUSED', 'Space นี้พักใช้งานหรือการตั้งค่าไม่ตรงกัน');
@@ -103,8 +114,39 @@ export async function authorizeSpace(
   id?: string,
 ) {
   const context = await spaceServices(root, c, control, id);
+  const central = await control.users.get('users', user.id);
+  if (!user.active || !user.sub || !userDto(central).active || userDto(central).sub !== user.sub)
+    throw forbidden();
+  const owner = isSystemOwner(central);
+  if (
+    owner &&
+    !(await control.forUser(user.id)).some((m) => m.workspace === context.row.control_id)
+  ) {
+    // Airtable linked-record writes need a local User ID. This inactive membership only
+    // supplies that identity; it never grants lasting Admin access after Owner is revoked.
+    await atomic(root, async (db) => {
+      await db.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
+        c.APP_ENV + ':' + context.row.id + ':members',
+      ]);
+      const scoped = control.withDatabase(db);
+      await scoped.requireOwner(user.id);
+      if ((await scoped.forUser(user.id)).some((m) => m.workspace === context.row.control_id))
+        return;
+      await provisionMember(
+        scoped,
+        scoped.repository(context.config, db),
+        context.row.control_id,
+        context.row.id,
+        user.email,
+        'Agent',
+        false,
+      );
+      await audit(db, c, context.row.id, user.id, 'owner-identity-linked');
+    });
+  }
   const member = await control.member(context.row.control_id, user.id);
-  if (!member.active) throw new AppError(403, 'WORKSPACE_PENDING', 'สมาชิก Space นี้ยังไม่ได้รับอนุมัติ');
+  if (!owner && !member.active)
+    throw new AppError(403, 'WORKSPACE_PENDING', 'สมาชิก Space นี้ยังไม่ได้รับอนุมัติ');
   const localUser = userDto(await context.repo.get('users', member.localUserId));
   if (!localUser.active || localUser.sub !== user.sub) throw forbidden();
   return { ...context, user: localUser };
@@ -133,8 +175,8 @@ export async function listSpaces(root: Sql, c: Config, control: ControlPlane, us
       name: String(record.fields.Name || row.name),
       active:
         row.active && record.fields.Active === true && record.fields['Base ID'] === row.base_id,
-      role: member?.role || null,
-      approved: member?.active || false,
+      role: owner ? 'Admin' : member?.role || null,
+      approved: owner || member?.active || false,
       baseId: owner ? row.base_id : undefined,
       isDefault: row.is_default,
     };
@@ -328,7 +370,7 @@ export async function updateMember(
     })
     .strict()
     .parse(input);
-  const space = await spaceServices(root, c, control, id);
+  const space = await spaceServices(root, c, control, id, await control.owner(actor.id));
   await control.requireAdmin(space.row.control_id, actor.id);
   return atomic(root, async (db) => {
     await db.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
@@ -341,6 +383,12 @@ export async function updateMember(
     const target = members.find(
       (_m, i) => String(users[i].fields.Email || '').toLowerCase() === data.email.toLowerCase(),
     );
+    if (target && isSystemOwner(users[members.indexOf(target)]))
+      throw new AppError(
+        409,
+        'SYSTEM_OWNER',
+        'สิทธิ์เจ้าของระบบจัดการจาก Control Base ไม่ใช่บทบาทสมาชิก Space',
+      );
     if (
       target?.active &&
       target.role === 'Admin' &&

@@ -7,6 +7,87 @@ import { bootstrap } from '../../src/server/services/reads';
 const id = '00000000-0000-4000-8000-000000000001';
 const second = '00000000-0000-4000-8000-000000000002';
 const csrf = 'a'.repeat(64);
+test('Owner can enter unjoined Spaces and edit their Admins', async ({ page }, info) => {
+  let role = 'Agent';
+  await page.route('**/api/spaces*', async (route) => {
+    const request = route.request();
+    if (request.method() === 'POST') {
+      const body = request.postDataJSON();
+      expect(request.headers()['x-csrf-token']).toBe(csrf);
+      expect(body.action).toBe('member');
+      expect(body.id).toBe(second);
+      expect(body.data).toMatchObject({
+        email: 'member@example.test',
+        role: 'Admin',
+        active: true,
+      });
+      role = body.data.role;
+      return route.fulfill({ json: { saved: true } });
+    }
+    if (new URL(request.url()).searchParams.has('members'))
+      return route.fulfill({
+        json: {
+          members: [
+            {
+              name: 'สมาชิกทดสอบ',
+              email: 'member@example.test',
+              role,
+              active: true,
+              globallyActive: true,
+            },
+            {
+              name: 'เจ้าของระบบทดสอบ',
+              email: 'owner@example.test',
+              role: 'Admin',
+              active: true,
+              globallyActive: true,
+              systemOwner: true,
+            },
+          ],
+        },
+      });
+    return route.fulfill({
+      json: {
+        enabled: true,
+        owner: true,
+        csrfToken: csrf,
+        items: [
+          {
+            id: second,
+            slug: 'team-b',
+            name: 'ทีมตัวอย่าง B',
+            active: true,
+            approved: false,
+            role: null,
+          },
+        ],
+      },
+    });
+  });
+  await page.goto('/spaces');
+  await expect(page.getByRole('button', { name: 'เข้า Space', exact: true })).toBeEnabled();
+  await page.getByRole('button', { name: 'จัดการ Admin / สมาชิก', exact: true }).click();
+  const member = page.getByRole('row').filter({ hasText: 'member@example.test' });
+  const owner = page.getByRole('row').filter({ hasText: 'owner@example.test' });
+  await expect(owner.getByRole('button', { name: 'ปิดสมาชิก' })).toBeDisabled();
+  await expect(owner.getByRole('button', { name: 'แก้ไขบทบาท' })).toBeDisabled();
+  await member.getByRole('button', { name: 'แก้ไขบทบาท' }).click();
+  await expect(page.locator('input[name=email]')).toHaveValue('member@example.test');
+  await page.getByRole('combobox', { name: 'บทบาท', exact: true }).selectOption('Admin');
+  await page.getByRole('button', { name: 'บันทึกสมาชิก', exact: true }).click();
+  await expect(member.getByRole('cell', { name: /Admin$/ })).toBeVisible();
+  await expect(page.getByRole('status')).toHaveText('บันทึกเรียบร้อย');
+  await expect(page.locator('body')).toHaveJSProperty(
+    'scrollWidth',
+    await page.locator('body').evaluate((el) => el.clientWidth),
+  );
+  await mkdir(resolve('../artifacts/workspaces'), { recursive: true });
+  await page.screenshot({
+    path: resolve('../artifacts/workspaces/owner-admin-' + info.project.name + '.png'),
+    fullPage: true,
+  });
+});
+
 test('Space Admin sees own membership tools and approves pending users; mobile layout stays within screen', async ({
   page,
 }, info) => {

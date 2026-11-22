@@ -22,6 +22,7 @@ type Member = {
   role: string;
   active: boolean;
   globallyActive: boolean;
+  systemOwner?: boolean;
 };
 const fields = [
   ['AIRTABLE_BASE_ID', 'Base ID'],
@@ -40,6 +41,7 @@ export function SpaceHub({ target, next = '/' }: { target?: string; next?: strin
     [message, setMessage] = useState('');
   const [selected, setSelected] = useState<Space | null>(null),
     [members, setMembers] = useState<Member[]>([]);
+  const [editing, setEditing] = useState<Member | null>(null);
   const load = useCallback(async () => {
     const response = await fetch('/api/spaces', { cache: 'no-store' });
     if (response.status === 401) {
@@ -86,6 +88,7 @@ export function SpaceHub({ target, next = '/' }: { target?: string; next?: strin
     }
   }
   async function roster(space: Space) {
+    setEditing(null);
     setSelected(space);
     setMembers([]);
     setError('');
@@ -147,6 +150,9 @@ export function SpaceHub({ target, next = '/' }: { target?: string; next?: strin
       </header>
       <h1>{target ? 'เลือก Space ก่อนเปิดลิงก์' : 'Space ของคุณ'}</h1>
       <p>แต่ละ Space มีสมาชิก งาน และเอกสารของตนเอง การเลือกที่นี่ไม่เปลี่ยน Space สำหรับ LINE AI</p>
+      {state?.owner && (
+        <p>เจ้าของระบบเข้าได้ทุก Space ที่เปิดใช้งาน และจัดการ Admin กับสมาชิกของแต่ละ Space ได้</p>
+      )}
       {error && (
         <p role="alert" className={styles.error}>
           {error}
@@ -189,25 +195,29 @@ export function SpaceHub({ target, next = '/' }: { target?: string; next?: strin
                     </p>
                   )}
                   <p>
-                    {space.role || 'เจ้าของระบบ (ยังไม่เป็นสมาชิก)'} ·{' '}
-                    {!space.active ? 'พักใช้งาน' : space.approved ? 'พร้อมใช้งาน' : 'รออนุมัติ'}
+                    {state.owner ? 'เจ้าของระบบ' : space.role || 'สมาชิก'} ·{' '}
+                    {!space.active
+                      ? 'พักใช้งาน'
+                      : state.owner || space.approved
+                        ? 'พร้อมใช้งาน'
+                        : 'รออนุมัติ'}
                   </p>
                   <button
                     type="button"
                     className="btn primary"
-                    disabled={busy || !space.active || !space.approved}
+                    disabled={busy || !space.active || (!state.owner && !space.approved)}
                     onClick={() => void act('select', space.id)}
                   >
                     เข้า Space
                   </button>
-                  {space.role === 'Admin' && space.approved && space.active && (
+                  {(state.owner || (space.role === 'Admin' && space.approved && space.active)) && (
                     <button
                       type="button"
                       className="btn secondary"
                       disabled={busy}
                       onClick={() => void roster(space)}
                     >
-                      จัดการสมาชิก
+                      {state.owner ? 'จัดการ Admin / สมาชิก' : 'จัดการสมาชิก'}
                     </button>
                   )}
                   {state.owner && (
@@ -220,7 +230,7 @@ export function SpaceHub({ target, next = '/' }: { target?: string; next?: strin
                       {space.active ? 'พัก Space' : 'เปิด Space'}
                     </button>
                   )}
-                  {space.role === 'Admin' && (
+                  {(state.owner || space.role === 'Admin') && (
                     <p>
                       <Link href={'/register?space=' + space.id}>ลิงก์ลงทะเบียนของ Space นี้</Link>
                     </p>
@@ -250,13 +260,13 @@ export function SpaceHub({ target, next = '/' }: { target?: string; next?: strin
                           <br />
                           {m.email}
                         </td>
-                        <td>{m.role}</td>
+                        <td>{m.systemOwner ? 'เจ้าของระบบ' : m.role}</td>
                         <td>{!m.globallyActive ? 'ปิดทั้งระบบ' : m.active ? 'ใช้งาน' : 'รออนุมัติ/ปิด'}</td>
                         <td>
                           <button
                             type="button"
                             className="btn secondary small"
-                            disabled={busy || !m.globallyActive}
+                            disabled={busy || !m.globallyActive || m.systemOwner}
                             onClick={async () => {
                               if (
                                 await act('member', selected.id, {
@@ -270,17 +280,38 @@ export function SpaceHub({ target, next = '/' }: { target?: string; next?: strin
                           >
                             {m.active ? 'ปิดสมาชิก' : 'อนุมัติ'}
                           </button>
+                          <button
+                            type="button"
+                            className="btn secondary small"
+                            disabled={busy || !m.globallyActive || m.systemOwner}
+                            onClick={() => setEditing(m)}
+                          >
+                            แก้ไขบทบาท
+                          </button>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-              <form onSubmit={saveMember} className={styles.form}>
-                <h3>เพิ่มสมาชิกหรือเปลี่ยนบทบาท</h3>
+              <form
+                key={selected.id + ':' + (editing?.email || 'new')}
+                onSubmit={saveMember}
+                className={styles.form}
+              >
+                <h3>{editing ? 'แก้ไขบทบาทสมาชิก' : 'เพิ่มสมาชิกหรือเปลี่ยนบทบาท'}</h3>
+                <p>
+                  เลือก Admin เพื่อให้จัดการ Space นี้ได้ ต้องมี Admin ที่ใช้งานได้อย่างน้อยหนึ่งคนก่อนถอน Admin เดิม
+                </p>
                 <label>
                   อีเมล Google
-                  <input type="email" name="email" required />
+                  <input
+                    type="email"
+                    name="email"
+                    required
+                    defaultValue={editing?.email || ''}
+                    readOnly={!!editing}
+                  />
                 </label>
                 <label>
                   ชื่อ (สำหรับผู้ใช้ใหม่)
@@ -288,18 +319,29 @@ export function SpaceHub({ target, next = '/' }: { target?: string; next?: strin
                 </label>
                 <label>
                   บทบาท
-                  <select name="role" defaultValue="Agent">
+                  <select name="role" defaultValue={editing?.role || 'Agent'}>
                     <option>Agent</option>
                     <option>Secretary</option>
                     <option>Admin</option>
                   </select>
                 </label>
                 <label>
-                  <input type="checkbox" name="active" defaultChecked /> อนุมัติให้ใช้งาน Space นี้
+                  <input type="checkbox" name="active" defaultChecked={editing?.active ?? true} />{' '}
+                  อนุมัติให้ใช้งาน Space นี้
                 </label>
                 <button type="submit" className="btn primary" disabled={busy}>
                   บันทึกสมาชิก
                 </button>
+                {editing && (
+                  <button
+                    type="button"
+                    className="btn secondary"
+                    disabled={busy}
+                    onClick={() => setEditing(null)}
+                  >
+                    ยกเลิกแก้ไข
+                  </button>
+                )}
               </form>
             </section>
           )}

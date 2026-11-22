@@ -43,6 +43,9 @@ export function membership(record: RecordData) {
   };
 }
 export type Membership = ReturnType<typeof membership>;
+export function isSystemOwner(record: RecordData) {
+  return record.fields.Active === true && record.fields['System Role'] === 'Owner';
+}
 export class ControlPlane {
   readonly users: AirtableRepository;
   readonly spaces: AirtableRepository;
@@ -85,7 +88,7 @@ export class ControlPlane {
   }
   async owner(userId: string) {
     const record = await this.users.get('users', userId);
-    return record.fields.Active === true && record.fields['System Role'] === 'Owner';
+    return isSystemOwner(record);
   }
   async requireOwner(userId: string) {
     if (!(await this.owner(userId))) throw forbidden();
@@ -126,10 +129,9 @@ export class ControlPlane {
     return rows[0];
   }
   async requireAdmin(spaceRecordId: string, userId: string) {
-    const [member, user] = await Promise.all([
-      this.member(spaceRecordId, userId),
-      this.users.get('users', userId),
-    ]);
+    const user = await this.users.get('users', userId);
+    if (isSystemOwner(user)) return;
+    const member = await this.member(spaceRecordId, userId);
     if (!member.active || member.role !== 'Admin' || !userDto(user).active) throw forbidden();
     return member;
   }
@@ -169,8 +171,8 @@ export function workspaceRepository(
       fields: {
         ...record.fields,
         ...user.fields,
-        Role: member.role,
-        Active: member.active && user.fields.Active === true,
+        Role: isSystemOwner(user) ? 'Admin' : member.role,
+        Active: isSystemOwner(user) || (member.active && user.fields.Active === true),
       },
     };
   }

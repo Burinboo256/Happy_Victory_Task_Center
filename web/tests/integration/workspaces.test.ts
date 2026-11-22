@@ -283,7 +283,7 @@ test('URL Space overrides cookies while membership, expected ID and scoped CSRF 
     assert.equal(second.row.id, b);
     assert.equal((await ownTask(first.repo, first.user, rid(11))).title, 'SPACE A ONLY');
     assert.equal((await ownTask(second.repo, second.user, rid(11))).title, 'SPACE B ONLY');
-    assert.equal(second.user.role, 'Agent');
+    assert.equal(second.user.role, 'Admin');
     await assert.rejects(requestSpace(f.db, c, f.control, agent, a, 'b'), {
       code: 'WORKSPACE_REQUIRED',
     });
@@ -320,8 +320,108 @@ test('URL Space overrides cookies while membership, expected ID and scoped CSRF 
   }
 });
 
+test('Owner enters every active Space and manages Admins without leaving implicit access after revocation', async () => {
+  const h = await fixture();
+  try {
+    const owner = userDto(h.central.tables.users[0]);
+    h.members.tables.users = h.members.tables.users.filter(
+      (m) => !(String(m.fields.Workspace) === rid(102) && String(m.fields.User) === owner.id),
+    );
+    h.second.tables.users = h.second.tables.users.filter((u) => u.id !== owner.id);
+    const before = h.members.tables.users.length;
+    const spaces = await listSpaces(h.db, c, h.control, owner);
+    assert.equal(spaces.owner, true);
+    assert.equal(spaces.items.length, 2);
+    assert.ok(spaces.items.every((s) => s.role === 'Admin' && s.approved));
+    // Owner can grant or change Admins before ever joining or opening this Space.
+    await h.control.requireAdmin(rid(102), owner.id);
+    await updateMember(h.db, c, h.control, owner, b, {
+      email: 'agent-a@gmail.com',
+      role: 'Admin',
+      active: true,
+    });
+    await updateMember(h.db, c, h.control, owner, b, {
+      email: 'agent-b@gmail.com',
+      role: 'Secretary',
+      active: true,
+    });
+    assert.equal((await h.control.member(rid(102), rid(2))).role, 'Admin');
+    assert.equal((await h.control.member(rid(102), rid(3))).role, 'Secretary');
+    assert.equal((await h.control.member(rid(101), rid(2))).role, 'Agent');
+    await assert.rejects(
+      updateMember(h.db, c, h.control, owner, b, {
+        email: 'agent-a@gmail.com',
+        role: 'Agent',
+        active: true,
+      }),
+      { code: 'LAST_WORKSPACE_ADMIN' },
+    );
+    const context = await authorizeSpace(h.db, c, h.control, owner, b);
+    assert.equal(context.user.role, 'Admin');
+    assert.equal(context.user.active, true);
+    assert.notEqual(context.user.id, owner.id);
+    assert.ok(h.second.tables.users.some((u) => u.id === context.user.id));
+    assert.equal((await ownTask(context.repo, context.user, rid(12))).id, rid(12));
+    assert.equal((await bootstrap(context.repo, context.user)).user.role, 'Admin');
+    const linked = await h.control.member(rid(102), owner.id);
+    assert.equal(linked.role, 'Agent');
+    assert.equal(linked.active, false);
+    await authorizeSpace(h.db, c, h.control, owner, b);
+    assert.equal(h.members.tables.users.length, before + 2);
+    assert.equal(
+      (await h.db.query("SELECT * FROM hvr_workspace_events WHERE action='owner-identity-linked'"))
+        .rows.length,
+      1,
+    );
+    await assert.rejects(
+      updateMember(h.db, c, h.control, userDto(h.central.tables.users[1]), b, {
+        email: owner.email,
+        role: 'Agent',
+        active: false,
+      }),
+      { code: 'SYSTEM_OWNER' },
+    );
+    h.spaces.tables.users[1].fields.Active = false;
+    await assert.rejects(authorizeSpace(h.db, c, h.control, owner, b), {
+      code: 'WORKSPACE_PAUSED',
+    });
+    await updateMember(h.db, c, h.control, owner, b, {
+      email: 'agent-b@gmail.com',
+      role: 'Admin',
+      active: true,
+    });
+    assert.equal((await h.control.member(rid(102), rid(3))).role, 'Admin');
+    await assert.rejects(
+      updateMember(h.db, c, h.control, userDto(h.central.tables.users[1]), b, {
+        email: 'agent-b@gmail.com',
+        role: 'Secretary',
+        active: true,
+      }),
+      { code: 'WORKSPACE_PAUSED' },
+    );
+    h.spaces.tables.users[1].fields.Active = true;
+    h.central.tables.users[0].fields.Active = false;
+    await assert.rejects(authorizeSpace(h.db, c, h.control, owner, b));
+    await assert.rejects(h.control.requireAdmin(rid(102), owner.id));
+    h.central.tables.users[0].fields.Active = true;
+    delete h.central.tables.users[0].fields['System Role'];
+    await assert.rejects(authorizeSpace(h.db, c, h.control, owner, b), {
+      code: 'WORKSPACE_PENDING',
+    });
+    await assert.rejects(h.control.requireAdmin(rid(102), owner.id));
+    const revoked = userDto(await context.repo.get('users', linked.localUserId));
+    assert.equal(revoked.active, false);
+    assert.equal(revoked.role, 'Agent');
+    // An explicitly granted membership is preserved after losing the global Owner role.
+    assert.equal((await authorizeSpace(h.db, c, h.control, owner, a)).user.role, 'Admin');
+  } finally {
+    await h.engine.close();
+  }
+});
+
 test('last Space persists per account and environment; restoration rechecks authorization', async () => {
   const f = await fixture();
+  delete f.central.tables.users[0].fields['System Role'];
   const user = userDto(f.central.tables.users[0]);
   const agent = userDto(f.central.tables.users[1]);
   try {
@@ -403,6 +503,7 @@ test('login resumes last Space without overriding explicit destinations or the m
 
 test('central membership overrides local roles; Base isolation, fresh revocation and last Admin checks', async () => {
   const h = await fixture();
+  delete h.central.tables.users[0].fields['System Role'];
   try {
     const identity = userDto(h.central.tables.users[0]);
     const first = await authorizeSpace(h.db, c, h.control, identity, a);
@@ -538,6 +639,7 @@ test('SQL scopes preserve default data, fail closed without tables, and rollback
 
 test('LINE uses explicit Space: link codes, tickets, replay, ownership and unfollow stay isolated', async () => {
   const h = await fixture();
+  delete h.central.tables.users[0].fields['System Role'];
   const signed = (body: unknown) => {
     const raw = JSON.stringify(body);
     return [

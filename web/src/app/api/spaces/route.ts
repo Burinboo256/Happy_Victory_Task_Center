@@ -13,6 +13,7 @@ import {
   getSpace,
 } from '@/server/workspaces/service';
 import { rememberSpace } from '@/server/workspaces/preference';
+import { isSystemOwner } from '@/server/workspaces/control';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -23,7 +24,13 @@ export function GET(request: Request) {
       return json({ enabled: false, items: [], owner: false, csrfToken: c.csrfToken });
     const id = new URL(request.url).searchParams.get('members');
     if (id) {
-      const space = await spaceServices(c.db, c.config, c.control, id);
+      const space = await spaceServices(
+        c.db,
+        c.config,
+        c.control,
+        id,
+        await c.control.owner(c.user.id),
+      );
       await c.control.requireAdmin(space.row.control_id, c.user.id);
       const members = await c.control.roster(space.row.control_id);
       const users = await c.control.memberUsers(members);
@@ -31,8 +38,9 @@ export function GET(request: Request) {
         members: members.map((m, i) => ({
           email: String(users[i].fields.Email || ''),
           name: String(users[i].fields['Full Name'] || ''),
-          role: m.role,
-          active: m.active,
+          role: isSystemOwner(users[i]) ? 'Admin' : m.role,
+          active: isSystemOwner(users[i]) || m.active,
+          systemOwner: isSystemOwner(users[i]),
           globallyActive: users[i].fields.Active === true,
         })),
       });
