@@ -12,6 +12,7 @@ import type { Sql } from '../db';
 import { AppError, forbidden } from '../errors';
 import { roles } from '../../domain/model';
 import { hash } from '../auth/security';
+import type { RequestReadScope } from '../airtable/read-scope';
 
 export function controlFingerprint(c: Config) {
   return hash(
@@ -61,13 +62,17 @@ export class ControlPlane {
       members: AirtableRepository;
       base?: (c: Config, db: Sql) => AirtableRepository;
     },
+    readScope?: RequestReadScope,
   ) {
-    this.withDatabase = (connection) => new ControlPlane(c, connection, repositories);
-    this.repository = repositories?.base || ((config, root) => new AirtableClient(config, root));
+    const wrap = (repo: AirtableRepository) => readScope?.wrap(repo) || repo;
+    this.withDatabase = (connection) => new ControlPlane(c, connection, repositories, readScope);
+    const base =
+      repositories?.base || ((config: Config, root: Sql) => new AirtableClient(config, root));
+    this.repository = (config, root) => wrap(base(config, root));
     if (repositories) {
-      this.users = repositories.users;
-      this.spaces = repositories.spaces;
-      this.members = repositories.members;
+      this.users = wrap(repositories.users);
+      this.spaces = wrap(repositories.spaces);
+      this.members = wrap(repositories.members);
       return;
     }
     if (!c.AIRTABLE_WORKSPACES_TABLE || !c.AIRTABLE_WORKSPACE_MEMBERS_TABLE)
@@ -82,9 +87,9 @@ export class ControlPlane {
         },
         db,
       );
-    this.users = make(c.AIRTABLE_CONTROL_USERS_TABLE || c.AIRTABLE_USERS_TABLE);
-    this.spaces = make(c.AIRTABLE_WORKSPACES_TABLE);
-    this.members = make(c.AIRTABLE_WORKSPACE_MEMBERS_TABLE);
+    this.users = wrap(make(c.AIRTABLE_CONTROL_USERS_TABLE || c.AIRTABLE_USERS_TABLE));
+    this.spaces = wrap(make(c.AIRTABLE_WORKSPACES_TABLE));
+    this.members = wrap(make(c.AIRTABLE_WORKSPACE_MEMBERS_TABLE));
   }
   async owner(userId: string) {
     const record = await this.users.get('users', userId);
@@ -179,8 +184,10 @@ export function workspaceRepository(
   return {
     async list(table, formula, fields) {
       if (table !== 'users') return raw.list(table, formula, fields);
-      const members = await control.roster(spaceRecordId);
-      const records = await raw.list('users');
+      const [members, records] = await Promise.all([
+        control.roster(spaceRecordId),
+        raw.list('users'),
+      ]);
       const central = new Map((await control.memberUsers(members)).map((u) => [u.id, u]));
       const ids = new Set(members.map((member) => member.localUserId));
       return Promise.all(

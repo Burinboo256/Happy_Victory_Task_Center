@@ -1,16 +1,11 @@
 'use client';
 
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { Brand } from './brand';
 import { CategoryBadge, PriorityBadge, categoryClass } from './task-appearance';
-import { OnboardingPanel } from './onboarding';
-import { CaseWorkflowPanel } from './case-workflow';
-import { TaskEditPanel } from './task-edit';
-import { LineSettings } from './line-settings';
-import { AiLineSettings } from './ai-line-settings';
-import { FormsLibrary } from './forms';
 import { spacePath } from '@/domain/space-link';
 import {
   isManager,
@@ -25,6 +20,26 @@ import {
   type Task,
   type TaskSummary,
 } from '@/domain/model';
+
+const loadingPanel = () => <p role="status">กำลังโหลดส่วนนี้…</p>;
+const OnboardingPanel = dynamic(() => import('./onboarding').then((m) => m.OnboardingPanel), {
+  loading: loadingPanel,
+});
+const CaseWorkflowPanel = dynamic(() => import('./case-workflow').then((m) => m.CaseWorkflowPanel), {
+  loading: loadingPanel,
+});
+const TaskEditPanel = dynamic(() => import('./task-edit').then((m) => m.TaskEditPanel), {
+  loading: loadingPanel,
+});
+const LineSettings = dynamic(() => import('./line-settings').then((m) => m.LineSettings), {
+  loading: loadingPanel,
+});
+const AiLineSettings = dynamic(() => import('./ai-line-settings').then((m) => m.AiLineSettings), {
+  loading: loadingPanel,
+});
+const FormsLibrary = dynamic(() => import('./forms').then((m) => m.FormsLibrary), {
+  loading: loadingPanel,
+});
 
 export type Page =
   | 'dashboard'
@@ -275,10 +290,12 @@ export function Workspace({
     async (signal?: AbortSignal) => {
       const sequence = ++loadSequence.current;
       try {
-        const value: Bootstrap = await request(
-          ['new', 'detail', 'notifications', 'forms'].includes(page)
-            ? '/api/bootstrap?scope=context'
-            : '/api/bootstrap',
+        const value: Bootstrap & { detail?: Detail } = await request(
+          taskId
+            ? '/api/bootstrap?scope=context&taskId=' + encodeURIComponent(taskId)
+            : ['new', 'detail', 'notifications', 'forms'].includes(page)
+              ? '/api/bootstrap?scope=context'
+              : '/api/bootstrap',
           { signal },
         );
         if (signal?.aborted || sequence !== loadSequence.current) return;
@@ -289,7 +306,10 @@ export function Workspace({
         if (spaceSlug && value.workspace?.slug !== spaceSlug)
           throw new Error('ข้อมูล Space ไม่ตรงกับ URL กรุณาเปิดหน้าใหม่');
         activeSpace.current = value.workspace?.id;
-        const nextDetail = taskId ? await request('/api/tasks/' + taskId, { signal }) : null;
+        // Keep the fallback for a browser loaded during a rolling deployment.
+        const nextDetail = taskId
+          ? value.detail || (await request('/api/tasks/' + taskId, { signal }))
+          : null;
         if (signal?.aborted || sequence !== loadSequence.current) return;
         setData(value);
         setDetail(nextDetail);

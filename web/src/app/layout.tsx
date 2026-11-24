@@ -1,7 +1,21 @@
 import type { Metadata } from 'next';
+import localFont from 'next/font/local';
 import './globals.css';
 
 export const dynamic = 'force-dynamic';
+
+const dmSans = localFont({
+  src: './fonts/dm-sans.woff2',
+  variable: '--font-dm-sans',
+  weight: '100 1000',
+  display: 'swap',
+});
+const notoSansThai = localFont({
+  src: './fonts/noto-sans-thai.woff2',
+  variable: '--font-noto-sans-thai',
+  weight: '100 900',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: { default: 'Happy Victory RINLYN Secretary', template: '%s · Happy Victory' },
@@ -10,7 +24,7 @@ export const metadata: Metadata = {
 };
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="th">
+    <html lang="th" className={`${dmSans.variable} ${notoSansThai.variable}`}>
       <body>{children}</body>
     </html>
   );

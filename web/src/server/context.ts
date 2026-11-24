@@ -8,16 +8,20 @@ import { ControlPlane } from './workspaces/control';
 import { modeGuard, workspaceCookie, workspaceCsrf } from './workspaces/service';
 import { requestSpace } from './workspaces/request';
 import { AppError } from './errors';
+import type { RequestReadScope } from './airtable/read-scope';
 
-export async function services() {
+export async function services(readScope?: RequestReadScope) {
   const config = readConfig();
   const db: Sql = getPool(config);
   await modeGuard(db, config);
-  const control = config.WORKSPACES_ENABLED ? new ControlPlane(config, db) : undefined;
-  return { config, db, repo: control?.users || new AirtableClient(config, db), control };
+  const control = config.WORKSPACES_ENABLED
+    ? new ControlPlane(config, db, undefined, readScope)
+    : undefined;
+  const raw = control?.users || new AirtableClient(config, db);
+  return { config, db, repo: control ? raw : readScope?.wrap(raw) || raw, control };
 }
-export async function protectedIdentity() {
-  const context = await services();
+export async function protectedIdentity(readScope?: RequestReadScope) {
+  const context = await services(readScope);
   const token = (await cookies()).get(cookieName(context.config, 'session'))?.value;
   return {
     ...context,
@@ -25,8 +29,8 @@ export async function protectedIdentity() {
     token: token || '',
   };
 }
-export async function protectedContext(explicitSlug?: string) {
-  const identity = await protectedIdentity();
+export async function protectedContext(explicitSlug?: string, readScope?: RequestReadScope) {
+  const identity = await protectedIdentity(readScope);
   const requestHeaders = await headers();
   const slug = explicitSlug ?? requestHeaders.get('x-workspace-slug') ?? undefined;
   if (!identity.control) {

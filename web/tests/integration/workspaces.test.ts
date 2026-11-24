@@ -47,6 +47,9 @@ import { schemaFixture } from '../schema-fixture';
 import { isSpaceSlug, reservedSpaceSlugs } from '../../src/domain/space-link';
 import { requestSpace } from '../../src/server/workspaces/request';
 import { registrationSpace } from '../../src/server/workspaces/registration';
+import { RequestReadScope } from '../../src/server/airtable/read-scope';
+import type { Config } from '../../src/server/config';
+import { taskDetail } from '../../src/server/services/task-detail';
 import {
   rememberSpace,
   resumeSpace,
@@ -166,6 +169,119 @@ async function fixture() {
   );
   return { db, engine, control, central, spaces, members, first, second };
 }
+
+test('request-local reads reduce detail calls without changing records or allowing revoked membership', async () => {
+  const h = await fixture();
+  try {
+    delete h.central.tables.users[0].fields['System Role'];
+    const before = structuredClone([
+      h.central.tables,
+      h.spaces.tables,
+      h.members.tables,
+      h.first.tables,
+      h.second.tables,
+    ]);
+    const repos = {
+      users: h.central.repo,
+      spaces: h.spaces.repo,
+      members: h.members.repo,
+      base: (target: Config) => (target.AIRTABLE_BASE_ID === baseB ? h.second.repo : h.first.repo),
+    };
+    const calls = () => [h.central, h.spaces, h.members, h.first, h.second].flatMap((r) => r.calls);
+    const context = async (control: ControlPlane, user = rid(1), space = a) => {
+      // authenticate() also fetches the central user before authorizing a Space.
+      const identity = userDto(await control.users.get('users', user));
+      return authorizeSpace(h.db, c, control, identity, space);
+    };
+    const oldStart = calls().length;
+    const oldBootstrap = await context(new ControlPlane(c, h.db, repos));
+    const oldData = await bootstrap(oldBootstrap.repo, oldBootstrap.user, 'context');
+    const oldDetail = await taskDetail(await context(new ControlPlane(c, h.db, repos)), rid(11));
+    const oldCalls = calls().length - oldStart;
+
+    const start = calls().length;
+    const scope = new RequestReadScope();
+    const combined = await context(new ControlPlane(c, h.db, repos, scope));
+    const newDetail = await taskDetail(combined, rid(11));
+    const newData = await bootstrap(combined.repo, combined.user, 'context');
+    scope.close();
+    const newCalls = calls().length - start;
+    assert.deepEqual(newDetail, oldDetail);
+    assert.deepEqual({ ...newData, syncedAt: '' }, { ...oldData, syncedAt: '' });
+    assert.equal(oldCalls, 20);
+    assert.equal(newCalls, 9);
+    assert.deepEqual(
+      [h.central.tables, h.spaces.tables, h.members.tables, h.first.tables, h.second.tables],
+      before,
+    );
+    assert.ok(!calls().some((call) => /^(patch|upsert):/.test(call)));
+
+    // Same user and same record ID in another Base must still resolve to that Space.
+    const other = await context(
+      new ControlPlane(c, h.db, repos, new RequestReadScope()),
+      rid(1),
+      b,
+    );
+    assert.equal((await taskDetail(other, rid(11))).task.title, 'SPACE B ONLY');
+    h.members.tables.users[0].fields.Role = 'Agent';
+    const downgraded = await context(new ControlPlane(c, h.db, repos, new RequestReadScope()));
+    assert.equal(downgraded.user.role, 'Agent');
+    await assert.rejects(
+      taskDetail(downgraded, rid(11)),
+      (error: unknown) => error instanceof AppError && error.status === 403,
+    );
+    h.members.tables.users[0].fields.Role = 'Admin';
+    h.members.tables.users[0].fields.Active = false;
+    await assert.rejects(
+      context(new ControlPlane(c, h.db, repos, new RequestReadScope())),
+      (error: unknown) => error instanceof AppError && error.code === 'WORKSPACE_PENDING',
+    );
+    h.members.tables.users[0].fields.Active = true;
+    h.central.tables.users[0].fields.Active = false;
+    await assert.rejects(context(new ControlPlane(c, h.db, repos, new RequestReadScope())));
+  } finally {
+    await h.engine.close();
+  }
+});
+
+test('cached read authorization still denies another Agent task before reading its history', async () => {
+  const h = await fixture();
+  try {
+    const control = new ControlPlane(
+      c,
+      h.db,
+      {
+        users: h.central.repo,
+        spaces: h.spaces.repo,
+        members: h.members.repo,
+        base: () => h.first.repo,
+      },
+      new RequestReadScope(),
+    );
+    const context = await authorizeSpace(h.db, c, control, h.central.agent, a);
+    const start = h.first.calls.length;
+    await assert.rejects(
+      taskDetail(context, rid(12)),
+      (error: unknown) => error instanceof AppError && error.status === 403,
+    );
+    assert.deepEqual(h.first.calls.slice(start), ['list:tasks']);
+    h.spaces.tables.users[0].fields.Active = false;
+    const fresh = new ControlPlane(
+      c,
+      h.db,
+      {
+        users: h.central.repo,
+        spaces: h.spaces.repo,
+        members: h.members.repo,
+        base: () => h.first.repo,
+      },
+      new RequestReadScope(),
+    );
+    await assert.rejects(authorizeSpace(h.db, c, fresh, h.central.agent, a));
+  } finally {
+    await h.engine.close();
+  }
+});
 
 test('workspace migrations match sources and credentials bind to environment and Space', async () => {
   const source = (await readdir('db/migrations'))

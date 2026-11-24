@@ -22,21 +22,23 @@ export async function bootstrap(
   user: User,
   scope: 'full' | 'context' = 'full',
 ) {
-  const records =
+  const [records, userRecords] = await Promise.all([
     scope === 'full'
-      ? await repo.list(
+      ? repo.list(
           'tasks',
           isManager(user) ? undefined : `{Agent Record ID}=${formulaValue(user.id)}`,
           taskSummaryFields,
         )
-      : [];
+      : Promise.resolve([]),
+    isManager(user) ? repo.list('users', undefined, publicUserFields) : Promise.resolve([]),
+  ]);
   const tasks = records
     .filter(
       (r) => isManager(user) || (Array.isArray(r.fields.Agent) && r.fields.Agent.includes(user.id)),
     )
     .map(taskSummaryDto);
   const users = isManager(user)
-    ? (await repo.list('users', undefined, publicUserFields))
+    ? userRecords
         // Airtable draft rows are not directory entries. Authentication still validates userDto.
         .filter((record) => roles.includes(record.fields.Role as User['role']))
         .map(userDto)
@@ -55,7 +57,12 @@ export async function bootstrap(
 export async function detail(repo: AirtableRepository, user: User, id: string) {
   const task = await ownTask(repo, user, id);
   const filter = `{Task Record ID}=${formulaValue(task.id)}`;
-  const updates = (await repo.list('updates', filter))
+  // Ownership is checked before either child collection is requested.
+  const [updateRecords, followupRecords] = await Promise.all([
+    repo.list('updates', filter),
+    isManager(user) ? repo.list('followups', filter) : Promise.resolve([]),
+  ]);
+  const updates = updateRecords
     .filter(
       (r) =>
         Array.isArray(r.fields.Task) &&
@@ -65,7 +72,7 @@ export async function detail(repo: AirtableRepository, user: User, id: string) {
     .map(updateDto)
     .sort((a, b) => (Date.parse(a.createdAt) || 0) - (Date.parse(b.createdAt) || 0));
   const followups = isManager(user)
-    ? (await repo.list('followups', filter))
+    ? followupRecords
         .filter((r) => Array.isArray(r.fields.Task) && r.fields.Task.includes(task.id))
         .map(followupDto)
     : [];

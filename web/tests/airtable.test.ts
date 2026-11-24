@@ -99,7 +99,7 @@ test('250-task bootstrap follows every page with field projection; compose conte
   assert.equal(full.tasks[249].description, 'Searchable task details');
   assert.equal(full.tasksIncluded, true);
   assert.deepEqual(
-    requests.map((r) => r.table),
+    requests.map((r) => r.table).sort(),
     ['tasks', 'tasks', 'tasks', 'users'],
   );
   const projectedBytes = requests
