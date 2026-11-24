@@ -25,9 +25,12 @@ const loadingPanel = () => <p role="status">กำลังโหลดส่ว
 const OnboardingPanel = dynamic(() => import('./onboarding').then((m) => m.OnboardingPanel), {
   loading: loadingPanel,
 });
-const CaseWorkflowPanel = dynamic(() => import('./case-workflow').then((m) => m.CaseWorkflowPanel), {
-  loading: loadingPanel,
-});
+const CaseWorkflowPanel = dynamic(
+  () => import('./case-workflow').then((m) => m.CaseWorkflowPanel),
+  {
+    loading: loadingPanel,
+  },
+);
 const TaskEditPanel = dynamic(() => import('./task-edit').then((m) => m.TaskEditPanel), {
   loading: loadingPanel,
 });
@@ -1547,6 +1550,19 @@ export function Workspace({
           {!data.writesEnabled && (
             <div className="maintenance-notice" role="status">
               ขณะนี้เปิดให้ดูข้อมูล การส่งงานและบันทึกจะเปิดให้ใช้งานเมื่อผู้ดูแลพร้อม
+            </div>
+          )}
+          {data.airtableSync && (
+            <div className="maintenance-notice" role="status">
+              ข้อมูลงานในเว็บบันทึกแล้ว · Airtable: รอส่ง {data.airtableSync.pending} รายการ
+              {data.airtableSync.review > 0 &&
+                ` · ต้องตรวจสอบ ${data.airtableSync.review} รายการ (แจ้ง Admin)`}
+              {data.airtableSync.lastSyncedAt &&
+                ` · ส่งล่าสุด ${new Intl.DateTimeFormat('th-TH', {
+                  dateStyle: 'short',
+                  timeStyle: 'short',
+                  timeZone: 'Asia/Bangkok',
+                }).format(new Date(data.airtableSync.lastSyncedAt))}`}
             </div>
           )}
           {content()}

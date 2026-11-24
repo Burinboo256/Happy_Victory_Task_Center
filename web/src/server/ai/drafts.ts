@@ -16,7 +16,7 @@ import type { AirtableRepository } from '../airtable/client';
 import { userDto } from '../airtable/dto';
 import { forbidden } from '../errors';
 import { requireWrites } from '../runtime';
-import { Journal } from '../operations/journal';
+import { taskOperation } from '../task-store/operation';
 import { mutate, validateMutation } from '../services/mutations';
 import { ownTask } from '../services/reads';
 
@@ -375,13 +375,16 @@ export async function draftPostback(
   ).rows[0];
   if (!claimed) return { text: stale };
   const payload = validateMutation('create', { ...d.fields, referenceUrl: '' }, fresh);
-  const outcome = await new Journal(db, c).execute(
+  const outcome = await taskOperation(
+    db,
+    c,
+    repo,
     user.id,
     d.id,
     'create',
     payload,
     `create:${user.id}:${d.id}`,
-    (steps) => mutate(repo, fresh, 'create', payload, steps),
+    (steps, selectedRepo) => mutate(selectedRepo, fresh, 'create', payload, steps),
   );
   if (outcome.state !== 'completed' || !outcome.result)
     return {

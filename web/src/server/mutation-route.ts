@@ -5,11 +5,12 @@ import { protectedContext } from './context';
 import { requireCsrf } from './auth/security';
 import { readBody, route, json } from './http';
 import { requireWrites } from './runtime';
-import { Journal } from './operations/journal';
+import { taskOperation } from './task-store/operation';
 import { mutate, validateMutation, type Action } from './services/mutations';
 import { ownTask } from './services/reads';
 import { requireTaskReady } from './operations/task-ready';
 import { requireCaseComplete } from './services/case-workflow';
+import { scheduleTaskMirror } from './task-store/background';
 
 export function mutationRoute(
   request: Request,
@@ -29,19 +30,23 @@ export function mutationRoute(
     }
     const resource =
       action === 'create' ? 'create:' + c.user.id + ':' + requestId : 'task:' + parameters.id;
-    const outcome = await new Journal(c.db, c.config).execute(
+    const outcome = await taskOperation(
+      c.db,
+      c.config,
+      c.repo,
       c.user.id,
       requestId,
       action,
       data,
       resource,
-      async (steps) => {
+      async (steps, repo, db) => {
         if (action === 'status' && 'status' in data && data.status === 'Completed')
-          await requireCaseComplete(c.db, c.config, c.repo, c.user, parameters.id);
-        return mutate(c.repo, c.user, action, data, steps);
+          await requireCaseComplete(db, c.config, repo, c.user, parameters.id);
+        return mutate(repo, c.user, action, data, steps);
       },
     );
     if (outcome.result?.id) await ownTask(c.repo, c.user, outcome.result.id);
+    if (outcome.state === 'completed') scheduleTaskMirror(c.db, c.rootDb, c.config, c.repo);
     if (
       ['create', 'status'].includes(action) &&
       outcome.state === 'completed' &&

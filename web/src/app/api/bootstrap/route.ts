@@ -12,6 +12,8 @@ import { safelyDrainLineQueue } from '@/server/line/queue';
 import { rememberAuthorizedSpace } from '@/server/workspaces/preference';
 import { workspaceCookie } from '@/server/workspaces/service';
 import { cookieOptions } from '@/server/auth/security';
+import { NeonTaskRepository } from '@/server/task-store/repository';
+import { taskSyncStatus } from '@/server/task-store/sync';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -33,6 +35,12 @@ export function GET(request: Request) {
       writesEnabled: state.writes,
       formsEnabled: c.config.FORMS_ENABLED,
       workspace: c.config.workspace,
+      ...(c.repo instanceof NeonTaskRepository
+        ? {
+            taskStorage: 'neon',
+            ...(isManager(c.user) ? { airtableSync: await taskSyncStatus(c.db, c.config) } : {}),
+          }
+        : {}),
       ...(detail ? { detail } : {}),
     });
     if (request.headers.has('x-workspace-slug') && c.config.workspace) {

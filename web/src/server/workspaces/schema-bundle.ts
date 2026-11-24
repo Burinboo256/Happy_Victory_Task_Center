@@ -121,4 +121,18 @@ export const operationalMigrations = [
     checksum: 'efb6863b72f56844225f400bd71b305cc9a544566e366fe2291d3e0ebee11907',
     statements: ['ALTER TABLE hvr_ai_events ADD COLUMN task_search_context jsonb'],
   },
+  {
+    name: '016_neon_tasks.sql',
+    checksum: '0928404f9efcefcd985f93a847d4ebf4ef30a3e2d9cad4de732d3df9f1954beb',
+    statements: [
+      "-- Per operational schema. No mode is enabled by this additive migration.\nCREATE TABLE hvr_task_storage (\n  environment text PRIMARY KEY REFERENCES hvr_instances(environment),\n  base_id text NOT NULL,\n  mode text NOT NULL DEFAULT 'airtable' CHECK (mode IN ('airtable','neon')),\n  imported_at timestamptz,\n  imported_hash text,\n  activated_at timestamptz\n)",
+      "CREATE TABLE hvr_task_records (\n  environment text NOT NULL REFERENCES hvr_instances(environment),\n  kind text NOT NULL CHECK (kind IN ('tasks','updates','followups','notifications')),\n  id text NOT NULL CHECK (id ~ '^rec[A-Za-z0-9]{14}$'),\n  fields jsonb NOT NULL,\n  version bigint NOT NULL DEFAULT 1,\n  airtable_id text,\n  key_field text NOT NULL,\n  key_value text NOT NULL,\n  created_at timestamptz NOT NULL DEFAULT clock_timestamp(),\n  PRIMARY KEY(environment,kind,id),\n  UNIQUE(environment,kind,key_field,key_value),\n  UNIQUE(environment,kind,airtable_id)\n)",
+      "CREATE INDEX hvr_task_records_agent ON hvr_task_records(environment,kind,(fields->'Agent'->>0))",
+      "CREATE INDEX hvr_task_records_parent ON hvr_task_records(environment,kind,(fields->'Task'->>0))",
+      "CREATE INDEX hvr_task_records_status ON hvr_task_records(environment,kind,(fields->>'Status'))",
+      "CREATE TABLE hvr_airtable_outbox (\n  environment text NOT NULL,\n  kind text NOT NULL,\n  record_id text NOT NULL,\n  version bigint NOT NULL,\n  fields jsonb NOT NULL,\n  state text NOT NULL DEFAULT 'pending' CHECK (state IN ('pending','synced','review')),\n  attempts integer NOT NULL DEFAULT 0,\n  next_attempt_at timestamptz NOT NULL DEFAULT clock_timestamp(),\n  last_synced_at timestamptz,\n  error_code text,\n  PRIMARY KEY(environment,kind,record_id,version),\n  FOREIGN KEY(environment,kind,record_id) REFERENCES hvr_task_records(environment,kind,id)\n)",
+      'CREATE INDEX hvr_airtable_outbox_due ON hvr_airtable_outbox(environment,state,next_attempt_at)',
+      "CREATE TABLE hvr_task_sync_reviews (\n  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,\n  environment text NOT NULL,\n  kind text NOT NULL,\n  record_id text NOT NULL,\n  version bigint NOT NULL,\n  evidence text NOT NULL,\n  resolution text NOT NULL CHECK(resolution IN ('confirmed','retry')),\n  created_at timestamptz NOT NULL DEFAULT clock_timestamp()\n)",
+    ],
+  },
 ] as const;

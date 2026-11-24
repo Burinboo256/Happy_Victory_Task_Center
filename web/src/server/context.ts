@@ -9,6 +9,7 @@ import { modeGuard, workspaceCookie, workspaceCsrf } from './workspaces/service'
 import { requestSpace } from './workspaces/request';
 import { AppError } from './errors';
 import type { RequestReadScope } from './airtable/read-scope';
+import { taskRepository } from './task-store/repository';
 
 export async function services(readScope?: RequestReadScope) {
   const config = readConfig();
@@ -18,7 +19,8 @@ export async function services(readScope?: RequestReadScope) {
     ? new ControlPlane(config, db, undefined, readScope)
     : undefined;
   const raw = control?.users || new AirtableClient(config, db);
-  return { config, db, repo: control ? raw : readScope?.wrap(raw) || raw, control };
+  const repo = control ? raw : await taskRepository(db, config, readScope?.wrap(raw) || raw);
+  return { config, db, repo, control };
 }
 export async function protectedIdentity(readScope?: RequestReadScope) {
   const context = await services(readScope);

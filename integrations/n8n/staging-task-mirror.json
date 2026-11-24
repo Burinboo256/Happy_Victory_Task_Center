@@ -1,0 +1,15 @@
+{
+  "name": "RINLYN Staging — Airtable Task Mirror",
+  "active": false,
+  "nodes": [
+    {"id":"schedule","name":"Every minute","type":"n8n-nodes-base.scheduleTrigger","typeVersion":1.2,"position":[0,0],"parameters":{"rule":{"interval":[{"field":"minutes","minutesInterval":1}]}}},
+    {"id":"spaces","name":"Staging Spaces only","type":"n8n-nodes-base.code","typeVersion":2,"position":[240,0],"parameters":{"jsCode":"return ['00000000-0000-4000-8000-000000000001','e023892a-33a9-485d-8e5a-b352eb0e480f'].map(workspaceId => ({json:{workspaceId}}));"}},
+    {"id":"drain","name":"Drain staging outbox","type":"n8n-nodes-base.httpRequest","typeVersion":4.2,"position":[480,0],"retryOnFail":true,"maxTries":3,"waitBetweenTries":5000,"parameters":{"method":"POST","url":"https://happy-victory-task-center-git-staging-burin.vercel.app/api/internal/task-sync","authentication":"genericCredentialType","genericAuthType":"httpHeaderAuth","sendBody":true,"specifyBody":"json","jsonBody":"={{ { workspaceId: $json.workspaceId } }}","options":{"timeout":55000}}},
+    {"id":"notes","name":"Staging setup","type":"n8n-nodes-base.stickyNote","typeVersion":1,"position":[0,240],"parameters":{"width":700,"height":260,"content":"## Staging only\nAttach a new Header Auth credential: Authorization = Bearer <TASK_SYNC_SECRET from Staging>. Keep secrets out of workflow JSON. Save and publish this separate workflow. Never replace the production LINE AI workflow.\n\nThe response contains queue counts only. Alert on nonzero review or missed executions. Test recovery without an open browser. See docs/neon-primary-tasks.md. Both Space IDs above are Staging registry IDs, scoped by the staging endpoint and database."}}
+  ],
+  "connections": {
+    "Every minute":{"main":[[{"node":"Staging Spaces only","type":"main","index":0}]]},
+    "Staging Spaces only":{"main":[[{"node":"Drain staging outbox","type":"main","index":0}]]}
+  },
+  "settings":{"executionOrder":"v1","timezone":"Asia/Bangkok"}
+}

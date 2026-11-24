@@ -37,6 +37,7 @@ const schema = z.object({
     .regex(/^U[a-f0-9]{32}$/)
     .optional(),
   CRON_SECRET: z.string().min(32).optional(),
+  TASK_SYNC_SECRET: z.string().min(32).optional(),
   AI_LINE_ENABLED: flag,
   FORMS_ENABLED: flag,
   AI_FORMS_ENABLED: flag,

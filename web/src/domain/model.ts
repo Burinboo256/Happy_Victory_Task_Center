@@ -91,6 +91,8 @@ export interface TaskUpdate {
   newStatus: string;
 }
 export interface Bootstrap {
+  taskStorage?: 'neon';
+  airtableSync?: { pending: number; review: number; lastSyncedAt: string | null };
   workspace?: { id: string; name: string; slug?: string };
   user: Pick<User, 'id' | 'name' | 'email' | 'role'>;
   users: PublicUser[];

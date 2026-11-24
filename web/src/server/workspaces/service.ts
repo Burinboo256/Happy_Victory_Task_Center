@@ -19,6 +19,7 @@ import { baseCredentials, decryptCredentials, encryptCredentials } from './crede
 import { workspaceDatabase, createOperationalSchema } from './database';
 import { verifyInstance } from '../runtime';
 import { isSpaceSlug } from '../../domain/space-link';
+import { taskRepository } from '../task-store/repository';
 
 export const workspaceCookie = (c: Config) =>
   `${c.APP_ORIGIN.startsWith('https:') ? '__Host-' : ''}hvr-space`;
@@ -103,7 +104,11 @@ export async function spaceServices(
   await verifyInstance(db, config);
   // Rate limiting is shared by Base ID in the control database, never split by Workspace schema.
   const rawRepo = control.repository(config, root);
-  const repo = workspaceRepository(rawRepo, control, row.control_id);
+  const repo = await taskRepository(
+    db,
+    config,
+    workspaceRepository(rawRepo, control, row.control_id),
+  );
   return { row, config, db, repo, rawRepo };
 }
 export async function authorizeSpace(
