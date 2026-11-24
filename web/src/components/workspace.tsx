@@ -1552,19 +1552,6 @@ export function Workspace({
               ขณะนี้เปิดให้ดูข้อมูล การส่งงานและบันทึกจะเปิดให้ใช้งานเมื่อผู้ดูแลพร้อม
             </div>
           )}
-          {data.airtableSync && (
-            <div className="maintenance-notice" role="status">
-              Airtable อัปเดตเบื้องหลัง: รอส่ง {data.airtableSync.pending} รายการ
-              {data.airtableSync.review > 0 &&
-                ` · ต้องตรวจสอบ ${data.airtableSync.review} รายการ (แจ้ง Admin)`}
-              {data.airtableSync.lastSyncedAt &&
-                ` · ส่งล่าสุด ${new Intl.DateTimeFormat('th-TH', {
-                  dateStyle: 'short',
-                  timeStyle: 'short',
-                  timeZone: 'Asia/Bangkok',
-                }).format(new Date(data.airtableSync.lastSyncedAt))}`}
-            </div>
-          )}
           {content()}
           <footer className="footer">
             <span>

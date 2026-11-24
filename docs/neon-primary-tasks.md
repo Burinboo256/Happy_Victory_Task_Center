@@ -20,7 +20,7 @@ The worker serializes delivery per Space without locking user writes while waiti
 
 Confirmed transient rejection retries with backoff. Ambiguous writes (including a lost response) enter `review` instead of allowing a newer update to overtake them. Review requires an operator to confirm the earlier invocation stopped, record evidence, and compare upstream fields. Matching writes are acknowledged; otherwise the same event is requeued. No event is silently discarded.
 
-Managers see pending/review counts and the latest successful delivery time in the web application. That timestamp alone is not a claim that the entire Base is current; pending/review counts must also be zero. The outbox is not a substitute for independent backups.
+The workspace no longer displays the Airtable synchronization banner (25 November 2026, requested UI simplification). Pending/review counts and the latest successful delivery time remain available to authorized managers in the bootstrap API and to operators in the worker response/n8n execution output. That timestamp alone is not a claim that the entire Base is current; pending/review counts must also be zero. Background delivery and recovery scheduling are unchanged. The outbox is not a substitute for independent backups.
 
 ## Staging operation
 
