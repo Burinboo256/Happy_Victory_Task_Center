@@ -1,5 +1,5 @@
 import type { Config } from '../config';
-import type { Sql } from '../db';
+import { rateLimitDatabase, type Sql } from '../db';
 import { AppError, UncertainWrite } from '../errors';
 import { z } from 'zod';
 
@@ -31,7 +31,9 @@ export class AirtableClient implements AirtableRepository {
     private config: Config,
     private db: Sql,
     private transport: typeof fetch = fetch,
-  ) {}
+  ) {
+    this.db = rateLimitDatabase(db);
+  }
   private async slot() {
     const result = await this.db.query(
       `INSERT INTO hvr_rate_limits(base_id,next_at)

@@ -1,4 +1,4 @@
-import { Pool, type PoolClient, type QueryResult, type QueryResultRow } from 'pg';
+import { Pool, type PoolClient, type PoolConfig, type QueryResult, type QueryResultRow } from 'pg';
 import type { Config } from './config';
 
 export interface Sql {
@@ -19,19 +19,42 @@ export async function atomic<T>(db: Sql, work: (connection: Sql) => Promise<T>):
     throw new Error('A transactional database is required');
   return transaction(db as Pool, work);
 }
-const pools = new Map<string, Pool>();
+// HTTP integrations can run while all application connections are checked out.
+// Their short, autocommit rate-limit queries must not wait for those transactions
+// (or retain a rate-limit row lock across an external HTTP request).
+export class ApplicationPool extends Pool {
+  readonly rateLimits: Pool;
+  constructor(options: PoolConfig) {
+    super(options);
+    this.rateLimits = new Pool({ ...options, max: 2 });
+    this.on('error', () => console.error('database_pool_error'));
+    this.rateLimits.on('error', () => console.error('database_rate_limit_pool_error'));
+  }
+  end(): Promise<void>;
+  end(callback: () => void): void;
+  end(callback?: () => void): Promise<void> | void {
+    const closing = Promise.all([super.end(), this.rateLimits.end()]).then(() => undefined);
+    if (callback) {
+      void closing.then(callback);
+      return;
+    }
+    return closing;
+  }
+}
+export const rateLimitDatabase = (db: Sql): Sql =>
+  db instanceof ApplicationPool ? db.rateLimits : db;
+
+const pools = new Map<string, ApplicationPool>();
 export function getPool(config: Pick<Config, 'DATABASE_URL'>) {
   let pool = pools.get(config.DATABASE_URL);
   if (!pool) {
-    pool = new Pool({
+    pool = new ApplicationPool({
       connectionString: config.DATABASE_URL,
       max: 3,
       connectionTimeoutMillis: 5000,
       idleTimeoutMillis: 30000,
       allowExitOnIdle: true,
     });
-    // Pool errors must never log a connection string or SQL payload.
-    pool.on('error', () => console.error('database_pool_error'));
     pools.set(config.DATABASE_URL, pool);
   }
   return pool;

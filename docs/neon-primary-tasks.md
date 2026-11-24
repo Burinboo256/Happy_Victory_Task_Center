@@ -71,6 +71,12 @@ This release removes Airtable business-record reads/writes from the normal reque
 
 Relevant references: [Airtable API limits](https://support.airtable.com/articles/7735693959-managing-api-call-limits-in-airtable), [Neon latency](https://neon.com/docs/connect/connection-latency), [Vercel Cron limits](https://vercel.com/docs/schedules/cron-jobs/usage-and-pricing).
 
+### Connection capacity
+
+Application transactions use up to three PostgreSQL connections per warm server instance. Airtable's short rate-limit queries have a separate pool capped at two, for a total ceiling of five per database URL per instance. This prevents live owner checks or mirror HTTP requests from waiting for a connection held by their own transaction. Rate-limit rows still live in the shared control schema and commit before HTTP; no rate-limit row lock is held across the network request. Size Neon connection capacity for the number of concurrent instances before Production, rather than increasing these limits without measurement. See [node-postgres pooling](https://node-postgres.com/features/pooling).
+
+The real PostgreSQL regression fills all three application connections with concurrent Secretary creates, checks owners through the real Airtable client with a synthetic HTTP transport, and verifies that all commits finish. A subsequent Active revocation is rejected. Both pools are closed together by operational tools.
+
 ## Staging evidence — 24 November 2026
 
 - Read-only encrypted PostgreSQL dump and network-isolated restore passed for 63 existing tables and constraints across both operational schemas. Backup run `092ad81a-0e7c-47dd-bef0-bb90cecc6e65`; only Neon-specific `pg_attver` storage statements were stripped from the local restore SQL, while the original archive was preserved. Airtable task snapshots were separately encrypted and verified before import.
