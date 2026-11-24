@@ -51,7 +51,7 @@ export function documentIntent(question: string, memory: MemoryTurn[] = []) {
   );
 }
 export function mixedDocumentQuestion(question: string) {
-  return /hvr-\d+|rec[a-z0-9]{14}|สรุปงาน|สถานะงาน|สถานะเคส|เคส(?:นี้|ไหน)|งาน(?:วันนี้|ลูกค้า|ตัวแทน)/i.test(
+  return /hvr-\d+|rn-[a-z0-9]{14}|rec[a-z0-9]{14}|สรุปงาน|สถานะงาน|สถานะเคส|เคส(?:นี้|ไหน)|งาน(?:วันนี้|ลูกค้า|ตัวแทน)/i.test(
     question,
   );
 }
@@ -63,7 +63,7 @@ export function documentSearchPhrase(question: string) {
     .replace(/หักบัญชี|หักชำระ|\b(?:dda|dca)\b/gi, 'หักบัญชี')
     .replace(/(?:ขอ)?ประวัติ(?:การรักษา)?/g, 'ขอประวัติ');
   return normalizeDocumentText(phrase)
-    .replace(/hvr-\d+|rec[a-z0-9]{14}/gi, '')
+    .replace(/hvr-\d+|rn-[a-z0-9]{14}|rec[a-z0-9]{14}/gi, '')
     .replace(
       /ขอเอกสารที่ฉันติดดาวไว้|รายการโปรด|ที่ฉันติดดาวไว้|ติดดาว|ใช้บ่อย|มีอะไรบ้าง|มีไหม|อะไรบ้าง|ขอ(?:ลิงก์|เอกสาร|ฟอร์ม|แบบฟอร์ม)|ช่วย(?:หา|ค้นหา)|แบบฟอร์ม|เอกสาร|ฟอร์ม|ลิงก์|เกี่ยวกับ|กรุณา|หน่อย|ครับ|ค่ะ|คะ|ได้ไหม|ไหม|สำหรับ|ต้องใช้|อยากได้/g,
       ' ',

@@ -128,7 +128,9 @@ export async function rememberReply(
   ).rows[0];
   if (!row) return; // Clear/disconnect during the external send must never recreate memory.
   const refs: TaskRef[] = row.task_refs;
-  const mentioned = new Set(answer.toLowerCase().match(/hvr-\d+|rec[a-z0-9]{14}/g) || []);
+  const mentioned = new Set(
+    answer.toLowerCase().match(/hvr-\d+|rn-[a-z0-9]{14}|rec[a-z0-9]{14}/g) || [],
+  );
   const focus = refs.filter(
     (r) => mentioned.has(r.code.toLowerCase()) || mentioned.has(r.id.toLowerCase()),
   );

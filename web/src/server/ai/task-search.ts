@@ -22,7 +22,11 @@ export function taskSearchIntent(question: string) {
     )
   )
     return false;
-  if (/hvr-\d+|rec[a-z0-9]{14}|เคสนี้|เคสนั้น|งานนี้|งานนั้น|รายการนี้|รายการนั้น|^แล้ว/i.test(question))
+  if (
+    /hvr-\d+|rn-[a-z0-9]{14}|rec[a-z0-9]{14}|เคสนี้|เคสนั้น|งานนี้|งานนั้น|รายการนี้|รายการนั้น|^แล้ว/i.test(
+      question,
+    )
+  )
     return false;
   // General daily totals keep their existing summary path. Qualifiers select the search path.
   return /ค้น|หา(?:งาน|เคส)|ติดตาม(?:งาน|เคส)|สถานะ(?:งาน|เคส)|(?:งาน|เคส).*(?:ไหน|อะไร|ที่|เกี่ยว|ของ)|ยังไม่(?:เสร็จ|จบ|ได้)|รอเอกสาร|ขาดเอกสาร|คงค้าง|งานค้าง|ถึงไหน/.test(

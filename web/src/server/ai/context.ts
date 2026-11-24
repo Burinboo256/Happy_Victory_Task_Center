@@ -73,7 +73,7 @@ export async function aiContext(
         names.set(r.id, userDto(r).name);
     }
   const q = question.toLocaleLowerCase();
-  const codes = q.match(/hvr-\d+|rec[a-z0-9]{14}/g);
+  const codes = q.match(/hvr-\d+|rn-[a-z0-9]{14}|rec[a-z0-9]{14}/g);
   const turns = authorizedMemory(
     memory,
     tasks.map((t) => t.id),
@@ -191,7 +191,7 @@ export async function aiContext(
       included: items.length,
       truncated: matched > items.length,
       items,
-      limitations: `ไม่มีรายละเอียดส่วนตัว เอกสารแนบ หรือข้อความอัปเดตในคำตอบนี้ ยอดรวมเป็นภาพรวมตามสิทธิ์ ส่วนรายการกรองตามคำถามและแสดงได้ไม่เกิน ${limit} งาน หากต้องการเคสเฉพาะให้ระบุรหัส HVR`,
+      limitations: `ไม่มีรายละเอียดส่วนตัว เอกสารแนบ หรือข้อความอัปเดตในคำตอบนี้ ยอดรวมเป็นภาพรวมตามสิทธิ์ ส่วนรายการกรองตามคำถามและแสดงได้ไม่เกิน ${limit} งาน หากต้องการเคสเฉพาะให้ระบุรหัสงาน`,
     },
   };
 }

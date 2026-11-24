@@ -68,6 +68,11 @@ test('Neon cutover preserves records, authorization, atomic writes, AI reads and
     await assert.rejects(run({ ...create, title: 'changed' }), { code: 'IDEMPOTENCY_CONFLICT' });
     const taskId = result.result.id;
     const task = await repo.get('tasks', taskId);
+    const byCode = await aiContext(db, config, repo, h.agent, 'สถานะ ' + task.fields['Task ID']);
+    assert.deepEqual(
+      byCode.taskRefs.map((t) => t.id),
+      [taskId],
+    );
     assert.ok(task.fields['Created At']);
     assert.equal(task.fields['Last Update'], 'neon:1');
     assert.equal((await repo.list('updates', `{Task Record ID}="${taskId}"`)).length, 1);
