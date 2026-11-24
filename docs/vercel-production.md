@@ -8,7 +8,8 @@ Space `rinlyn` ย้ายงานเดิม 29 งาน พร้อมป
 - แก้ข้อมูลงานผ่านเว็บ; Airtable งานเป็นสำเนาซิงก์เบื้องหลัง ส่วนผู้ใช้/Active/Role/สมาชิก/Space ยังคงควบคุมผ่าน Airtable Control Base
 - หลังบันทึกเริ่มซิงก์ทันทีแบบ best effort; n8n Production workflow แยกตั้งรอบกู้คืน 30 นาทีและ Publish แล้ว ทดสอบเรียก worker ส่งงานสมมติสถานะยกเลิกถึง Airtable สำเร็จ คิว pending/review เป็นศูนย์ก่อนเปิดรับงาน
 - สำรองเข้ารหัสหลังพัก writes และซ้อม restore แบบแยกเครือข่ายผ่าน 71 ตาราง/constraints; ข้อมูลเก่าที่ไม่มีลิงก์งาน 13 รายการเก็บไว้ตามเดิม ไม่ลบหรือผูกกับงานอื่น
-- ทดสอบ HTTP ผ่าน session ชั่วคราวของ Admin/Secretary/Agent และเพิกถอนแล้ว ไม่ใช่การ Login Google หรือส่ง LINE จริงรอบใหม่ ตัวตั้งเวลา Staging รันเองผ่านแล้วและหยุดหลังทดสอบ ส่วนการตรวจ execution อัตโนมัติ Production ผ่าน Chrome ยังไม่จบเพราะเครื่องมือหยุดตรวจ URL; ไม่เท่ากับยังไม่ได้ Publish
+- ทดสอบ HTTP ผ่าน session ชั่วคราวของ Admin/Secretary/Agent และเพิกถอนแล้ว ไม่ใช่การ Login Google หรือส่ง LINE จริงรอบใหม่ ตัวตั้งเวลา Staging รันเองผ่านแล้วและหยุดหลังทดสอบ
+- **ตรวจ n8n ครบเมื่อ 25 พฤศจิกายน:** Production รันอัตโนมัติสำเร็จต่อเนื่อง 9 รอบ ทุก 30 นาที ตั้งแต่ 24 พ.ย. 22:53 ถึง 25 พ.ย. 02:53 น. (เวลาไทย), executions 1452–1460; รอบล่าสุดใช้เวลา 6.8 วินาที และตอบ `processed=0`, `pending=0`, `review=0` เพราะไม่มีงานรอส่ง ปิดข้อค้างเรื่องตรวจรอบตั้งเวลาแล้ว ดู [หลักฐาน](neon-primary-tasks.md#production-scheduler-verification--25-november-2026)
 
 ดู [หลักฐาน การซิงก์ และวิธีกู้คืน](neon-primary-tasks.md#production-evidence--24-november-2026) ก่อนแก้ config หรือ rollback ห้ามย้อนรุ่นเว็บก่อนรองรับ Neon หรือสลับ mode กลับ Airtable โดยตรง
 
