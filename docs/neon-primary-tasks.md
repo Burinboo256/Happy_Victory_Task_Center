@@ -1,6 +1,6 @@
 # Neon primary tasks and Airtable mirror
 
-Status: implementation and Staging rehearsal in progress, 24 November 2026. Production is not authorized for this release. The existing Airtable Control Base remains authoritative for users, Active, roles, memberships and Spaces.
+Status: Neon activated and HTTP/recovery rehearsal passed on both Staging Spaces, 24 November 2026. Independent n8n scheduling is prepared but **not published** because Computer Use stopped on URL verification. Production remains unchanged and is not authorized for this release. The existing Airtable Control Base remains authoritative for users, Active, roles, memberships and Spaces.
 
 ## Data ownership
 
@@ -70,3 +70,26 @@ Release blockers: missing independent recovery scheduling, unresolved mirror err
 This release removes Airtable business-record reads/writes from the normal request path. Control authorization remains live, so its latency remains. Task list projections are indexed by owner/parent/status, but the current dashboard and AI compatibility path still loads the complete authorized summary set. Server-side paging with accurate aggregate totals and SQL-based Thai search is a separate follow-up; do not truncate data to simulate a speed improvement.
 
 Relevant references: [Airtable API limits](https://support.airtable.com/articles/7735693959-managing-api-call-limits-in-airtable), [Neon latency](https://neon.com/docs/connect/connection-latency), [Vercel Cron limits](https://vercel.com/docs/schedules/cron-jobs/usage-and-pricing).
+
+## Staging evidence — 24 November 2026
+
+- Read-only encrypted PostgreSQL dump and network-isolated restore passed for 63 existing tables and constraints across both operational schemas. Backup run `092ad81a-0e7c-47dd-bef0-bb90cecc6e65`; only Neon-specific `pg_attver` storage statements were stripped from the local restore SQL, while the original archive was preserved. Airtable task snapshots were separately encrypted and verified before import.
+- RINLYN imported 15 tasks / 30 updates / 4 followups / 5 notifications; Space B imported 3 / 7 / 1 / 1. Snapshot hashes matched again at activation. No old tasks or Airtable records were deleted/recreated.
+- Real Staging HTTP tests used three short-lived synthetic sessions for the existing Secretary/Agent A/Agent B accounts. All were revoked. They verified idempotent creation, ownership, cross-Space rejection, hidden private comments, incomplete-checklist rejection, successful completion after mandatory checklist entries, AI context reads, authenticated worker execution and the final Airtable status. Two clearly marked `[NEON STAGING TEST]` tasks were retained as test evidence. Existing task fields were unchanged.
+- Real Staging recovery rehearsal injected a known temporary rejection and then a lost response **only for the marked synthetic task**. The independent HTTP worker recovered the former; field comparison acknowledged the latter without duplication. Pending/review counts finished at zero. This proves the endpoint and durable queue, not the unpublished scheduler or a live LINE OA.
+- Latest three HTTP samples: overview/list 1957 / 2042 / 1958 ms; detail 1967 / 1964 / 1983 ms. These are a small sample after warm-up with 16 tasks before the second synthetic creation, not browser paint or a production SLA. Live authorization still accounted for about 1.2 seconds. Earlier post-optimization medians were 2461 / 3082 ms on 15 tasks; data sets and request timing differ, so percentages are indicative only.
+- Core release CI [45411188167](https://github.com/Burinboo256/Happy_Victory_Task_Center/actions/runs/45411188167) passed: 39 unit, 85 PGlite integration, 12 PostgreSQL, 92 browser, 21 HTTP API, synthetic load and 69 legacy tests. Additional RN-code matching in LINE task search/memory has regression coverage. Check the latest staging commit's CI before promotion.
+- Production alias remained `dpl_HbWZNsLS7kWoPMANkAgYVBXC1osg`; remote `main` remained `a4a924ddaca7beee088fa859d1873700ca169a2e`. No Production database, Base, credentials, configuration or deployment was changed.
+
+Ignored evidence: `artifacts/vercel/neon-staging-{backup-latest,prepare,activate,smoke,recovery}.json`. Secret configuration and encrypted snapshots must not be committed. The independent scheduler template is [staging-task-mirror.json](../integrations/n8n/staging-task-mirror.json); attach the staging-only Header Auth credential and publish a separate workflow, then verify timed execution without browser traffic before closing this release gate.
+
+## ก่อนขึ้น Production — ต้องตรวจร่วมกันก่อน
+
+1. สำรอง Neon และ Airtable ของ **ทุก Space** พร้อมซ้อมกู้คืน โดยเก็บกุญแจแยกจากชุดสำรอง
+2. ตรวจผู้ที่แก้ข้อมูลงานใน Airtable และ Automation เดิม ให้ย้ายการแก้งานมาเว็บ; Active/Role/สมาชิก/Space ยังคงแก้ผ่าน Control Base
+3. เปิดตัวตั้งเวลา n8n แยกตาม environment และตรวจว่าเรียกเองได้จริงเมื่อไม่มีคนเปิดเว็บ รวมการแจ้งเตือนคิวค้าง
+4. วางช่วงพักการเขียนเฉพาะ Space ที่นำร่อง รอคำขอเดิมจบ แล้วนำเข้าข้อมูลและตรวจจำนวน/ฟิลด์/รหัส/Checklist/ประวัติ/ลิงก์เดิมให้ครบ
+5. เปิด Neon ทีละ Space เมื่อข้อมูลตรงกันเท่านั้น ทดสอบสิทธิ์และ LINE จริงก่อนขยาย; Airtable เป็นสำเนาที่อาจตามหลังเว็บ จึงต้องดูเวลาซิงก์และรายการค้างประกอบ
+6. หากมีปัญหา ให้พัก writes และใช้ release ที่เข้าใจ Neon mode แก้ต่อก่อน ห้ามย้อนเว็บเก่าหรือสลับกลับ Airtable ขณะมีข้อมูลรอซิงก์ การย้อนแหล่งข้อมูลต้อง reconcile ข้อมูลใหม่และรักษาลิงก์งานใหม่ด้วย
+
+ขั้นตอน Production ข้างต้นเป็นแผนเท่านั้น ยังไม่ได้ดำเนินการ และเครื่องมือซ้อมในรุ่นนี้ปฏิเสธ environment Production โดยตั้งใจ

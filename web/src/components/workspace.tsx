@@ -1554,7 +1554,7 @@ export function Workspace({
           )}
           {data.airtableSync && (
             <div className="maintenance-notice" role="status">
-              ข้อมูลงานในเว็บบันทึกแล้ว · Airtable: รอส่ง {data.airtableSync.pending} รายการ
+              Airtable อัปเดตเบื้องหลัง: รอส่ง {data.airtableSync.pending} รายการ
               {data.airtableSync.review > 0 &&
                 ` · ต้องตรวจสอบ ${data.airtableSync.review} รายการ (แจ้ง Admin)`}
               {data.airtableSync.lastSyncedAt &&
