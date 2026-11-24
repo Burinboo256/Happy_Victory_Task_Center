@@ -2,7 +2,7 @@
 
 ## Project Structure & Architecture
 
-RINLYN Secretary runs from `web/` on Vercel. Airtable stores business records; Neon PostgreSQL stores sessions, operation journals, workflows, LINE bindings, AI memory, and document metadata, versions, and favorites. Documents open from Allianz or Google Drive URLs; do not store file contents in the application.
+RINLYN Secretary runs from `web/` on Vercel. Task storage switches per Space: activated Spaces use Neon for tasks/history/followups/notifications and an asynchronous Airtable mirror; other Spaces retain Airtable. Airtable Control Base remains authoritative for users, roles, Active, memberships, and Spaces. Neon also stores sessions, operation journals, workflows, LINE bindings, AI memory, and document metadata, versions, and favorites. Documents open from Allianz or Google Drive URLs; do not store file contents in the application.
 
 - `web/src/app/`: routes; `components/`: interface; `domain/`: workflow rules; `server/`: authentication, integrations, and services.
 - `web/db/migrations/`, `web/tests/`, and `web/tools/`: migrations, tests, and operational utilities.
@@ -32,7 +32,7 @@ Use `node:test` (`*.test.ts`), PGlite, and Playwright as appropriate. Cover owne
 
 ## Configuration & Deployment
 
-Keep secrets in ignored environment files and hosting configuration. Separate development, staging, and production credentials. Vercel Root Directory is `web/`; consult `docs/vercel-production.md` and deployment/recovery runbooks. Early README deployment snapshots may be outdated. Keep authorization server-side and legacy writes paused after cutover.
+Keep secrets in ignored environment files and hosting configuration. Separate development, staging, and production credentials. Vercel Root Directory is `web/`; consult `docs/vercel-production.md` and `docs/neon-primary-tasks.md`. Early README deployment snapshots may be outdated. Keep authorization server-side and legacy writes paused after cutover. Never switch Neon Spaces back to Airtable or deploy a pre-Neon writer without a reconciled migration preserving new task IDs.
 
 ## Manuals & Videos
 

@@ -1,5 +1,17 @@
 # สถานะ production
 
+## งานใช้ Neon เป็นฐานหลัก — 24 พฤศจิกายน 2569
+
+Space `rinlyn` ย้ายงานเดิม 29 งาน พร้อมประวัติ 153 รายการ นัดติดตาม 14 รายการ และการแจ้งเตือน 76 รายการไป Neon แล้ว ตรวจ hash ทุกฟิลด์/ID ตรงกับ snapshot ก่อนย้าย เปิด `task_writes=true`, คง `jobs=false` ส่วน `rinlyn-bu` ยังพักไว้และใช้ Airtable mode ตามเดิม
+
+- Release `c0875dd` / deployment `dpl_3p1hGodRNREVCR17e3yHpHYPCTvC` READY และ alias Production ตรง; [CI main ผ่าน](https://github.com/Burinboo256/Happy_Victory_Task_Center/actions/runs/45421782607)
+- แก้ข้อมูลงานผ่านเว็บ; Airtable งานเป็นสำเนาซิงก์เบื้องหลัง ส่วนผู้ใช้/Active/Role/สมาชิก/Space ยังคงควบคุมผ่าน Airtable Control Base
+- หลังบันทึกเริ่มซิงก์ทันทีแบบ best effort; n8n Production workflow แยกตั้งรอบกู้คืน 30 นาทีและ Publish แล้ว ทดสอบเรียก worker ส่งงานสมมติสถานะยกเลิกถึง Airtable สำเร็จ คิว pending/review เป็นศูนย์ก่อนเปิดรับงาน
+- สำรองเข้ารหัสหลังพัก writes และซ้อม restore แบบแยกเครือข่ายผ่าน 71 ตาราง/constraints; ข้อมูลเก่าที่ไม่มีลิงก์งาน 13 รายการเก็บไว้ตามเดิม ไม่ลบหรือผูกกับงานอื่น
+- ทดสอบ HTTP ผ่าน session ชั่วคราวของ Admin/Secretary/Agent และเพิกถอนแล้ว ไม่ใช่การ Login Google หรือส่ง LINE จริงรอบใหม่ ตัวตั้งเวลา Staging รันเองผ่านแล้วและหยุดหลังทดสอบ ส่วนการตรวจ execution อัตโนมัติ Production ผ่าน Chrome ยังไม่จบเพราะเครื่องมือหยุดตรวจ URL; ไม่เท่ากับยังไม่ได้ Publish
+
+ดู [หลักฐาน การซิงก์ และวิธีกู้คืน](neon-primary-tasks.md#production-evidence--24-november-2026) ก่อนแก้ config หรือ rollback ห้ามย้อนรุ่นเว็บก่อนรองรับ Neon หรือสลับ mode กลับ Airtable โดยตรง
+
 ## รุ่นหลาย Space — 22 พฤศจิกายน 2569
 
 เปิดรุ่นหลาย Space และย้ายสมาชิกเดิมแล้ว Owner Login/เข้า RINLYN ผ่าน งานเดิม 27 รายการครบ เปิด runtime writes=true และคง jobs=false แล้ว ดู [สถานะ cutover ล่าสุดและจุดกู้คืน](multi-workspace-production-cutover.md) สำหรับ deployment, migration 013, Control Base และหลักฐานสำรอง สถานะวันที่ 15 พฤศจิกายนด้านล่างเป็นประวัติก่อนเปลี่ยนเป็นหลาย Space
