@@ -59,7 +59,8 @@ test('Neon concurrent retry commits once and mirror HTTP never locks interactive
         .rows[0].n,
       1,
     );
-    const id = result[0].result!.id;
+    assert.ok(result[0].result);
+    const id = result[0].result.id;
     let release!: () => void, started!: () => void;
     const waiting = new Promise<void>((resolve) => {
       release = resolve;
