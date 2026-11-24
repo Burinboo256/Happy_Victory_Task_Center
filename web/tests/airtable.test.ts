@@ -17,6 +17,22 @@ function limiter() {
   } as Sql;
   return { db, statements };
 }
+
+test('membership creation timestamps survive pagination only when explicitly requested', async () => {
+  const { db } = limiter();
+  const transport: typeof fetch = async (input) => {
+    const second = new URL(String(input)).searchParams.has('offset');
+    return Response.json({
+      records: [{ id: rid(second ? 12 : 11), createdTime: '2026-11-25T00:00:00.000Z', fields: {} }],
+      ...(second ? {} : { offset: 'next' }),
+    });
+  };
+  const normal = await new AirtableClient(config, db, transport).list('tasks');
+  assert.ok(normal.every((r) => !('createdTime' in r)));
+  const members = await new AirtableClient(config, db, transport, true).list('users');
+  assert.equal(members.length, 2);
+  assert.ok(members.every((r) => r.createdTime === '2026-11-25T00:00:00.000Z'));
+});
 test('Airtable pagination encodes offset and refuses repeated pages', async () => {
   const { db } = limiter();
   let n = 0;

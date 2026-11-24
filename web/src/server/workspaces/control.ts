@@ -41,6 +41,7 @@ export function membership(record: RecordData) {
       .parse(record.fields['Local User ID']),
     role: z.enum(roles).parse(record.fields.Role),
     active: record.fields.Active === true,
+    createdAt: record.createdTime || null,
   };
 }
 export type Membership = ReturnType<typeof membership>;
@@ -77,7 +78,7 @@ export class ControlPlane {
     }
     if (!c.AIRTABLE_WORKSPACES_TABLE || !c.AIRTABLE_WORKSPACE_MEMBERS_TABLE)
       throw new AppError(503, 'WORKSPACE_SETUP', 'ยังไม่ได้ตั้งค่าตารางกลางสำหรับ Space');
-    const make = (table: string) =>
+    const make = (table: string, includeRecordCreatedTime = false) =>
       new AirtableClient(
         {
           ...c,
@@ -86,10 +87,13 @@ export class ControlPlane {
           AIRTABLE_USERS_TABLE: table,
         },
         db,
+        undefined,
+        includeRecordCreatedTime,
       );
     this.users = wrap(make(c.AIRTABLE_CONTROL_USERS_TABLE || c.AIRTABLE_USERS_TABLE));
     this.spaces = wrap(make(c.AIRTABLE_WORKSPACES_TABLE));
-    this.members = wrap(make(c.AIRTABLE_WORKSPACE_MEMBERS_TABLE));
+    // Membership creation time is the join date for this Space, not the global account date.
+    this.members = wrap(make(c.AIRTABLE_WORKSPACE_MEMBERS_TABLE, true));
   }
   async owner(userId: string) {
     const record = await this.users.get('users', userId);
@@ -154,6 +158,13 @@ export class ControlPlane {
     if (result.size !== ids.length) throw forbidden();
     return members.map((member) => result.get(member.user) as RecordData);
   }
+}
+
+// Serialize web global deactivations with membership role/Active changes across Spaces.
+export async function lockMemberAdministration(db: Sql, c: Config) {
+  await db.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
+    `${c.APP_ENV}:workspace-member-administration`,
+  ]);
 }
 
 // Base-local Users only provide linked-record IDs. Roles and Active always come from Control Base.

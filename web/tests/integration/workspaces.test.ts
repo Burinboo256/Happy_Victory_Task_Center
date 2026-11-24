@@ -51,6 +51,10 @@ import { RequestReadScope } from '../../src/server/airtable/read-scope';
 import type { Config } from '../../src/server/config';
 import { taskDetail } from '../../src/server/services/task-detail';
 import {
+  listManagedMembers,
+  updateGlobalUserActive,
+} from '../../src/server/workspaces/member-management';
+import {
   rememberSpace,
   resumeSpace,
   spaceLoginDestination,
@@ -169,6 +173,138 @@ async function fixture() {
   );
   return { db, engine, control, central, spaces, members, first, second };
 }
+
+test('only an active Owner can change global Active; Space approvals and local mirrors remain independent', async () => {
+  const h = await fixture();
+  try {
+    const owner = userDto(h.central.tables.users[0]);
+    const admin = userDto(h.central.tables.users[2]);
+    await updateMember(h.db, c, h.control, owner, b, {
+      email: 'agent-a@gmail.com',
+      role: 'Agent',
+      active: false,
+    });
+    const beforeMembers = structuredClone(h.members.tables.users);
+    const beforeLocal = structuredClone(h.first.tables.users);
+    await assert.rejects(
+      updateGlobalUserActive(h.db, c, h.control, admin, b, {
+        userId: rid(2),
+        active: false,
+      }),
+      { code: 'FORBIDDEN' },
+    );
+    await assert.rejects(
+      updateGlobalUserActive(h.db, c, h.control, owner, a, {
+        userId: owner.id,
+        active: false,
+      }),
+      { code: 'SYSTEM_OWNER' },
+    );
+    await updateGlobalUserActive(h.db, c, h.control, owner, a, { userId: rid(2), active: false });
+    assert.equal(h.central.tables.users[1].fields.Active, false);
+    await assert.rejects(authorizeSpace(h.db, c, h.control, userDto(h.central.tables.users[1]), a));
+    assert.deepEqual(h.members.tables.users, beforeMembers);
+    assert.deepEqual(h.first.tables.users, beforeLocal);
+    await updateGlobalUserActive(h.db, c, h.control, owner, a, { userId: rid(2), active: true });
+    const agent = userDto(h.central.tables.users[1]);
+    assert.equal((await authorizeSpace(h.db, c, h.control, agent, a)).user.role, 'Agent');
+    await assert.rejects(authorizeSpace(h.db, c, h.control, agent, b), {
+      code: 'WORKSPACE_PENDING',
+    });
+    assert.equal(
+      (await h.db.query("SELECT * FROM hvr_workspace_events WHERE action LIKE 'user-global-%'"))
+        .rows.length,
+      2,
+    );
+    h.central.tables.users[0].fields.Active = false;
+    await assert.rejects(
+      updateGlobalUserActive(h.db, c, h.control, owner, a, { userId: rid(2), active: false }),
+    );
+    assert.equal(h.central.tables.users[1].fields.Active, true);
+  } finally {
+    await h.engine.close();
+  }
+});
+
+test('global deactivation protects the last Admin of another Space and never promotes pending members', async () => {
+  const h = await fixture();
+  try {
+    const owner = userDto(h.central.tables.users[0]);
+    await updateMember(h.db, c, h.control, owner, a, {
+      email: 'agent-b@gmail.com',
+      role: 'Agent',
+      active: true,
+    });
+    await assert.rejects(
+      updateGlobalUserActive(h.db, c, h.control, owner, a, {
+        userId: rid(3),
+        active: false,
+      }),
+      { code: 'LAST_WORKSPACE_ADMIN' },
+    );
+    assert.equal(h.central.tables.users[2].fields.Active, true);
+    await updateMember(h.db, c, h.control, owner, b, {
+      email: 'agent-a@gmail.com',
+      role: 'Admin',
+      active: true,
+    });
+    await updateGlobalUserActive(h.db, c, h.control, owner, a, { userId: rid(3), active: false });
+    assert.equal(h.central.tables.users[2].fields.Active, false);
+    await assert.rejects(
+      updateMember(h.db, c, h.control, owner, b, {
+        email: 'agent-a@gmail.com',
+        role: 'Agent',
+        active: true,
+      }),
+      { code: 'LAST_WORKSPACE_ADMIN' },
+    );
+    await assert.rejects(
+      updateGlobalUserActive(h.db, c, h.control, owner, a, {
+        userId: rid(999),
+        active: true,
+      }),
+    );
+  } finally {
+    await h.engine.close();
+  }
+});
+
+test('managed roster sorts by per-Space registration date, newest first, with unknown dates last', async () => {
+  const h = await fixture();
+  try {
+    const owner = userDto(h.central.tables.users[0]);
+    await updateMember(h.db, c, h.control, owner, a, {
+      email: 'agent-b@gmail.com',
+      role: 'Agent',
+      active: false,
+    });
+    const membership = (user: number) => {
+      const member = h.members.tables.users.find(
+        (m) => String(m.fields.Workspace) === rid(101) && String(m.fields.User) === rid(user),
+      );
+      assert.ok(member);
+      return member;
+    };
+    membership(2).createdTime = '2026-11-20T23:00:00.000Z';
+    membership(3).createdTime = '2026-11-25T00:00:00.000Z';
+    const rows = await listManagedMembers(h.db, c, h.control, owner, a);
+    assert.deepEqual(
+      rows.map((r) => r.userId),
+      [rid(3), rid(2), rid(1)],
+    );
+    assert.equal(rows[0].registeredAt, '2026-11-25T00:00:00.000Z');
+    assert.equal(rows[0].active, false);
+    assert.equal(rows[2].registeredAt, null);
+    await assert.rejects(
+      listManagedMembers(h.db, c, h.control, userDto(h.central.tables.users[2]), a),
+    );
+    await assert.rejects(
+      listManagedMembers(h.db, c, h.control, userDto(h.central.tables.users[1]), a),
+    );
+  } finally {
+    await h.engine.close();
+  }
+});
 
 test('request-local reads reduce detail calls without changing records or allowing revoked membership', async () => {
   const h = await fixture();

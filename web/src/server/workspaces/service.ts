@@ -14,6 +14,7 @@ import {
   workspaceRepository,
   controlFingerprint,
   isSystemOwner,
+  lockMemberAdministration,
 } from './control';
 import { baseCredentials, decryptCredentials, encryptCredentials } from './credentials';
 import { workspaceDatabase, createOperationalSchema } from './database';
@@ -378,6 +379,7 @@ export async function updateMember(
   const space = await spaceServices(root, c, control, id, await control.owner(actor.id));
   await control.requireAdmin(space.row.control_id, actor.id);
   return atomic(root, async (db) => {
+    await lockMemberAdministration(db, c);
     await db.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
       c.APP_ENV + ':' + id + ':members',
     ]);

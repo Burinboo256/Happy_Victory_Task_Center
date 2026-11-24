@@ -17,12 +17,14 @@ type Space = {
 };
 type State = { enabled: boolean; owner: boolean; csrfToken: string; items: Space[] };
 type Member = {
+  userId?: string;
   name: string;
   email: string;
   role: string;
   active: boolean;
   globallyActive: boolean;
   systemOwner?: boolean;
+  registeredAt?: string | null;
 };
 const fields = [
   ['AIRTABLE_BASE_ID', 'Base ID'],
@@ -42,6 +44,8 @@ export function SpaceHub({ target, next = '/' }: { target?: string; next?: strin
   const [selected, setSelected] = useState<Space | null>(null),
     [members, setMembers] = useState<Member[]>([]);
   const [editing, setEditing] = useState<Member | null>(null);
+  const [rosterLoading, setRosterLoading] = useState(false);
+  const rosterRequest = useRef(0);
   const load = useCallback(async () => {
     const response = await fetch('/api/spaces', { cache: 'no-store' });
     if (response.status === 401) {
@@ -88,6 +92,8 @@ export function SpaceHub({ target, next = '/' }: { target?: string; next?: strin
     }
   }
   async function roster(space: Space) {
+    const requestId = ++rosterRequest.current;
+    setRosterLoading(true);
     setEditing(null);
     setSelected(space);
     setMembers([]);
@@ -96,10 +102,27 @@ export function SpaceHub({ target, next = '/' }: { target?: string; next?: strin
       const response = await fetch('/api/spaces?members=' + space.id, { cache: 'no-store' });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error?.message || 'โหลดสมาชิกไม่สำเร็จ');
-      setMembers(body.members);
+      if (requestId === rosterRequest.current) setMembers(body.members);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'โหลดสมาชิกไม่สำเร็จ');
+      if (requestId === rosterRequest.current)
+        setError(e instanceof Error ? e.message : 'โหลดสมาชิกไม่สำเร็จ');
+    } finally {
+      if (requestId === rosterRequest.current) setRosterLoading(false);
     }
+  }
+  async function setGlobalActive(member: Member) {
+    if (!selected || !state?.owner || !member.userId || member.systemOwner) return;
+    const active = !member.globallyActive;
+    if (
+      !window.confirm(
+        active
+          ? `เปิดบัญชี ${member.name || member.email} ทั้งระบบ? สมาชิกที่อนุมัติไว้ในแต่ละ Space จะกลับมาใช้งานได้ ส่วน Space ที่ยังรออนุมัติจะยังเข้าไม่ได้`
+          : `ปิดบัญชี ${member.name || member.email} ทั้งระบบ? ผู้ใช้นี้จะเข้าใช้งานทุก Space ไม่ได้ แต่ข้อมูลและสิทธิ์สมาชิกเดิมจะยังเก็บไว้`,
+      )
+    )
+      return;
+    if (await act('user-status', selected.id, { userId: member.userId, active }))
+      await roster(selected);
   }
   async function create(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -214,7 +237,7 @@ export function SpaceHub({ target, next = '/' }: { target?: string; next?: strin
                     <button
                       type="button"
                       className="btn secondary"
-                      disabled={busy}
+                      disabled={busy || rosterLoading}
                       onClick={() => void roster(space)}
                     >
                       {state.owner ? 'จัดการ Admin / สมาชิก' : 'จัดการสมาชิก'}
@@ -243,7 +266,13 @@ export function SpaceHub({ target, next = '/' }: { target?: string; next?: strin
           {selected && (
             <section className={styles.card}>
               <h2>สมาชิก: {selected.name}</h2>
-              <p>บทบาทและการอนุมัติมีผลเฉพาะ Space นี้ บัญชีที่ถูกปิดทั้งระบบต้องให้เจ้าของระบบตรวจสอบ</p>
+              <p>
+                {state.owner
+                  ? 'จัดการบัญชีทั้งระบบและสิทธิ์ใน Space นี้ได้จากที่นี่ การเปิดบัญชีทั้งระบบไม่อนุมัติ Space ที่ยังรออยู่'
+                  : 'บทบาทและการอนุมัติมีผลเฉพาะ Space นี้ บัญชีที่ถูกปิดทั้งระบบต้องให้เจ้าของระบบเปิดให้ก่อน'}
+              </p>
+              <p className={styles.joined}>เรียงตามวันที่สมัคร/เพิ่มสมาชิกใน Space ล่าสุดก่อน</p>
+              {rosterLoading && <p role="status">กำลังโหลดสมาชิก…</p>}
               <div className={styles.table}>
                 <table>
                   <thead>
@@ -261,9 +290,26 @@ export function SpaceHub({ target, next = '/' }: { target?: string; next?: strin
                           {m.name}
                           <br />
                           {m.email}
+                          <small className={styles.joined}>
+                            สมัคร/เพิ่มสมาชิก:{' '}
+                            {m.registeredAt ? (
+                              <time dateTime={m.registeredAt}>
+                                {new Intl.DateTimeFormat('th-TH', {
+                                  dateStyle: 'short',
+                                  timeStyle: 'short',
+                                  timeZone: 'Asia/Bangkok',
+                                }).format(new Date(m.registeredAt))}
+                              </time>
+                            ) : (
+                              'ไม่ทราบวันที่'
+                            )}
+                          </small>
                         </td>
                         <td>{m.systemOwner ? 'เจ้าของระบบ' : m.role}</td>
-                        <td>{!m.globallyActive ? 'ปิดทั้งระบบ' : m.active ? 'ใช้งาน' : 'รออนุมัติ/ปิด'}</td>
+                        <td>
+                          <div>บัญชี: {m.globallyActive ? 'เปิดใช้งาน' : 'ปิดทั้งระบบ'}</div>
+                          <div>Space: {m.active ? 'อนุมัติแล้ว' : 'รออนุมัติ/ปิด'}</div>
+                        </td>
                         <td>
                           <button
                             type="button"
@@ -290,6 +336,16 @@ export function SpaceHub({ target, next = '/' }: { target?: string; next?: strin
                           >
                             แก้ไขบทบาท
                           </button>
+                          {state.owner && (
+                            <button
+                              type="button"
+                              className="btn secondary small"
+                              disabled={busy || !m.userId || m.systemOwner}
+                              onClick={() => void setGlobalActive(m)}
+                            >
+                              {m.globallyActive ? 'ปิดบัญชีทั้งระบบ' : 'เปิดบัญชีทั้งระบบ'}
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}

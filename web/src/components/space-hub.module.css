@@ -72,6 +72,15 @@
   text-align: left;
   border-bottom: 1px solid #e2d7e0;
 }
+.joined {
+  display: block;
+  color: #65596a;
+  font-size: 0.875rem;
+  margin-top: 6px;
+}
+.table td {
+  overflow-wrap: anywhere;
+}
 @media (max-width: 550px) {
   .hub header {
     align-items: flex-start;

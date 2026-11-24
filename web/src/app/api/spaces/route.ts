@@ -6,14 +6,13 @@ import { AppError } from '@/server/errors';
 import {
   createSpace,
   listSpaces,
-  spaceServices,
   updateMember,
   workspaceCookie,
   audit,
   getSpace,
 } from '@/server/workspaces/service';
 import { rememberSpace } from '@/server/workspaces/preference';
-import { isSystemOwner } from '@/server/workspaces/control';
+import { listManagedMembers, updateGlobalUserActive } from '@/server/workspaces/member-management';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -24,25 +23,8 @@ export function GET(request: Request) {
       return json({ enabled: false, items: [], owner: false, csrfToken: c.csrfToken });
     const id = new URL(request.url).searchParams.get('members');
     if (id) {
-      const space = await spaceServices(
-        c.db,
-        c.config,
-        c.control,
-        id,
-        await c.control.owner(c.user.id),
-      );
-      await c.control.requireAdmin(space.row.control_id, c.user.id);
-      const members = await c.control.roster(space.row.control_id);
-      const users = await c.control.memberUsers(members);
       return json({
-        members: members.map((m, i) => ({
-          email: String(users[i].fields.Email || ''),
-          name: String(users[i].fields['Full Name'] || ''),
-          role: isSystemOwner(users[i]) ? 'Admin' : m.role,
-          active: isSystemOwner(users[i]) || m.active,
-          systemOwner: isSystemOwner(users[i]),
-          globallyActive: users[i].fields.Active === true,
-        })),
+        members: await listManagedMembers(c.db, c.config, c.control, c.user, id),
       });
     }
     return json({
@@ -59,7 +41,7 @@ export function POST(request: Request) {
     if (!c.control) throw new AppError(404, 'WORKSPACES_DISABLED', 'ยังไม่เปิดระบบ Space');
     const body = z
       .object({
-        action: z.enum(['select', 'create', 'member', 'status']),
+        action: z.enum(['select', 'create', 'member', 'status', 'user-status']),
         id: z.uuid().optional(),
         data: z.unknown().optional(),
       })
@@ -76,6 +58,8 @@ export function POST(request: Request) {
     }
     if (body.action === 'member')
       return json(await updateMember(c.db, c.config, c.control, c.user, id, body.data));
+    if (body.action === 'user-status')
+      return json(await updateGlobalUserActive(c.db, c.config, c.control, c.user, id, body.data));
     await c.control.requireOwner(c.user.id);
     const row = await getSpace(c.db, c.config, id);
     const active = z.object({ active: z.boolean() }).strict().parse(body.data).active;

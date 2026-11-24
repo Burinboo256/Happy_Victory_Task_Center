@@ -7,6 +7,7 @@ export type Table = 'users' | 'tasks' | 'updates' | 'followups' | 'notifications
 export interface RecordData {
   id: string;
   fields: Record<string, unknown>;
+  createdTime?: string;
 }
 export interface AirtableRepository {
   list(table: Table, formula?: string, fields?: readonly string[]): Promise<RecordData[]>;
@@ -31,6 +32,7 @@ export class AirtableClient implements AirtableRepository {
     private config: Config,
     private db: Sql,
     private transport: typeof fetch = fetch,
+    private includeRecordCreatedTime = false,
   ) {
     this.db = rateLimitDatabase(db);
   }
@@ -162,7 +164,14 @@ export class AirtableClient implements AirtableRepository {
       if (offset) query.set('offset', offset);
       const page = await this.request('GET', table, '', undefined, query);
       const parsed = z
-        .object({ records: z.array(record), offset: z.string().min(1).optional() })
+        .object({
+          records: z.array(
+            this.includeRecordCreatedTime
+              ? record.extend({ createdTime: z.iso.datetime({ offset: true }).optional() })
+              : record,
+          ),
+          offset: z.string().min(1).optional(),
+        })
         .safeParse(page);
       if (!parsed.success) throw new AppError(503, 'AIRTABLE_RESPONSE', 'บริการข้อมูลตอบกลับไม่ถูกต้อง');
       records.push(...parsed.data.records);
