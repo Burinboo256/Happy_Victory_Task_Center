@@ -25,6 +25,7 @@ const schemas = {
       .union([z.literal(''), z.url().refine((s) => new URL(s).protocol === 'https:')])
       .default(''),
     agentId: id.optional(),
+    careEventId: z.uuid().optional(),
   }),
   status: z.object({
     id,
@@ -54,6 +55,7 @@ const schemas = {
   }),
 };
 export type Action = keyof typeof schemas;
+export type CreateTaskInput = z.infer<typeof schemas.create>;
 export function validateMutation(action: Action, input: unknown, user: User) {
   if (['edit', 'status', 'followup', 'resolveFollowup'].includes(action) && !isManager(user))
     throw forbidden();

@@ -11,6 +11,7 @@ import {
 
 export type TaskDraft = Pick<Task, 'title' | 'description' | 'agentId' | 'dueDate' | 'category'> & {
   caseName: string;
+  careEventId?: string;
 };
 export type TaskFormProps = {
   data: Bootstrap;
@@ -35,6 +36,9 @@ export function TaskForm({
       </div>
       <form className="task-form" onSubmit={onSubmit}>
         <fieldset disabled={busy || !data.writesEnabled}>
+          {initial?.careEventId && (
+            <input type="hidden" name="careEventId" value={initial.careEventId} />
+          )}
           <label>
             ชื่องาน *
             <input

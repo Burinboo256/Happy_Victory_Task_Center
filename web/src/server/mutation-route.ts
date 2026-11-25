@@ -11,6 +11,8 @@ import { ownTask } from './services/reads';
 import { requireTaskReady } from './operations/task-ready';
 import { requireCaseComplete } from './services/case-workflow';
 import { scheduleTaskMirror } from './task-store/background';
+import { createCareTask } from './services/care-task';
+import { forbidden } from './errors';
 
 export function mutationRoute(
   request: Request,
@@ -30,21 +32,25 @@ export function mutationRoute(
     }
     const resource =
       action === 'create' ? 'create:' + c.user.id + ':' + requestId : 'task:' + parameters.id;
-    const outcome = await taskOperation(
-      c.db,
-      c.config,
-      c.repo,
-      c.user.id,
-      requestId,
-      action,
-      data,
-      resource,
-      async (steps, repo, db) => {
-        if (action === 'status' && 'status' in data && data.status === 'Completed')
-          await requireCaseComplete(db, c.config, repo, c.user, parameters.id);
-        return mutate(repo, c.user, action, data, steps);
-      },
-    );
+    if ('careEventId' in data && data.careEventId && !c.config.workspace) throw forbidden();
+    const outcome =
+      action === 'create' && 'careEventId' in data && data.careEventId
+        ? await createCareTask(c, { ...data, careEventId: data.careEventId }, requestId)
+        : await taskOperation(
+            c.db,
+            c.config,
+            c.repo,
+            c.user.id,
+            requestId,
+            action,
+            data,
+            resource,
+            async (steps, repo, db) => {
+              if (action === 'status' && 'status' in data && data.status === 'Completed')
+                await requireCaseComplete(db, c.config, repo, c.user, parameters.id);
+              return mutate(repo, c.user, action, data, steps);
+            },
+          );
     if (outcome.result?.id) await ownTask(c.repo, c.user, outcome.result.id);
     if (outcome.state === 'completed') scheduleTaskMirror(c.db, c.rootDb, c.config, c.repo);
     if (

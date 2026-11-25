@@ -5,6 +5,77 @@ import { database, repository, config } from '../fixtures';
 import { careAlerts, careRoster, saveCare } from '../../src/server/services/customer-care';
 import { initialCare, alertLevel, shiftDate, nextPremium } from '../../src/domain/customer-care';
 import { todayBangkok } from '../../src/domain/model';
+import { createCareTask } from '../../src/server/services/care-task';
+import { NeonTaskRepository } from '../../src/server/task-store/repository';
+
+for (const mode of ['Airtable', 'Neon']) {
+  test(`one task per reminder survives concurrent submitters and retries in ${mode}`, async () => {
+    const { db, engine } = await database();
+    const h = repository();
+    const repo = mode === 'Neon' ? new NeonTaskRepository(db, config, h.repo) : h.repo;
+    const c = { db, config, repo, user: h.secretary };
+    try {
+      const today = todayBangkok();
+      await saveCare(c, {
+        action: 'create',
+        operation: randomUUID(),
+        agentId: h.agent.id,
+        kind: 'life',
+        customer: 'ลูกค้าทดลอง',
+        reference: 'CARE-1',
+        started: today,
+      });
+      const [policy] = (await careRoster(c)).policies;
+      const [first, second] = policy.events;
+      const input = {
+        careEventId: first.id,
+        agentId: h.agent.id,
+        title: 'ติดตาม',
+        caseName: policy.customer,
+        description: 'ทดสอบ',
+        category: 'ลูกค้าเก่า' as const,
+        priority: 'Normal' as const,
+        dueDate: today,
+        referenceUrl: '',
+      };
+      await assert.rejects(createCareTask({ ...c, user: h.other }, input, randomUUID()), {
+        code: 'FORBIDDEN',
+      });
+      const before = (await repo.list('tasks')).length;
+      const receipts = await Promise.all([
+        createCareTask(c, input, randomUUID()),
+        createCareTask(
+          { ...c, user: h.agent },
+          { ...input, careEventId: first.id.toUpperCase(), title: 'อีกหน้าต่าง' },
+          randomUUID(),
+        ),
+      ]);
+      assert.equal(receipts[0].operationId, receipts[1].operationId);
+      const retry = await createCareTask(c, input, randomUUID());
+      assert.equal(retry.state, 'completed');
+      assert.equal((await repo.list('tasks')).length, before + 1);
+      const updated = (await careRoster(c)).policies[0];
+      assert.equal(updated.events.find((e) => e.id === first.id)?.taskId, retry.result.id);
+      assert.equal(updated.events.find((e) => e.id === second.id)?.taskId, null);
+      await saveCare(c, {
+        action: 'finish',
+        operation: randomUUID(),
+        policyId: policy.id,
+        eventId: second.id,
+        outcome: 'done',
+        note: '',
+      });
+      await assert.rejects(createCareTask(c, { ...input, careEventId: second.id }, randomUUID()), {
+        code: 'CARE_CLOSED',
+      });
+      await assert.rejects(createCareTask({ ...c, user: h.other }, input, randomUUID()), {
+        code: 'FORBIDDEN',
+      });
+    } finally {
+      await engine.close();
+    }
+  });
+}
 
 test('annual reviews clamp leap day and customer care alerts use explicit policy dates', () => {
   const entries = initialCare('2024-02-29', '2027-02-20', '2027-03-01', '2027-10-31');

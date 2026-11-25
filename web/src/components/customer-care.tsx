@@ -272,6 +272,7 @@ export function CustomerCare({ data, request, submittingTask, onSubmitTask, spac
   function openTask(policy: CarePolicy, event: CareEvent) {
     const subject = careLabels[event.kind];
     setTaskDraft({
+      careEventId: event.id,
       title: `${subject} · ${policy.customer}`,
       description: [
         subject,
@@ -301,15 +302,21 @@ export function CustomerCare({ data, request, submittingTask, onSubmitTask, spac
             {p.reference} · {agentName(p.agentId)} · ผู้ติดตาม {recipient(e)}
           </small>
         </button>
-        <button
-          type="button"
-          className="btn secondary small"
-          disabled={readonly}
-          aria-label={`เปิดงานให้เลขา · ${careLabels[e.kind]} · ${p.customer}`}
-          onClick={() => openTask(p, e)}
-        >
-          เปิดงานให้เลขา
-        </button>
+        {e.taskId ? (
+          <Link className="btn secondary small" href={spacePath(spaceSlug, '/tasks/' + e.taskId)}>
+            ดูงานที่เปิดแล้ว
+          </Link>
+        ) : (
+          <button
+            type="button"
+            className="btn secondary small"
+            disabled={readonly || e.taskPending}
+            aria-label={`${e.taskPending ? 'กำลังตรวจสอบการเปิดงาน' : 'เปิดงานให้เลขา'} · ${careLabels[e.kind]} · ${p.customer}`}
+            onClick={() => openTask(p, e)}
+          >
+            {e.taskPending ? 'กำลังตรวจสอบการเปิดงาน' : 'เปิดงานให้เลขา'}
+          </button>
+        )}
       </div>
     );
   }
@@ -670,6 +677,9 @@ export function CustomerCare({ data, request, submittingTask, onSubmitTask, spac
                       </span>
                       {e.note && <small>{e.note}</small>}
                     </button>
+                    {e.taskId && (
+                      <Link href={spacePath(spaceSlug, '/tasks/' + e.taskId)}>ดูงานที่เปิดแล้ว</Link>
+                    )}
                     {target === e.id && (
                       <form
                         key={e.id}
@@ -801,6 +811,12 @@ export function CustomerCare({ data, request, submittingTask, onSubmitTask, spac
                   dateStyle: 'medium',
                 }).format(new Date(e.completedAt))}
                 {e.resultNote && ' · ' + e.resultNote}
+                {e.taskId && (
+                  <>
+                    {' '}
+                    · <Link href={spacePath(spaceSlug, '/tasks/' + e.taskId)}>ดูงานที่เปิดแล้ว</Link>
+                  </>
+                )}
               </p>
             ))}
           {!policy.closed && isManager(data.user) && (

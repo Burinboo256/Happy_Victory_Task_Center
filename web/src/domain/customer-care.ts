@@ -49,6 +49,8 @@ export const leadDays: Record<EventKind, number> = {
   service: 7,
 };
 export type CareEvent = {
+  taskId?: string | null;
+  taskPending?: boolean;
   id: string;
   kind: EventKind;
   due: string;

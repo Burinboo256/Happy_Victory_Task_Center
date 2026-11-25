@@ -87,8 +87,12 @@ export async function careRoster(c: Context) {
   const result = await c.db.query<CarePolicy>(
     `SELECT p.id,p.customer,p.reference,p.agent_id AS "agentId",p.kind,p.started::text,p.ends::text,p.closed,
       p.review_date::text AS "reviewDate",p.birthday_md AS birthday,p.payment_frequency AS frequency,p.premium_amount::text AS "premiumAmount",
-      COALESCE(jsonb_agg(jsonb_build_object('id',e.id,'kind',e.kind,'due',e.due::text,'recipient',e.recipient,'note',e.note,'outcome',e.outcome,'resultNote',e.result_note,'completedAt',e.completed_at) ORDER BY e.due,e.id) FILTER (WHERE e.id IS NOT NULL),'[]') AS events
+      COALESCE(jsonb_agg(jsonb_build_object('id',e.id,'kind',e.kind,'due',e.due::text,'recipient',e.recipient,'note',e.note,'outcome',e.outcome,'resultNote',e.result_note,'completedAt',e.completed_at,
+        'taskId',CASE WHEN o.state='completed' THEN o.result->>'id' END,
+        'taskPending',COALESCE(o.state IN ('running','review') OR (o.state='pending' AND o.user_id<>$3),false)) ORDER BY e.due,e.id) FILTER (WHERE e.id IS NOT NULL),'[]') AS events
       FROM hvr_care_policies p LEFT JOIN hvr_care_events e ON e.policy_id=p.id
+      LEFT JOIN hvr_operations o ON o.environment=p.environment AND o.resource='care-event:' || e.id::text
+        AND o.resource LIKE 'care-event:%' AND o.action='create' AND o.state<>'failed'
       WHERE p.environment=$1 AND ($2 OR p.agent_id=$3) GROUP BY p.id ORDER BY p.closed,p.customer,p.reference`,
     [c.config.APP_ENV, isManager(c.user), c.user.id],
   );

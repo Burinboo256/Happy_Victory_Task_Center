@@ -87,7 +87,7 @@ test('reminders group active appointments by type and recorded birth month', asy
   };
   policy.events = [
     event,
-    { ...event, id: 'maturity', kind: 'maturity', due: '2026-11-21' },
+    { ...event, id: '77112233-abcd-4aba-9111-987654321000', kind: 'maturity', due: '2026-11-21' },
     { ...event, id: 'future', kind: 'premium', due: '2027-02-25' },
     { ...event, id: 'done', kind: 'claim', outcome: 'done' },
   ];
@@ -135,11 +135,15 @@ test('reminders group active appointments by type and recorded birth month', asy
     expect(r.request().headers()['x-workspace-slug']).toBe('rinlyn');
     expect(r.request().headers()['x-csrf-token']).toBe(ctx.csrfToken);
     expect(r.request().headers()['idempotency-key']).toBeTruthy();
+    const source = policy.events.find((e) => e.id === r.request().postDataJSON().careEventId);
+    if (!source) throw new Error('Missing reminder on task submission');
+    expect(source.kind).toBe('maturity');
     submissions++;
     const result = await mutate(h.repo, h.secretary, 'create', r.request().postDataJSON(), {
       key: 'care-task-ui',
       run: async (_name, work) => work(),
     });
+    source.taskId = result.id;
     await r.fulfill({ json: { ...result, state: 'completed' } });
   });
   const rows = page.getByRole('button', { name: /ลูกค้าตัวอย่าง ·/ });
@@ -224,6 +228,12 @@ test('reminders group active appointments by type and recorded birth month', asy
     'Case Name': policy.customer,
     'Due Date': '2026-11-21',
   });
+  const taskUrl = page.url();
+  await page.goto('/rinlyn/customer-care/queue?group=maturity');
+  await expect(page.getByRole('button', { name: /เปิดงานให้เลขา/ })).toHaveCount(0);
+  await page.getByRole('link', { name: 'ดูงานที่เปิดแล้ว' }).click();
+  await expect(page).toHaveURL(taskUrl);
+  expect(submissions).toBe(1);
 });
 
 test('secretary opens care from Space, creates policy and hands next contact to Agent', async ({

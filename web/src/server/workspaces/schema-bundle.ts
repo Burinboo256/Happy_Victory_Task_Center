@@ -161,4 +161,11 @@ export const operationalMigrations = [
       'ALTER TABLE hvr_care_policies\n  ADD COLUMN premium_amount numeric(12, 2) CHECK (premium_amount >= 0)',
     ],
   },
+  {
+    name: '020_care_task_link.sql',
+    checksum: '1630bd469f21295d58b2a800b8377eb8a831c3a96519b970aa666d50e3d69984',
+    statements: [
+      "-- A failed operation has no outstanding writes. Pending and completed receipts\n-- reserve the reminder across users, including during Airtable recovery.\nCREATE UNIQUE INDEX hvr_one_task_per_care_event ON hvr_operations(environment, resource)\nWHERE action = 'create' AND resource LIKE 'care-event:%' AND state <> 'failed'",
+    ],
+  },
 ] as const;
