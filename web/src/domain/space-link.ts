@@ -37,7 +37,7 @@ export const spaceViews = [
   'notifications',
 ] as const;
 export const carePaths = {
-  overview: '/customer-care',
+  dashboard: '/customer-care/dashboard',
   queue: '/customer-care/queue',
   policies: '/customer-care/policies',
   register: '/customer-care/register',
@@ -47,6 +47,7 @@ const pages = new Set([
   '/tasks',
   '/tasks/new',
   '/forms',
+  '/customer-care',
   ...Object.values(carePaths),
   ...spaceViews.map((v) => '/' + v),
 ]);

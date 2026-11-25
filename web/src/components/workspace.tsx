@@ -83,7 +83,7 @@ const nav: { page: Page; href: string; symbol: string; manager?: boolean; agent?
   { page: 'tasks', href: '/tasks', symbol: '▤' },
   { page: 'inbox', href: '/inbox', symbol: '↙', manager: true },
   { page: 'followups', href: '/followups', symbol: '◷' },
-  { page: 'customer-care', href: carePaths.overview, symbol: '♡' },
+  { page: 'customer-care', href: carePaths.dashboard, symbol: '♡' },
   { page: 'calendar', href: '/calendar', symbol: '▦' },
   { page: 'reports', href: '/reports', symbol: '▥', manager: true },
   { page: 'team', href: '/team', symbol: '♧', manager: true },

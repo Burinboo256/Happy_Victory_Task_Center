@@ -148,9 +148,7 @@ type Props = {
 export function CustomerCare({ data, request, submittingTask, onSubmitTask, spaceSlug }: Props) {
   const [feed, setFeed] = useState<Feed | null>(null),
     [selected, setSelected] = useState('');
-  const pathname = usePathname();
-  const tab =
-    pathname === spacePath(spaceSlug, carePaths.overview) ? 'overview' : pathname.split('/').at(-1);
+  const tab = usePathname().split('/').at(-1);
   const params = useSearchParams();
   const group = eventKinds.find((kind) => kind === params.get('group'));
   function navigate(view: keyof typeof carePaths, kind?: EventKind) {
@@ -355,7 +353,7 @@ export function CustomerCare({ data, request, submittingTask, onSubmitTask, spac
       <nav aria-label="เมนูดูแลลูกค้า">
         {(
           [
-            ['overview', 'ภาพรวมการแจ้งเตือน'],
+            ['dashboard', 'ภาพรวมการแจ้งเตือน'],
             ['queue', 'คิวแจ้งเตือน'],
             ['policies', 'ทะเบียนกรมธรรม์'],
             ['register', 'เพิ่มกรมธรรม์'],
@@ -392,7 +390,7 @@ export function CustomerCare({ data, request, submittingTask, onSubmitTask, spac
       )}
       {notice && <p role="status">{notice}</p>}
       {!feed && !error && <p role="status">กำลังโหลดกรมธรรม์…</p>}
-      {feed && tab === 'overview' && (
+      {feed && tab === 'dashboard' && (
         <article className="panel">
           <h2>สรุปการแจ้งเตือน · {dateLabel(feed.today)}</h2>
           {ownerFilter}

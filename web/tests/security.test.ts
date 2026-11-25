@@ -88,6 +88,7 @@ test('return destinations allow only known local paths', () => {
     '/rinlyn/tasks',
     '/rinlyn/inbox',
     '/rinlyn/tasks/new',
+    '/rinlyn/customer-care/dashboard',
     '/rinlyn/customer-care/queue',
     '/rinlyn/customer-care/queue?group=premium',
     '/rinlyn/customer-care/policies',

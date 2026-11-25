@@ -25,7 +25,7 @@ test('agent sees the personal queue and registry without a team filter', async (
     }),
   );
   await page.goto('/rinlyn/customer-care');
-  await expect(page).toHaveURL(/\/rinlyn\/customer-care$/);
+  await expect(page).toHaveURL(/\/rinlyn\/customer-care\/dashboard$/);
   const owner = page.getByRole('combobox', { name: 'ตัวแทนผู้ดูแล', exact: true });
   const groups = page.getByRole('list', { name: 'จำนวนแจ้งเตือนตามกลุ่ม' });
   await expect(groups.getByRole('link', { name: /0 นัด/ })).toHaveCount(9);
@@ -148,6 +148,7 @@ test('reminders group active appointments by type and recorded birth month', asy
   await expect(rows).toContainText('DEMO-B');
   await page.goBack();
   await expect(owner).toHaveValue(h.other.id);
+  await expect(page).toHaveURL(/\/rinlyn\/customer-care\/dashboard$/);
   await owner.selectOption('');
   await groups.getByRole('link', { name: 'ติดตามครบสัญญา 1 นัด' }).click();
   await page.reload();

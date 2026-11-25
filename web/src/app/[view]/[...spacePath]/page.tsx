@@ -1,6 +1,6 @@
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { Workspace, type Page } from '@/components/workspace';
-import { isSpaceSlug, isWorkspacePath } from '@/domain/space-link';
+import { carePaths, isSpaceSlug, isWorkspacePath, spacePath } from '@/domain/space-link';
 import { statuses } from '@/domain/model';
 
 export default async function SpacePage({
@@ -13,6 +13,7 @@ export default async function SpacePage({
   const { view, spacePath: parts } = await params;
   const path = '/' + parts.join('/');
   if (!isSpaceSlug(view) || !isWorkspacePath(path) || path.endsWith('/open')) notFound();
+  if (path === '/customer-care') redirect(spacePath(view, carePaths.dashboard));
   const query = await searchParams;
   const page: Page =
     parts[0] === 'tasks'
