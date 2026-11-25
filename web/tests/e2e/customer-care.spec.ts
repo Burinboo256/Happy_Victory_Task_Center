@@ -32,6 +32,9 @@ test('secretary opens care from Space, creates policy and hands next contact to 
         customer: v.customer,
         reference: v.reference,
         started: v.started,
+        birthday: v.birthday,
+        frequency: v.frequency,
+        reviewDate: v.reviewDate,
         closed: false,
         ends: null,
         events: [
@@ -66,8 +69,14 @@ test('secretary opens care from Space, creates policy and hands next contact to 
   await page.getByLabel('รหัสอ้างอิง').fill('DEMO-CARE-01');
   await page.getByLabel('ตัวแทนผู้ดูแล').selectOption(h.agent.id);
   await page.getByLabel('วันเริ่มกรมธรรม์').fill(today);
+  await page.getByLabel('วันทบทวนครั้งแรก').fill('2027-01-15');
+  await page.getByLabel('เดือนเกิด').selectOption('02');
+  await page.getByLabel('วันที่เกิด').selectOption('29');
+  await page.getByLabel('ประเภทการชำระเงิน').selectOption('quarterly');
+  await page.getByLabel('วันชำระเบี้ยครั้งถัดไป').fill('2026-12-31');
   await page.getByRole('button', { name: 'บันทึกและสร้างแผนติดตาม' }).click();
   await expect(page.getByRole('heading', { name: /ลูกค้าทดลอง A/ })).toBeVisible();
+  await expect(page.getByText(/วันเกิด 29 กุมภาพันธ์.*รอบชำระเบี้ย รายไตรมาส/)).toBeVisible();
   await page.getByRole('button', { name: 'คิวแจ้งเตือน' }).click();
   await page.getByRole('button', { name: /ลูกค้าทดลอง A · ส่งมอบ/ }).click();
   await page.getByLabel('ผลการติดตาม').selectOption('handoff');

@@ -1,7 +1,10 @@
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import {
-  anniversary,
+  annualOnOrAfter,
+  shiftDate,
+  nextPremium,
+  frequencies,
   eventKinds,
   initialCare,
   leadDays,
@@ -33,6 +36,13 @@ const command = z.discriminatedUnion('action', [
       started: day,
       premium: day.optional(),
       ends: day.optional(),
+      reviewDate: day.optional(),
+      birthday: z
+        .string()
+        .regex(/^\d{2}-\d{2}$/)
+        .refine((v) => z.iso.date().safeParse('2000-' + v).success)
+        .optional(),
+      frequency: z.enum(frequencies).optional(),
     })
     .strict(),
   z
@@ -74,6 +84,7 @@ export async function careAlerts(c: Context) {
 export async function careRoster(c: Context) {
   const result = await c.db.query<CarePolicy>(
     `SELECT p.id,p.customer,p.reference,p.agent_id AS "agentId",p.kind,p.started::text,p.ends::text,p.closed,
+      p.review_date::text AS "reviewDate",p.birthday_md AS birthday,p.payment_frequency AS frequency,
       COALESCE(jsonb_agg(jsonb_build_object('id',e.id,'kind',e.kind,'due',e.due::text,'recipient',e.recipient,'note',e.note,'outcome',e.outcome,'resultNote',e.result_note,'completedAt',e.completed_at) ORDER BY e.due,e.id) FILTER (WHERE e.id IS NOT NULL),'[]') AS events
       FROM hvr_care_policies p LEFT JOIN hvr_care_events e ON e.policy_id=p.id
       WHERE p.environment=$1 AND ($2 OR p.agent_id=$3) GROUP BY p.id ORDER BY p.closed,p.customer,p.reference`,
@@ -88,10 +99,11 @@ function addEvent(
   due: string,
   recipient = 'team',
   message = '',
+  cycleDue = due,
 ) {
   return db.query(
-    'INSERT INTO hvr_care_events(policy_id,kind,due,recipient,note) VALUES($1,$2,$3,$4,$5)',
-    [id, kind, due, recipient, message],
+    'INSERT INTO hvr_care_events(policy_id,kind,due,recipient,note,cycle_due) VALUES($1,$2,$3,$4,$5,$6)',
+    [id, kind, due, recipient, message, cycleDue],
   );
 }
 export async function saveCare(c: Context, input: unknown) {
@@ -103,6 +115,12 @@ export async function saveCare(c: Context, input: unknown) {
     if (!manager && data.agentId !== c.user.id) throw forbidden();
     const agent = userDto(await c.repo.get('users', data.agentId));
     if (!agent.active || agent.role !== 'Agent') throw invalid('กรุณาเลือกตัวแทนที่ใช้งานใน Space นี้');
+    if (data.frequency && !data.premium) throw invalid('กรุณาระบุวันชำระเบี้ยครั้งถัดไปสำหรับรอบที่เลือก');
+    if (
+      data.reviewDate &&
+      (data.reviewDate < data.started || (data.ends && data.reviewDate > data.ends))
+    )
+      throw invalid('วันทบทวนต้องอยู่ภายในอายุกรมธรรม์');
     if (
       (data.ends && data.ends < data.started) ||
       (data.premium && (data.premium < data.started || (data.ends && data.premium > data.ends)))
@@ -128,8 +146,8 @@ export async function saveCare(c: Context, input: unknown) {
     }
     if (data.action === 'create') {
       const row = await db.query(
-        `INSERT INTO hvr_care_policies(id,environment,customer,reference,agent_id,kind,started,ends)
-        VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT DO NOTHING RETURNING id`,
+        `INSERT INTO hvr_care_policies(id,environment,customer,reference,agent_id,kind,started,ends,review_date,birthday_md,payment_frequency,premium_anchor)
+        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) ON CONFLICT DO NOTHING RETURNING id`,
         [
           data.operation,
           c.config.APP_ENV,
@@ -139,15 +157,26 @@ export async function saveCare(c: Context, input: unknown) {
           data.kind,
           data.started,
           data.ends,
+          data.reviewDate,
+          data.birthday,
+          data.frequency,
+          data.premium,
         ],
       );
       if (!row.rows.length) throw new AppError(409, 'CARE_DUPLICATE', 'ตัวแทนมีกรมธรรม์อ้างอิงนี้อยู่แล้ว');
-      for (const e of initialCare(data.started, today, data.premium, data.ends))
+      for (const e of initialCare(
+        data.started,
+        today,
+        data.premium,
+        data.ends,
+        data.reviewDate,
+        data.birthday,
+      ))
         await addEvent(db, data.operation, e.kind, e.due);
       return { saved: true };
     }
     const record = await db.query(
-      `SELECT started::text,ends::text,closed FROM hvr_care_policies WHERE id=$1 AND environment=$2 AND ($3 OR agent_id=$4) FOR UPDATE`,
+      `SELECT started::text,ends::text,closed,review_date::text,birthday_md,payment_frequency,premium_anchor::text FROM hvr_care_policies WHERE id=$1 AND environment=$2 AND ($3 OR agent_id=$4) FOR UPDATE`,
       [data.policyId, c.config.APP_ENV, manager, c.user.id],
     );
     const policy = record.rows[0];
@@ -160,7 +189,7 @@ export async function saveCare(c: Context, input: unknown) {
     } else {
       const event = (
         await db.query(
-          'SELECT kind, due::text, recipient, outcome FROM hvr_care_events WHERE id=$1 AND policy_id=$2',
+          'SELECT kind, due::text, coalesce(cycle_due,due)::text AS cycle, recipient, outcome FROM hvr_care_events WHERE id=$1 AND policy_id=$2',
           [data.eventId, data.policyId],
         )
       ).rows[0];
@@ -174,11 +203,30 @@ export async function saveCare(c: Context, input: unknown) {
         [data.eventId, c.user.id, data.outcome, data.note],
       );
       let next = data.next;
-      if (!next && event.kind === 'review') {
-        let year = Math.max(+today.slice(0, 4), +event.due.slice(0, 4) + 1);
-        if (anniversary(policy.started, year) <= today) year++;
-        next = anniversary(policy.started, year);
-        if (policy.ends && next > policy.ends) next = undefined;
+      if (!next && event.kind === 'premium' && policy.payment_frequency && policy.premium_anchor)
+        next = nextPremium(event.cycle, policy.premium_anchor, policy.payment_frequency);
+      if (!next && (event.kind === 'review' || event.kind === 'birthday')) {
+        const anchor =
+          event.kind === 'review'
+            ? policy.review_date || policy.started
+            : policy.birthday_md
+              ? '2000-' + policy.birthday_md
+              : event.cycle;
+        // Once the current annual contact is done, advance beyond that occurrence's year,
+        // even if the contact was completed on an earlier or later day.
+        const earliest = String(Number(event.cycle.slice(0, 4)) + 1) + '-01-01';
+        const tomorrow = shiftDate(today, 1);
+        next = annualOnOrAfter(anchor, earliest.localeCompare(tomorrow) > 0 ? earliest : tomorrow);
+      }
+      if (
+        next &&
+        policy.ends &&
+        next > policy.ends &&
+        data.outcome === 'done' &&
+        ['premium', 'review', 'birthday'].includes(event.kind)
+      ) {
+        if (data.next) throw invalid('นัดรอบถัดไปเกินวันครบสัญญา');
+        next = undefined;
       }
       if (next)
         await addEvent(
@@ -188,6 +236,7 @@ export async function saveCare(c: Context, input: unknown) {
           next,
           data.outcome === 'handoff' ? 'agent' : event.recipient,
           data.outcome === 'done' ? '' : data.note,
+          data.outcome === 'done' ? next : event.cycle,
         );
     }
     return { saved: true };

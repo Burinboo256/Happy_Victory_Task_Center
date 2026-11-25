@@ -6,6 +6,8 @@ import {
   eventKinds,
   insurance,
   outcomes,
+  frequencies,
+  paymentLabels,
   policyKinds,
   type CareEvent,
   type CarePolicy,
@@ -19,6 +21,85 @@ const dateLabel = (value: string) =>
     new Date(value + 'T12:00:00+07:00'),
   );
 const endpoint = '/api/customer-care';
+const monthName = (month: number) =>
+  new Intl.DateTimeFormat('th-TH', { month: 'long', timeZone: 'UTC' }).format(
+    new Date(Date.UTC(2000, month - 1, 1)),
+  );
+function CareScheduleFields() {
+  const [month, setMonth] = useState(''),
+    [day, setDay] = useState(''),
+    [frequency, setFrequency] = useState('');
+  const days = month ? new Date(Date.UTC(2000, Number(month), 0)).getUTCDate() : 31;
+  return (
+    <>
+      <fieldset className={styles.grid}>
+        <legend>Coverage Review · ทบทวนความเพียงพอของความคุ้มครองทุกปี</legend>
+        <label>
+          วันทบทวนครั้งแรก
+          <input type="date" name="reviewDate" />
+          <small>เว้นว่างเพื่อใช้วันครบรอบกรมธรรม์</small>
+        </label>
+      </fieldset>
+      <fieldset className={styles.grid}>
+        <legend>Birthday · วันเกิดลูกค้าทุกปี</legend>
+        <label>
+          เดือนเกิด
+          <select
+            value={month}
+            onChange={(e) => {
+              const m = e.target.value;
+              setMonth(m);
+              if (!m || Number(day) > new Date(Date.UTC(2000, Number(m), 0)).getUTCDate())
+                setDay('');
+            }}
+          >
+            <option value="">ยังไม่ระบุ</option>
+            {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+              <option key={m} value={String(m).padStart(2, '0')}>
+                {monthName(m)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          วันที่เกิด
+          <select
+            disabled={!month}
+            required={!!month}
+            value={day}
+            onChange={(e) => setDay(e.target.value)}
+          >
+            <option value="">เลือกวัน</option>
+            {Array.from({ length: days }, (_, i) => i + 1).map((d) => (
+              <option key={d} value={String(d).padStart(2, '0')}>
+                {d}
+              </option>
+            ))}
+          </select>
+        </label>
+        <input type="hidden" name="birthday" value={month && day ? month + '-' + day : ''} />
+      </fieldset>
+      <fieldset className={styles.grid}>
+        <legend>Policy Status · รอบชำระเบี้ย</legend>
+        <label>
+          ประเภทการชำระเงิน
+          <select name="frequency" value={frequency} onChange={(e) => setFrequency(e.target.value)}>
+            <option value="">ยังไม่ระบุ</option>
+            {frequencies.map((f) => (
+              <option key={f} value={f}>
+                {paymentLabels[f]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          วันชำระเบี้ยครั้งถัดไปตามเอกสาร{frequency ? ' *' : ''}
+          <input type="date" name="premium" required={!!frequency} />
+        </label>
+      </fieldset>
+    </>
+  );
+}
 type Feed = { policies: CarePolicy[]; today: string };
 type Props = { data: Bootstrap; request: (url: string, options?: RequestInit) => Promise<Feed> };
 export function CustomerCare({ data, request }: Props) {
@@ -215,6 +296,9 @@ export function CustomerCare({ data, request }: Props) {
                 action: 'create',
                 premium: v.premium || undefined,
                 ends: v.ends || undefined,
+                reviewDate: v.reviewDate || undefined,
+                birthday: v.birthday || undefined,
+                frequency: v.frequency || undefined,
               },
               (id) => show(id),
             );
@@ -261,13 +345,12 @@ export function CustomerCare({ data, request }: Props) {
               วันเริ่มกรมธรรม์ *<input type="date" required name="started" />
             </label>
             <label>
-              วันชำระเบี้ยครั้งถัดไปตามเอกสาร
-              <input type="date" name="premium" />
-            </label>
-            <label>
               วันครบสัญญาตามเอกสาร
               <input type="date" name="ends" />
             </label>
+          </fieldset>
+          <fieldset disabled={readonly}>
+            <CareScheduleFields />
           </fieldset>
           <button type="submit" className="btn primary" disabled={readonly}>
             บันทึกและสร้างแผนติดตาม
@@ -288,6 +371,18 @@ export function CustomerCare({ data, request }: Props) {
           </p>
           <p>
             <strong>สิ่งที่ควรติดตาม</strong> {insurance[policy.kind][1]}
+          </p>
+          <p>
+            ทบทวนทุกปี ·{' '}
+            {policy.reviewDate
+              ? dateLabel(policy.reviewDate).replace(/\s+\d+$/, '')
+              : 'วันครบรอบกรมธรรม์'}
+            {policy.birthday &&
+              ' · วันเกิด ' +
+                Number(policy.birthday.slice(3)) +
+                ' ' +
+                monthName(Number(policy.birthday.slice(0, 2)))}
+            {' · รอบชำระเบี้ย ' + (policy.frequency ? paymentLabels[policy.frequency] : 'ยังไม่ระบุ')}
           </p>
           {policy.closed ? (
             <p>สิ้นสุดการติดตามแล้ว</p>
@@ -365,6 +460,17 @@ export function CustomerCare({ data, request }: Props) {
                               min={feed?.today}
                             />
                           </label>
+                          {outcome === 'done' &&
+                            (e.kind === 'review' ||
+                              e.kind === 'birthday' ||
+                              (e.kind === 'premium' && policy.frequency)) && (
+                              <small>
+                                เว้นวันนัดถัดไปเพื่อให้ระบบสร้างนัดตามรอบ
+                                {e.kind === 'premium' && policy.frequency
+                                  ? paymentLabels[policy.frequency]
+                                  : 'รายปี'}
+                              </small>
+                            )}
                           <button type="submit" className="btn primary">
                             บันทึกผล
                           </button>

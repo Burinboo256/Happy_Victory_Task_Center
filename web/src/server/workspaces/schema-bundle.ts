@@ -146,4 +146,12 @@ export const operationalMigrations = [
       'CREATE TABLE hvr_care_operations (\n  environment text NOT NULL,\n  actor text NOT NULL,\n  id uuid NOT NULL,\n  payload_hash text NOT NULL,\n  PRIMARY KEY(environment, actor, id)\n)',
     ],
   },
+  {
+    name: '018_care_recurrence.sql',
+    checksum: '562ff7519b90d2983635b4c744e8d0bc8b6c893d8442cdb5f60bc9728228a73f',
+    statements: [
+      "ALTER TABLE hvr_care_policies\n  ADD COLUMN review_date date,\n  ADD COLUMN birthday_md text CHECK (birthday_md ~ '^[0-9]{2}-[0-9]{2}$'),\n  ADD COLUMN payment_frequency text CHECK (payment_frequency IN ('monthly','quarterly','yearly')),\n  ADD COLUMN premium_anchor date",
+      'ALTER TABLE hvr_care_events ADD COLUMN cycle_due date',
+    ],
+  },
 ] as const;
