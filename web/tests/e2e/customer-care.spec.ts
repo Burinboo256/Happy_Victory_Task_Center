@@ -29,6 +29,7 @@ test('agent sees the personal queue and registry without a team filter', async (
   const owner = page.getByRole('combobox', { name: 'ตัวแทนผู้ดูแล', exact: true });
   const groups = page.getByRole('list', { name: 'จำนวนแจ้งเตือนตามกลุ่ม' });
   await expect(groups.getByRole('link', { name: /0 นัด/ })).toHaveCount(9);
+  await expect(page.getByText('กรมธรรม์ทั้งหมด 0 ฉบับ', { exact: true })).toBeVisible();
   const guide = page.getByRole('list', { name: 'เงื่อนไขทั้ง 9 กลุ่ม' });
   await expect(guide).toBeHidden();
   await page.getByText('เงื่อนไขการแจ้งเตือนแต่ละกลุ่ม', { exact: true }).click();
@@ -106,6 +107,7 @@ test('reminders group active appointments by type and recorded birth month', asy
             policies: [
               policy,
               { ...policy, id: 'closed', closed: true },
+              { ...policy, id: 'unscheduled', reference: 'DEMO-C', customer: 'คุณมะลิ', events: [] },
               {
                 ...policy,
                 id: 'second',
@@ -145,10 +147,12 @@ test('reminders group active appointments by type and recorded birth month', asy
   await expect(owner).toHaveValue('');
   const groups = page.getByRole('list', { name: 'จำนวนแจ้งเตือนตามกลุ่ม' });
   await expect(page.getByText('นัดที่ถึงช่วงแจ้งเตือน 3 นัด')).toBeVisible();
+  await expect(page.getByText('กรมธรรม์ทั้งหมด 4 ฉบับ', { exact: true })).toBeVisible();
   await expect(page.getByText('เกินนัด 1 นัด', { exact: true })).toBeVisible();
   await expect(groups.getByRole('link', { name: 'วันเกิดลูกค้า 2 นัด' })).toBeVisible();
   await expect(groups.getByRole('link', { name: 'ยืนยันการชำระเบี้ย 0 นัด' })).toBeVisible();
   await owner.selectOption(h.other.id);
+  await expect(page.getByText('กรมธรรม์ทั้งหมด 1 ฉบับ', { exact: true })).toBeVisible();
   await groups.getByRole('link', { name: 'วันเกิดลูกค้า 1 นัด' }).click();
   await expect(page).toHaveURL(/\/queue\?group=birthday$/);
   await expect(rows).toHaveCount(1);

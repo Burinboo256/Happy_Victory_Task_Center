@@ -397,6 +397,9 @@ export function CustomerCare({ data, request, submittingTask, onSubmitTask, spac
           {ownerFilter}
           <div className={styles.alertTotal}>
             <span>
+              กรมธรรม์ทั้งหมด <strong>{ownerPolicies.length.toLocaleString('th-TH')} ฉบับ</strong>
+            </span>
+            <span>
               นัดที่ถึงช่วงแจ้งเตือน <strong>{alerts.length} นัด</strong>
             </span>
             <span className={styles.late}>
