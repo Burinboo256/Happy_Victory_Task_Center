@@ -6,7 +6,7 @@ import { careRoster, careAlerts, saveCare } from '@/server/services/customer-car
 export const dynamic = 'force-dynamic';
 async function context() {
   const c = await protectedContext();
-  if (c.config.APP_ENV === 'production' || !c.config.workspace)
+  if (!c.config.workspace)
     throw new AppError(404, 'CARE_DISABLED', 'ยังไม่เปิดบริการใน Space นี้');
   return c;
 }
