@@ -132,6 +132,8 @@ export function CustomerCare({ data, request }: Props) {
     [notice, setNotice] = useState('');
   const [target, setTarget] = useState(''),
     [outcome, setOutcome] = useState<Outcome>('done');
+  const [grouped, setGrouped] = useState(false);
+  const [includeFuture, setIncludeFuture] = useState(false);
   const pending = useRef<{ key: string; operation: string } | null>(null);
   const latest = useRef(0);
   const reload = useCallback(async () => {
@@ -209,10 +211,25 @@ export function CustomerCare({ data, request }: Props) {
         .filter((e) => !e.outcome)
         .map((e) => ({ p, e, level: alertLevel(e, feed?.today ?? data.today) })),
     )
-    .filter((r) => r.level !== 'ตามแผน')
+    .filter((r) => r.level !== 'ตามแผน' || (grouped && includeFuture))
     .sort((a, b) => a.e.due.localeCompare(b.e.due));
   const recipient = (e: CareEvent) =>
     e.recipient === 'team' ? 'เลขา / ทีมดูแล' : 'ตัวแทนเจ้าของกรมธรรม์';
+  function reminderRow({ p, e, level }: (typeof queue)[number]) {
+    return (
+      <button type="button" key={e.id} className={styles.row} onClick={() => show(p.id, e.id)}>
+        <strong>
+          {p.customer} · {careLabels[e.kind]}
+        </strong>
+        <span className={level === 'เกินนัด' ? styles.late : undefined}>
+          {level} · {dateLabel(e.due)}
+        </span>
+        <small>
+          {p.reference} · {agentName(p.agentId)} · ผู้ติดตาม {recipient(e)}
+        </small>
+      </button>
+    );
+  }
   return (
     <section className={styles.care}>
       <nav aria-label="เมนูดูแลลูกค้า">
@@ -254,27 +271,54 @@ export function CustomerCare({ data, request }: Props) {
       {feed && tab === 'queue' && (
         <article className="panel">
           <h2>คิวติดตาม · {dateLabel(feed.today)}</h2>
+          <fieldset className={styles.queueViews} aria-label="มุมมองคิวแจ้งเตือน">
+            <button type="button" aria-pressed={!grouped} onClick={() => setGrouped(false)}>
+              ตามวันนัด
+            </button>
+            <button type="button" aria-pressed={grouped} onClick={() => setGrouped(true)}>
+              แยกตามกลุ่ม
+            </button>
+          </fieldset>
+          {grouped && (
+            <label className={styles.futureToggle}>
+              <input
+                type="checkbox"
+                checked={includeFuture}
+                onChange={(e) => setIncludeFuture(e.target.checked)}
+              />
+              รวมนัดล่วงหน้าที่ยังไม่ถึงช่วงแจ้งเตือน
+            </label>
+          )}
           {queue.length === 0 ? (
-            <p>ยังไม่มีนัดที่ถึงช่วงแจ้งเตือน</p>
+            <p>{grouped && includeFuture ? 'ยังไม่มีนัดที่รอติดตาม' : 'ยังไม่มีนัดที่ถึงช่วงแจ้งเตือน'}</p>
+          ) : grouped ? (
+            eventKinds.map((kind) => {
+              const rows = queue.filter(({ e }) => e.kind === kind);
+              if (!rows.length) return null;
+              return (
+                <details key={kind} className={styles.queueGroup}>
+                  <summary>
+                    {careLabels[kind]} <span>{rows.length} นัด</span>
+                  </summary>
+                  {kind === 'birthday'
+                    ? [...Array.from({ length: 12 }, (_, i) => i + 1), 0].map((month) => {
+                        const birthdays = rows.filter(
+                          ({ p }) => Number(p.birthday?.slice(0, 2) || 0) === month,
+                        );
+                        if (!birthdays.length) return null;
+                        return (
+                          <section key={month}>
+                            <h3>{month ? monthName(month) : 'ไม่ระบุเดือนเกิด'}</h3>
+                            {birthdays.map(reminderRow)}
+                          </section>
+                        );
+                      })
+                    : rows.map(reminderRow)}
+                </details>
+              );
+            })
           ) : (
-            queue.map(({ p, e, level }) => (
-              <button
-                type="button"
-                key={e.id}
-                className={styles.row}
-                onClick={() => show(p.id, e.id)}
-              >
-                <strong>
-                  {p.customer} · {careLabels[e.kind]}
-                </strong>
-                <span className={level === 'เกินนัด' ? styles.late : undefined}>
-                  {level} · {dateLabel(e.due)}
-                </span>
-                <small>
-                  {p.reference} · {agentName(p.agentId)} · ผู้ติดตาม {recipient(e)}
-                </small>
-              </button>
-            ))
+            queue.map(reminderRow)
           )}
         </article>
       )}

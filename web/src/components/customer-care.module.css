@@ -67,6 +67,58 @@
   cursor: pointer;
   font-weight: 700;
 }
+.care .queueViews {
+  display: inline-flex;
+  margin: 0;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.queueViews button {
+  min-height: 40px;
+  padding: 6px 14px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.queueViews button[aria-pressed="true"] {
+  background: #773d57;
+  color: white;
+}
+.care .futureToggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 14px 0;
+}
+.futureToggle input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.care .queueGroup {
+  margin: 8px 0;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.queueGroup summary {
+  padding: 12px 0;
+}
+.queueGroup summary span {
+  display: inline-block;
+  margin-inline-start: 6px;
+  color: var(--muted);
+  font-weight: normal;
+}
+.queueGroup h3 {
+  margin: 6px 0 0;
+  font-size: 1rem;
+  color: #773d57;
+}
 .createForm {
   container-type: inline-size;
   min-width: 0;

@@ -2,6 +2,76 @@ import { test, expect } from '@playwright/test';
 import { bootstrap } from '../../src/server/services/reads';
 import { repository } from '../fixtures';
 import type { CarePolicy } from '../../src/domain/customer-care';
+test('reminders group active appointments by type and recorded birth month', async ({ page }) => {
+  const h = repository();
+  const today = '2026-11-25';
+  const policy: CarePolicy = {
+    id: 'sample',
+    agentId: h.agent.id,
+    customer: 'ลูกค้าตัวอย่าง',
+    reference: 'DEMO-GROUP',
+    kind: 'life',
+    started: '2025-01-01',
+    birthday: '10-31',
+    reviewDate: null,
+    frequency: null,
+    closed: false,
+    ends: null,
+    events: [],
+  };
+  const event: CarePolicy['events'][number] = {
+    id: 'birthday',
+    kind: 'birthday',
+    due: today,
+    recipient: 'team',
+    note: '',
+    completedAt: null,
+    outcome: null,
+    resultNote: null,
+  };
+  policy.events = [
+    event,
+    { ...event, id: 'maturity', kind: 'maturity', due: '2026-11-21' },
+    { ...event, id: 'future', kind: 'premium', due: '2027-02-25' },
+    { ...event, id: 'done', kind: 'claim', outcome: 'done' },
+  ];
+  const ctx = {
+    ...(await bootstrap(h.repo, h.secretary)),
+    workspace: { id: '00000000-0000-4000-8000-000000000001', slug: 'rinlyn', name: 'ตัวอย่าง' },
+    customerCareEnabled: true,
+    writesEnabled: true,
+  };
+  await page.route('**/api/bootstrap*', (r) => r.fulfill({ json: ctx }));
+  await page.route('**/api/customer-care*', (r) =>
+    r.fulfill({
+      json: r.request().url().endsWith('scope=alerts')
+        ? { total: 2, late: 1 }
+        : {
+            policies: [policy, { ...policy, id: 'closed', closed: true }],
+            today,
+          },
+    }),
+  );
+  await page.goto('/rinlyn/customer-care');
+  const rows = page.getByRole('button', { name: /ลูกค้าตัวอย่าง ·/ });
+  await expect(rows).toHaveCount(2);
+  await expect(rows.first()).toContainText('ติดตามครบสัญญา');
+  await page.getByRole('button', { name: 'แยกตามกลุ่ม' }).click();
+  await page.getByText('วันเกิดลูกค้า 1 นัด', { exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'ตุลาคม' })).toBeVisible();
+  await expect(page.locator('summary', { hasText: 'ติดตามหลังแจ้งเคลม' })).toHaveCount(0);
+  const premium = page.locator('summary', { hasText: 'ยืนยันการชำระเบี้ย' });
+  await expect(premium).toHaveCount(0);
+  await page.getByRole('checkbox', { name: /รวมนัดล่วงหน้า/ }).check();
+  await expect(premium).toContainText('1 นัด');
+  await page.getByRole('button', { name: 'ตามวันนัด' }).click();
+  await expect(rows).toHaveCount(2);
+  await page.getByRole('button', { name: 'แยกตามกลุ่ม' }).click();
+  await page.getByText('ติดตามครบสัญญา 1 นัด', { exact: true }).click();
+  await page.getByRole('button', { name: /ลูกค้าตัวอย่าง · ติดตามครบสัญญา/ }).click();
+  await expect(page.getByLabel('ผลการติดตาม')).toBeVisible();
+});
+
 test('secretary opens care from Space, creates policy and hands next contact to Agent', async ({
   page,
 }) => {
