@@ -3,6 +3,48 @@ import { bootstrap, detail } from '../../src/server/services/reads';
 import { mutate } from '../../src/server/services/mutations';
 import { repository } from '../fixtures';
 import type { CarePolicy } from '../../src/domain/customer-care';
+test('a signed-out policy registration link keeps the exact destination', async ({ page }) => {
+  await page.route('**/api/bootstrap*', (r) => r.fulfill({ status: 401, json: {} }));
+  await page.goto('/rinlyn/customer-care/register');
+  await expect(page).toHaveURL(/\/login\?returnTo=%2Frinlyn%2Fcustomer-care%2Fregister$/);
+});
+
+test('agent sees the personal queue and registry without a team filter', async ({ page }) => {
+  const h = repository();
+  const ctx = {
+    ...(await bootstrap(h.repo, h.agent, 'context')),
+    workspace: { id: '00000000-0000-4000-8000-000000000001', slug: 'rinlyn', name: 'ตัวอย่าง' },
+    customerCareEnabled: true,
+  };
+  await page.route('**/api/bootstrap*', (r) => r.fulfill({ json: ctx }));
+  await page.route('**/api/customer-care*', (r) =>
+    r.fulfill({
+      json: r.request().url().endsWith('scope=alerts')
+        ? { total: 0, late: 0 }
+        : { today: ctx.today, policies: [] },
+    }),
+  );
+  await page.goto('/rinlyn/customer-care');
+  await expect(page).toHaveURL(/\/rinlyn\/customer-care\/queue$/);
+  const owner = page.getByRole('combobox', { name: 'ตัวแทนผู้ดูแล', exact: true });
+  await expect(page.getByText('ยังไม่มีนัดที่ถึงช่วงแจ้งเตือน')).toBeVisible();
+  await expect(owner).toHaveCount(0);
+  await page.getByRole('link', { name: 'ทะเบียนกรมธรรม์' }).click();
+  await expect(page).toHaveURL(/\/rinlyn\/customer-care\/policies$/);
+  await expect(page.getByText('ไม่พบกรมธรรม์')).toBeVisible();
+  await expect(owner).toHaveCount(0);
+  await page.getByRole('link', { name: 'เพิ่มกรมธรรม์' }).click();
+  await expect(page).toHaveURL(/\/rinlyn\/customer-care\/register$/);
+  await expect(page.getByLabel('ชื่อลูกค้า')).toBeVisible();
+  await page.goBack();
+  await expect(page.getByRole('searchbox')).toBeVisible();
+  await page.goForward();
+  await page.reload();
+  await expect(page.getByLabel('ชื่อลูกค้า')).toBeVisible();
+  await page.goto('/rinlyn/customer-care/policies');
+  await expect(page.getByRole('searchbox')).toBeVisible();
+});
+
 test('reminders group active appointments by type and recorded birth month', async ({ page }) => {
   const h = repository();
   const today = '2026-11-25';
@@ -50,7 +92,17 @@ test('reminders group active appointments by type and recorded birth month', asy
       json: r.request().url().endsWith('scope=alerts')
         ? { total: 2, late: 1 }
         : {
-            policies: [policy, { ...policy, id: 'closed', closed: true }],
+            policies: [
+              policy,
+              { ...policy, id: 'closed', closed: true },
+              {
+                ...policy,
+                id: 'second',
+                agentId: h.other.id,
+                reference: 'DEMO-B',
+                events: [{ ...event, id: 'second-birthday' }],
+              },
+            ],
             today,
           },
     }),
@@ -78,6 +130,27 @@ test('reminders group active appointments by type and recorded birth month', asy
     await r.fulfill({ json: { ...result, state: 'completed' } });
   });
   const rows = page.getByRole('button', { name: /ลูกค้าตัวอย่าง ·/ });
+  const owner = page.getByRole('combobox', { name: 'ตัวแทนผู้ดูแล', exact: true });
+  await expect(owner).toHaveValue('');
+  await expect(rows).toHaveCount(3);
+  await owner.selectOption(h.other.id);
+  await expect(rows).toHaveCount(1);
+  await expect(rows).toContainText('DEMO-B');
+  await page.getByRole('button', { name: 'แยกตามกลุ่ม' }).click();
+  await expect(page.locator('summary')).toHaveText(['วันเกิดลูกค้า 1 นัด']);
+  await page.getByRole('link', { name: 'ทะเบียนกรมธรรม์' }).click();
+  await expect(owner).toHaveValue(h.other.id);
+  await expect(rows).toHaveCount(1);
+  await page.getByRole('searchbox').fill('DEMO-GROUP');
+  await expect(page.getByText('ไม่พบกรมธรรม์', { exact: true })).toBeVisible();
+  await owner.selectOption('');
+  await expect(rows).toHaveCount(2);
+  await page.getByRole('searchbox').fill('');
+  await expect(rows).toHaveCount(3);
+  await owner.selectOption(h.agent.id);
+  await page.getByRole('link', { name: 'คิวแจ้งเตือน' }).click();
+  await expect(owner).toHaveValue(h.agent.id);
+  await page.getByRole('button', { name: 'ตามวันนัด' }).click();
   await expect(rows).toHaveCount(2);
   await expect(rows.first()).toContainText('ติดตามครบสัญญา');
   await page.getByRole('button', { name: /เปิดงานให้เลขา · วันเกิดลูกค้า/ }).click();
@@ -98,7 +171,7 @@ test('reminders group active appointments by type and recorded birth month', asy
   await page.getByText('ติดตามครบสัญญา 1 นัด', { exact: true }).click();
   await page.getByRole('button', { name: /ลูกค้าตัวอย่าง · ติดตามครบสัญญา/ }).click();
   await expect(page.getByLabel('ผลการติดตาม')).toBeVisible();
-  await page.getByRole('button', { name: 'คิวแจ้งเตือน' }).click();
+  await page.getByRole('link', { name: 'คิวแจ้งเตือน' }).click();
   await page.getByText('ติดตามครบสัญญา 1 นัด', { exact: true }).click();
   await page.getByRole('button', { name: /เปิดงานให้เลขา · ติดตามครบสัญญา/ }).click();
   await expect(page.getByLabel('ชื่อลูกค้า', { exact: true })).toHaveValue(policy.customer);
@@ -182,7 +255,7 @@ test('secretary opens care from Space, creates policy and hands next contact to 
   });
   await page.goto('/rinlyn');
   await page.getByRole('link', { name: /นัดดูแลลูกค้า 0/ }).click();
-  await page.getByRole('button', { name: 'เพิ่มกรมธรรม์', exact: true }).click();
+  await page.getByRole('link', { name: 'เพิ่มกรมธรรม์', exact: true }).click();
   await page.getByLabel('ชื่อลูกค้า').fill('ลูกค้าทดลอง A');
   await page.getByLabel('รหัสอ้างอิง').fill('DEMO-CARE-01');
   await page.getByLabel('ตัวแทนผู้ดูแล').selectOption(h.agent.id);
@@ -197,7 +270,7 @@ test('secretary opens care from Space, creates policy and hands next contact to 
   await expect(page.getByRole('heading', { name: /ลูกค้าทดลอง A/ })).toBeVisible();
   await expect(page.getByText(/วันเกิด 29 กุมภาพันธ์.*รอบชำระเบี้ย รายไตรมาส/)).toBeVisible();
   await expect(page.getByText(/ยอดเบี้ยต่อรอบ 12,500\.50 บาท/)).toBeVisible();
-  await page.getByRole('button', { name: 'คิวแจ้งเตือน' }).click();
+  await page.getByRole('link', { name: 'คิวแจ้งเตือน' }).click();
   await page.getByRole('button', { name: /ลูกค้าทดลอง A · ส่งมอบ/ }).click();
   await page.getByLabel('ผลการติดตาม').selectOption('handoff');
   await page.getByLabel('วันนัดถัดไป').fill('2026-11-26');

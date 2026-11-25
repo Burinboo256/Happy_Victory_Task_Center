@@ -34,12 +34,18 @@ export const spaceViews = [
   'history',
   'notifications',
 ] as const;
+export const carePaths = {
+  queue: '/customer-care/queue',
+  policies: '/customer-care/policies',
+  register: '/customer-care/register',
+} as const;
 const pages = new Set([
   '/',
   '/tasks',
   '/tasks/new',
   '/forms',
   '/customer-care',
+  ...Object.values(carePaths),
   ...spaceViews.map((v) => '/' + v),
 ]);
 export function isWorkspacePath(value: string) {

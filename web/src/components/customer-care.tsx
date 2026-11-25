@@ -1,4 +1,7 @@
 'use client';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { carePaths, spacePath } from '@/domain/space-link';
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import {
   alertLevel,
@@ -135,15 +138,21 @@ function CareScheduleFields() {
 }
 type Feed = { policies: CarePolicy[]; today: string };
 type Props = {
+  spaceSlug: string;
   data: Bootstrap;
   request: (url: string, options?: RequestInit) => Promise<Feed>;
   submittingTask: boolean;
   onSubmitTask: TaskFormProps['onSubmit'];
 };
-export function CustomerCare({ data, request, submittingTask, onSubmitTask }: Props) {
+export function CustomerCare({ data, request, submittingTask, onSubmitTask, spaceSlug }: Props) {
   const [feed, setFeed] = useState<Feed | null>(null),
-    [selected, setSelected] = useState(''),
-    [tab, setTab] = useState<'queue' | 'policies' | 'create'>('queue');
+    [selected, setSelected] = useState('');
+  const pathname = usePathname();
+  const tab = pathname.split('/').at(-1);
+  function navigate(view: keyof typeof carePaths) {
+    const path = spacePath(spaceSlug, carePaths[view]);
+    if (window.location.pathname !== path) window.history.pushState(null, '', path);
+  }
   const [search, setSearch] = useState(''),
     [error, setError] = useState(''),
     [busy, setBusy] = useState(false),
@@ -152,7 +161,19 @@ export function CustomerCare({ data, request, submittingTask, onSubmitTask }: Pr
     [outcome, setOutcome] = useState<Outcome>('done');
   const [grouped, setGrouped] = useState(false);
   const [includeFuture, setIncludeFuture] = useState(false);
+  const [ownerId, setOwnerId] = useState('');
   const [taskDraft, setTaskDraft] = useState<TaskDraft | null>(null);
+  useEffect(() => {
+    const resetDetail = () => {
+      setSelected('');
+      setTarget('');
+      setTaskDraft(null);
+      setNotice('');
+      setError('');
+    };
+    window.addEventListener('popstate', resetDetail);
+    return () => window.removeEventListener('popstate', resetDetail);
+  }, []);
   const pending = useRef<{ key: string; operation: string } | null>(null);
   const latest = useRef(0);
   const reload = useCallback(async () => {
@@ -191,7 +212,7 @@ export function CustomerCare({ data, request, submittingTask, onSubmitTask }: Pr
     setSelected(id);
     setTarget(event);
     setOutcome('done');
-    setTab('policies');
+    navigate('policies');
     setError('');
     setNotice('');
   };
@@ -223,7 +244,13 @@ export function CustomerCare({ data, request, submittingTask, onSubmitTask }: Pr
     event.preventDefault();
     return Object.fromEntries(new FormData(event.currentTarget)) as Record<string, string>;
   }
-  const queue = (feed?.policies || [])
+  const policies = feed?.policies ?? [];
+  const ownerPolicies = ownerId ? policies.filter((p) => p.agentId === ownerId) : policies;
+  const query = search.trim().toLowerCase();
+  const matchingPolicies = ownerPolicies.filter((p) =>
+    `${p.customer} ${p.reference}`.toLowerCase().includes(query),
+  );
+  const queue = ownerPolicies
     .filter((p) => !p.closed)
     .flatMap((p) =>
       p.events
@@ -293,6 +320,27 @@ export function CustomerCare({ data, request, submittingTask, onSubmitTask }: Pr
       />
     );
   }
+  const ownerNames = new Map(data.users.map((u) => [u.id, u.name]));
+  const ownerIds = new Set([
+    ...data.users.filter((u) => u.role === 'Agent' && u.active).map((u) => u.id),
+    ...policies.map((p) => p.agentId),
+  ]);
+  const ownerOptions = [...ownerIds]
+    .map((id) => ({ id, name: ownerNames.get(id) || id }))
+    .sort((a, b) => a.name.localeCompare(b.name, 'th'));
+  const ownerFilter = isManager(data.user) && (
+    <label>
+      ตัวแทนผู้ดูแล
+      <select value={ownerId} onChange={(event) => setOwnerId(event.target.value)}>
+        <option value="">ทุกตัวแทน</option>
+        {ownerOptions.map(({ id, name }) => (
+          <option key={id} value={id}>
+            {name}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
   return (
     <section className={styles.care}>
       <nav aria-label="เมนูดูแลลูกค้า">
@@ -300,17 +348,20 @@ export function CustomerCare({ data, request, submittingTask, onSubmitTask }: Pr
           [
             ['queue', 'คิวแจ้งเตือน'],
             ['policies', 'ทะเบียนกรมธรรม์'],
-            ['create', 'เพิ่มกรมธรรม์'],
+            ['register', 'เพิ่มกรมธรรม์'],
           ] as const
         ).map(([key, label]) => (
-          <button
-            type="button"
+          <Link
             key={key}
+            href={spacePath(spaceSlug, carePaths[key])}
+            prefetch={false}
             className={'btn ' + (tab === key ? 'primary' : 'secondary')}
-            disabled={busy}
-            aria-pressed={tab === key}
-            onClick={() => {
-              setTab(key);
+            aria-disabled={busy || undefined}
+            aria-current={tab === key ? 'page' : undefined}
+            onNavigate={(event) => {
+              event.preventDefault();
+              if (busy) return;
+              navigate(key);
               setSelected('');
               setTarget('');
               setError('');
@@ -318,7 +369,7 @@ export function CustomerCare({ data, request, submittingTask, onSubmitTask }: Pr
             }}
           >
             {label}
-          </button>
+          </Link>
         ))}
       </nav>
       {error && (
@@ -334,6 +385,7 @@ export function CustomerCare({ data, request, submittingTask, onSubmitTask }: Pr
       {feed && tab === 'queue' && (
         <article className="panel">
           <h2>คิวติดตาม · {dateLabel(feed.today)}</h2>
+          {ownerFilter}
           <fieldset className={styles.queueViews} aria-label="มุมมองคิวแจ้งเตือน">
             <button type="button" aria-pressed={!grouped} onClick={() => setGrouped(false)}>
               ตามวันนัด
@@ -388,31 +440,28 @@ export function CustomerCare({ data, request, submittingTask, onSubmitTask }: Pr
       {feed && tab === 'policies' && !policy && (
         <article className="panel">
           <h2>ทะเบียนกรมธรรม์</h2>
-          <label>
-            ค้นหาชื่อลูกค้าหรือรหัสอ้างอิง
-            <input type="search" value={search} onChange={(e) => setSearch(e.target.value)} />
-          </label>
-          {feed.policies
-            .filter((p) =>
-              (p.customer + ' ' + p.reference).toLowerCase().includes(search.trim().toLowerCase()),
-            )
-            .map((p) => (
-              <button type="button" className={styles.row} key={p.id} onClick={() => show(p.id)}>
-                <strong>
-                  {p.customer} · {insurance[p.kind][0]}
-                </strong>
-                <small>
-                  {p.reference} · {agentName(p.agentId)}
-                  {p.closed ? ' · สิ้นสุดการติดตาม' : ''}
-                </small>
-              </button>
-            ))}
-          {!feed.policies.some((p) =>
-            (p.customer + ' ' + p.reference).toLowerCase().includes(search.trim().toLowerCase()),
-          ) && <p>ไม่พบกรมธรรม์</p>}
+          <div className={styles.grid}>
+            {ownerFilter}
+            <label>
+              ค้นหาชื่อลูกค้าหรือรหัสอ้างอิง
+              <input type="search" value={search} onChange={(e) => setSearch(e.target.value)} />
+            </label>
+          </div>
+          {matchingPolicies.map((p) => (
+            <button type="button" className={styles.row} key={p.id} onClick={() => show(p.id)}>
+              <strong>
+                {p.customer} · {insurance[p.kind][0]}
+              </strong>
+              <small>
+                {p.reference} · {agentName(p.agentId)}
+                {p.closed ? ' · สิ้นสุดการติดตาม' : ''}
+              </small>
+            </button>
+          ))}
+          {!matchingPolicies.length && <p>ไม่พบกรมธรรม์</p>}
         </article>
       )}
-      {feed && tab === 'create' && (
+      {feed && tab === 'register' && (
         <form
           className={styles.createForm}
           onSubmit={(e) => {
