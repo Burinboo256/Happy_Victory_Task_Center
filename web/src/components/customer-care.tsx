@@ -14,6 +14,7 @@ import {
   type Outcome,
 } from '@/domain/customer-care';
 import { isManager, type Bootstrap } from '@/domain/model';
+import { TaskForm, type TaskDraft, type TaskFormProps } from './task-form';
 import styles from './customer-care.module.css';
 
 const dateLabel = (value: string) =>
@@ -121,8 +122,13 @@ function CareScheduleFields() {
   );
 }
 type Feed = { policies: CarePolicy[]; today: string };
-type Props = { data: Bootstrap; request: (url: string, options?: RequestInit) => Promise<Feed> };
-export function CustomerCare({ data, request }: Props) {
+type Props = {
+  data: Bootstrap;
+  request: (url: string, options?: RequestInit) => Promise<Feed>;
+  submittingTask: boolean;
+  onSubmitTask: TaskFormProps['onSubmit'];
+};
+export function CustomerCare({ data, request, submittingTask, onSubmitTask }: Props) {
   const [feed, setFeed] = useState<Feed | null>(null),
     [selected, setSelected] = useState(''),
     [tab, setTab] = useState<'queue' | 'policies' | 'create'>('queue');
@@ -134,6 +140,7 @@ export function CustomerCare({ data, request }: Props) {
     [outcome, setOutcome] = useState<Outcome>('done');
   const [grouped, setGrouped] = useState(false);
   const [includeFuture, setIncludeFuture] = useState(false);
+  const [taskDraft, setTaskDraft] = useState<TaskDraft | null>(null);
   const pending = useRef<{ key: string; operation: string } | null>(null);
   const latest = useRef(0);
   const reload = useCallback(async () => {
@@ -215,19 +222,63 @@ export function CustomerCare({ data, request }: Props) {
     .sort((a, b) => a.e.due.localeCompare(b.e.due));
   const recipient = (e: CareEvent) =>
     e.recipient === 'team' ? 'เลขา / ทีมดูแล' : 'ตัวแทนเจ้าของกรมธรรม์';
+  function openTask(policy: CarePolicy, event: CareEvent) {
+    const subject = careLabels[event.kind];
+    setTaskDraft({
+      title: `${subject} · ${policy.customer}`,
+      description: [
+        subject,
+        `กรมธรรม์ ${policy.reference}`,
+        `วันนัดติดตาม ${dateLabel(event.due)}`,
+        event.note,
+      ]
+        .filter(Boolean)
+        .join('\n'),
+      caseName: policy.customer,
+      agentId: policy.agentId,
+      category: event.kind === 'welcome' ? 'ลูกค้าใหม่' : 'ลูกค้าเก่า',
+      dueDate: event.due,
+    });
+  }
   function reminderRow({ p, e, level }: (typeof queue)[number]) {
     return (
-      <button type="button" key={e.id} className={styles.row} onClick={() => show(p.id, e.id)}>
-        <strong>
-          {p.customer} · {careLabels[e.kind]}
-        </strong>
-        <span className={level === 'เกินนัด' ? styles.late : undefined}>
-          {level} · {dateLabel(e.due)}
-        </span>
-        <small>
-          {p.reference} · {agentName(p.agentId)} · ผู้ติดตาม {recipient(e)}
-        </small>
-      </button>
+      <div key={e.id} className={styles.reminder}>
+        <button type="button" className={styles.row} onClick={() => show(p.id, e.id)}>
+          <strong>
+            {p.customer} · {careLabels[e.kind]}
+          </strong>
+          <span className={level === 'เกินนัด' ? styles.late : undefined}>
+            {level} · {dateLabel(e.due)}
+          </span>
+          <small>
+            {p.reference} · {agentName(p.agentId)} · ผู้ติดตาม {recipient(e)}
+          </small>
+        </button>
+        <button
+          type="button"
+          className="btn secondary small"
+          disabled={readonly}
+          aria-label={`เปิดงานให้เลขา · ${careLabels[e.kind]} · ${p.customer}`}
+          onClick={() => openTask(p, e)}
+        >
+          เปิดงานให้เลขา
+        </button>
+      </div>
+    );
+  }
+  if (taskDraft) {
+    return (
+      <TaskForm
+        data={data}
+        busy={submittingTask}
+        onSubmit={onSubmitTask}
+        initial={taskDraft}
+        cancel={
+          <button type="button" className="btn" onClick={() => setTaskDraft(null)}>
+            กลับคิวติดตาม
+          </button>
+        }
+      />
     );
   }
   return (

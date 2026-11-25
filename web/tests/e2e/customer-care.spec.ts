@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { bootstrap } from '../../src/server/services/reads';
+import { bootstrap, detail } from '../../src/server/services/reads';
+import { mutate } from '../../src/server/services/mutations';
 import { repository } from '../fixtures';
 import type { CarePolicy } from '../../src/domain/customer-care';
 test('reminders group active appointments by type and recorded birth month', async ({ page }) => {
@@ -40,6 +41,7 @@ test('reminders group active appointments by type and recorded birth month', asy
     workspace: { id: '00000000-0000-4000-8000-000000000001', slug: 'rinlyn', name: 'ตัวอย่าง' },
     customerCareEnabled: true,
     writesEnabled: true,
+    csrfToken: 'care-test',
   };
   await page.route('**/api/bootstrap*', (r) => r.fulfill({ json: ctx }));
   await page.route('**/api/customer-care*', (r) =>
@@ -53,9 +55,34 @@ test('reminders group active appointments by type and recorded birth month', asy
     }),
   );
   await page.goto('/rinlyn/customer-care');
+  let submissions = 0;
+  await page.route('**/api/tasks/rec*', async (r) =>
+    r.fulfill({
+      json: await detail(
+        h.repo,
+        h.secretary,
+        new URL(r.request().url()).pathname.split('/').at(-1) || '',
+      ),
+    }),
+  );
+  await page.route('**/api/tasks', async (r) => {
+    expect(r.request().headers()['x-workspace-slug']).toBe('rinlyn');
+    expect(r.request().headers()['x-csrf-token']).toBe(ctx.csrfToken);
+    expect(r.request().headers()['idempotency-key']).toBeTruthy();
+    submissions++;
+    const result = await mutate(h.repo, h.secretary, 'create', r.request().postDataJSON(), {
+      key: 'care-task-ui',
+      run: async (_name, work) => work(),
+    });
+    await r.fulfill({ json: { ...result, state: 'completed' } });
+  });
   const rows = page.getByRole('button', { name: /ลูกค้าตัวอย่าง ·/ });
   await expect(rows).toHaveCount(2);
   await expect(rows.first()).toContainText('ติดตามครบสัญญา');
+  await page.getByRole('button', { name: /เปิดงานให้เลขา · วันเกิดลูกค้า/ }).click();
+  await expect(page.getByLabel('ชื่องาน')).toHaveValue('วันเกิดลูกค้า · ลูกค้าตัวอย่าง');
+  await page.getByRole('button', { name: 'กลับคิวติดตาม' }).click();
+  expect(submissions).toBe(0);
   await page.getByRole('button', { name: 'แยกตามกลุ่ม' }).click();
   await page.getByText('วันเกิดลูกค้า 1 นัด', { exact: true }).click();
   await expect(page.getByRole('heading', { name: 'ตุลาคม' })).toBeVisible();
@@ -70,6 +97,25 @@ test('reminders group active appointments by type and recorded birth month', asy
   await page.getByText('ติดตามครบสัญญา 1 นัด', { exact: true }).click();
   await page.getByRole('button', { name: /ลูกค้าตัวอย่าง · ติดตามครบสัญญา/ }).click();
   await expect(page.getByLabel('ผลการติดตาม')).toBeVisible();
+  await page.getByRole('button', { name: 'คิวแจ้งเตือน' }).click();
+  await page.getByText('ติดตามครบสัญญา 1 นัด', { exact: true }).click();
+  await page.getByRole('button', { name: /เปิดงานให้เลขา · ติดตามครบสัญญา/ }).click();
+  await expect(page.getByLabel('ชื่อลูกค้า', { exact: true })).toHaveValue(policy.customer);
+  await expect(page.getByLabel('รายละเอียดงาน')).toHaveValue(/DEMO-GROUP/);
+  await expect(page.getByLabel('Agent เจ้าของงาน')).toHaveValue(h.agent.id);
+  await expect(page.getByLabel('กำหนดส่ง')).toHaveValue('2026-11-21');
+  await expect(page.getByLabel('ประเภทงาน')).toHaveValue('ลูกค้าเก่า');
+  await page.getByLabel('ชื่องาน').fill('เตรียมเอกสารครบสัญญา');
+  await page.getByRole('button', { name: 'ส่งงานให้เลขาฯ' }).click();
+  await expect(page).toHaveURL(/\/rinlyn\/tasks\/rec\w+$/);
+  await expect(page.getByRole('heading', { name: 'เตรียมเอกสารครบสัญญา' })).toBeVisible();
+  expect(submissions).toBe(1);
+  expect(h.tables.tasks.at(-1)?.fields).toMatchObject({
+    Status: 'New',
+    Agent: [h.agent.id],
+    'Case Name': policy.customer,
+    'Due Date': '2026-11-21',
+  });
 });
 
 test('secretary opens care from Space, creates policy and hands next contact to Agent', async ({

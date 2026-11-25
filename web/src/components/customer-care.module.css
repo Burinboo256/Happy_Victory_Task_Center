@@ -56,6 +56,19 @@
 .row small {
   flex-basis: 100%;
 }
+.reminder {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0 12px;
+  padding: 4px 0 8px;
+  border-bottom: 1px solid #e8dce1;
+}
+.reminder .row {
+  flex: 1 1 250px;
+  min-width: 0;
+  border-bottom: 0;
+}
 .late {
   color: #a12828;
   font-weight: 700;
