@@ -303,7 +303,10 @@ export function CustomerCare({ data, request, submittingTask, onSubmitTask, spac
           </small>
         </button>
         {e.taskId ? (
-          <Link className="btn secondary small" href={spacePath(spaceSlug, '/tasks/' + e.taskId)}>
+          <Link
+            className={`btn small ${styles.existingTask}`}
+            href={spacePath(spaceSlug, '/tasks/' + e.taskId)}
+          >
             ดูงานที่เปิดแล้ว
           </Link>
         ) : (
@@ -678,7 +681,12 @@ export function CustomerCare({ data, request, submittingTask, onSubmitTask, spac
                       {e.note && <small>{e.note}</small>}
                     </button>
                     {e.taskId && (
-                      <Link href={spacePath(spaceSlug, '/tasks/' + e.taskId)}>ดูงานที่เปิดแล้ว</Link>
+                      <Link
+                        className={styles.existingTask}
+                        href={spacePath(spaceSlug, '/tasks/' + e.taskId)}
+                      >
+                        ดูงานที่เปิดแล้ว
+                      </Link>
                     )}
                     {target === e.id && (
                       <form
@@ -814,7 +822,13 @@ export function CustomerCare({ data, request, submittingTask, onSubmitTask, spac
                 {e.taskId && (
                   <>
                     {' '}
-                    · <Link href={spacePath(spaceSlug, '/tasks/' + e.taskId)}>ดูงานที่เปิดแล้ว</Link>
+                    ·{' '}
+                    <Link
+                      className={styles.existingTask}
+                      href={spacePath(spaceSlug, '/tasks/' + e.taskId)}
+                    >
+                      ดูงานที่เปิดแล้ว
+                    </Link>
                   </>
                 )}
               </p>

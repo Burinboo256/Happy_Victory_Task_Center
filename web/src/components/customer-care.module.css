@@ -69,6 +69,20 @@
   min-width: 0;
   border-bottom: 0;
 }
+.care .existingTask {
+  color: #4b4b4b;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+.reminder .existingTask {
+  background-color: #ededed;
+  border-color: #bdbdbd;
+  text-decoration: none;
+}
+.reminder .existingTask:hover,
+.reminder .existingTask:focus-visible {
+  background-color: #dedede;
+}
 .late {
   color: #a12828;
   font-weight: 700;

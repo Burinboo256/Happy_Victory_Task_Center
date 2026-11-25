@@ -231,7 +231,10 @@ test('reminders group active appointments by type and recorded birth month', asy
   const taskUrl = page.url();
   await page.goto('/rinlyn/customer-care/queue?group=maturity');
   await expect(page.getByRole('button', { name: /เปิดงานให้เลขา/ })).toHaveCount(0);
-  await page.getByRole('link', { name: 'ดูงานที่เปิดแล้ว' }).click();
+  const existingTask = page.getByRole('link', { name: 'ดูงานที่เปิดแล้ว' });
+  await expect(existingTask).toHaveCSS('color', 'rgb(75, 75, 75)');
+  await expect(existingTask).toHaveCSS('background-color', 'rgb(237, 237, 237)');
+  await existingTask.click();
   await expect(page).toHaveURL(taskUrl);
   expect(submissions).toBe(1);
 });
