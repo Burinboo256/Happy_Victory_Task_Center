@@ -11,6 +11,7 @@ import {
   leadDays,
   policyKinds,
   type CarePolicy,
+  type CareDashboard,
   type CareEvent,
 } from '../../domain/customer-care';
 import { isManager, todayBangkok, type User } from '../../domain/model';
@@ -82,6 +83,27 @@ export async function careAlerts(c: Context) {
     [c.config.APP_ENV, isManager(c.user), todayBangkok(), c.user.id, JSON.stringify(leadDays)],
   );
   return result.rows[0];
+}
+export async function careDashboard(c: Context): Promise<CareDashboard> {
+  const today = todayBangkok();
+  const { rows } = await c.db.query<CareDashboard['owners'][number]>(
+    `WITH visible AS (
+       SELECT id,agent_id,closed FROM hvr_care_policies
+       WHERE environment=$1 AND ($2 OR agent_id=$4)
+     ), counts AS (
+       SELECT agent_id,count(*)::int AS policies FROM visible GROUP BY agent_id
+     ), alerts AS (
+       SELECT p.agent_id,e.kind,count(*)::int AS n,count(*) FILTER (WHERE e.due < $3::date)::int AS late
+       FROM visible p JOIN hvr_care_events e ON e.policy_id=p.id
+       WHERE NOT p.closed AND e.outcome IS NULL AND e.due <= $3::date + (($5::jsonb ->> e.kind)::int)
+       GROUP BY p.agent_id,e.kind
+     )
+     SELECT c.agent_id AS "agentId",c.policies,coalesce(sum(a.late),0)::int AS late,
+       coalesce(jsonb_object_agg(a.kind,a.n) FILTER (WHERE a.kind IS NOT NULL),'{}'::jsonb) AS groups
+     FROM counts c LEFT JOIN alerts a USING(agent_id) GROUP BY c.agent_id,c.policies ORDER BY c.agent_id`,
+    [c.config.APP_ENV, isManager(c.user), today, c.user.id, JSON.stringify(leadDays)],
+  );
+  return { today, owners: rows };
 }
 export async function careRoster(c: Context) {
   const result = await c.db.query<CarePolicy>(

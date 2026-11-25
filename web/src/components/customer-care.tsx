@@ -2,10 +2,11 @@
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { carePaths, spacePath } from '@/domain/space-link';
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import {
   alertLevel,
   careLabels,
+  dashboardFromRoster,
   eventKinds,
   insurance,
   outcomes,
@@ -14,6 +15,9 @@ import {
   premiumAmountPattern,
   policyKinds,
   type CareEvent,
+  type CareCounts,
+  type CareDashboard,
+  type CareRoster,
   type CarePolicy,
   type EventKind,
   type Outcome,
@@ -23,10 +27,12 @@ import { TaskForm, type TaskDraft, type TaskFormProps } from './task-form';
 import { CustomerCareAlertGuide } from './customer-care-alert-guide';
 import styles from './customer-care.module.css';
 
-const dateLabel = (value: string) =>
-  new Intl.DateTimeFormat('th-TH', { dateStyle: 'medium', timeZone: 'Asia/Bangkok' }).format(
-    new Date(value + 'T12:00:00+07:00'),
-  );
+const thaiDate = new Intl.DateTimeFormat('th-TH', {
+  dateStyle: 'medium',
+  timeZone: 'Asia/Bangkok',
+});
+const thaiMonth = new Intl.DateTimeFormat('th-TH', { month: 'long', timeZone: 'UTC' });
+const dateLabel = (value: string) => thaiDate.format(new Date(value + 'T12:00:00+07:00'));
 const endpoint = '/api/customer-care';
 const requiredMark = (
   <span className="case-required-marker" aria-hidden="true">
@@ -34,10 +40,7 @@ const requiredMark = (
     *
   </span>
 );
-const monthName = (month: number) =>
-  new Intl.DateTimeFormat('th-TH', { month: 'long', timeZone: 'UTC' }).format(
-    new Date(Date.UTC(2000, month - 1, 1)),
-  );
+const monthName = (month: number) => thaiMonth.format(new Date(Date.UTC(2000, month - 1, 1)));
 function CareScheduleFields() {
   const [month, setMonth] = useState(''),
     [day, setDay] = useState(''),
@@ -138,18 +141,21 @@ function CareScheduleFields() {
     </>
   );
 }
-type Feed = { policies: CarePolicy[]; today: string };
+const emptyPolicies: CarePolicy[] = [];
+const refreshInterval = 300000;
 type Props = {
   spaceSlug: string;
   data: Bootstrap;
-  request: (url: string, options?: RequestInit) => Promise<Feed>;
+  request: <T>(url: string, options?: RequestInit) => Promise<T>;
   submittingTask: boolean;
   onSubmitTask: TaskFormProps['onSubmit'];
 };
 export function CustomerCare({ data, request, submittingTask, onSubmitTask, spaceSlug }: Props) {
-  const [feed, setFeed] = useState<Feed | null>(null),
+  const [snapshot, setSnapshot] = useState<CareRoster | CareDashboard | null>(null),
     [selected, setSelected] = useState('');
+  const feed = snapshot && 'policies' in snapshot ? snapshot : null;
   const tab = usePathname().split('/').at(-1);
+  const scope = tab === 'register' ? null : tab === 'dashboard' ? 'dashboard' : 'roster';
   const params = useSearchParams();
   const group = eventKinds.find((kind) => kind === params.get('group'));
   function navigate(view: keyof typeof carePaths, kind?: EventKind) {
@@ -179,39 +185,78 @@ export function CustomerCare({ data, request, submittingTask, onSubmitTask, spac
     return () => window.removeEventListener('popstate', resetDetail);
   }, []);
   const pending = useRef<{ key: string; operation: string } | null>(null);
-  const latest = useRef(0);
-  const reload = useCallback(async () => {
-    const n = ++latest.current;
-    try {
-      const result = await request(endpoint);
-      if (n === latest.current) {
-        setFeed(result);
-        setError('');
+  const inFlight = useRef<AbortController | null>(null);
+  const cached = useRef<{ scope: 'dashboard' | 'roster'; at: number; revision: number } | null>(
+    null,
+  );
+  const [revision, setRevision] = useState(0);
+  const reload = useCallback(
+    async (force = true) => {
+      if ((!scope && !force) || inFlight.current) return;
+      const last = cached.current;
+      if (
+        !force &&
+        last?.revision === revision &&
+        (last.scope === scope || last.scope === 'roster') &&
+        Date.now() - last.at < refreshInterval
+      )
+        return;
+      const controller = new AbortController();
+      inFlight.current = controller;
+      try {
+        if (!scope) {
+          // Recheck access on focus or the refresh timer without downloading the roster for the form.
+          await request(endpoint + '?scope=access', { signal: controller.signal });
+          if (!controller.signal.aborted) {
+            cached.current = null;
+            setSnapshot(null);
+            setError('');
+          }
+          return;
+        }
+        const result = await request<CareRoster | CareDashboard>(
+          scope === 'dashboard' ? endpoint + '?scope=dashboard' : endpoint,
+          { signal: controller.signal },
+        );
+        if (!controller.signal.aborted) {
+          setSnapshot(result);
+          cached.current = {
+            scope: 'policies' in result ? 'roster' : 'dashboard',
+            at: Date.now(),
+            revision,
+          };
+          setError('');
+        }
+      } catch (e) {
+        if (!controller.signal.aborted) {
+          cached.current = null;
+          setSnapshot(null);
+          setError(e instanceof Error ? e.message : 'โหลดรายการไม่สำเร็จ');
+        }
+      } finally {
+        if (inFlight.current === controller) inFlight.current = null;
       }
-    } catch (e) {
-      if (n === latest.current) {
-        setFeed(null);
-        setError(e instanceof Error ? e.message : 'โหลดรายการไม่สำเร็จ');
-      }
-    }
-  }, [request]);
+    },
+    [request, scope, revision],
+  );
   useEffect(() => {
-    void reload();
+    void reload(false);
     const refresh = () => {
       if (document.visibilityState === 'visible') void reload();
     };
-    const timer = window.setInterval(refresh, 300000);
+    const timer = window.setInterval(refresh, refreshInterval);
     document.addEventListener('visibilitychange', refresh);
     return () => {
-      latest.current++;
+      inFlight.current?.abort();
+      inFlight.current = null;
       window.clearInterval(timer);
       document.removeEventListener('visibilitychange', refresh);
     };
   }, [reload]);
   const readonly = busy || !data.writesEnabled;
   const policy = feed?.policies.find((p) => p.id === selected);
-  const agentName = (id: string) =>
-    data.users.find((u) => u.id === id)?.name || 'ตัวแทนเจ้าของกรมธรรม์';
+  const ownerNames = useMemo(() => new Map(data.users.map((u) => [u.id, u.name])), [data.users]);
+  const agentName = (id: string) => ownerNames.get(id) || 'ตัวแทนเจ้าของกรมธรรม์';
   const show = (id: string, event = '') => {
     setSelected(id);
     setTarget(event);
@@ -235,8 +280,11 @@ export function CustomerCare({ data, request, submittingTask, onSubmitTask, spac
         body: JSON.stringify({ ...values, operation }),
       });
       pending.current = null;
+      inFlight.current?.abort();
+      cached.current = null;
+      setSnapshot(null);
+      setRevision((value) => value + 1);
       after(operation);
-      await reload();
       setNotice('บันทึกเรียบร้อยแล้ว');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'บันทึกไม่สำเร็จ');
@@ -248,25 +296,63 @@ export function CustomerCare({ data, request, submittingTask, onSubmitTask, spac
     event.preventDefault();
     return Object.fromEntries(new FormData(event.currentTarget)) as Record<string, string>;
   }
-  const policies = feed?.policies ?? [];
-  const ownerPolicies = ownerId ? policies.filter((p) => p.agentId === ownerId) : policies;
-  const query = search.trim().toLowerCase();
-  const matchingPolicies = ownerPolicies.filter((p) =>
-    `${p.customer} ${p.reference}`.toLowerCase().includes(query),
+  const policies = feed?.policies ?? emptyPolicies;
+  const ownerPolicies = useMemo(
+    () => (ownerId ? policies.filter((p) => p.agentId === ownerId) : policies),
+    [ownerId, policies],
   );
-  const appointments = ownerPolicies
-    .filter((p) => !p.closed)
-    .flatMap((p) =>
-      p.events
-        .filter((e) => !e.outcome)
-        .map((e) => ({ p, e, level: alertLevel(e, feed?.today ?? data.today) })),
-    )
-    .sort((a, b) => a.e.due.localeCompare(b.e.due));
-  const alerts = appointments.filter((r) => r.level !== 'ตามแผน');
-  const visibleAppointments = grouped && includeFuture ? appointments : alerts;
-  const queue = group
-    ? visibleAppointments.filter(({ e }) => e.kind === group)
-    : visibleAppointments;
+  const query = search.trim().toLowerCase();
+  const matchingPolicies =
+    tab === 'policies' && !policy
+      ? ownerPolicies.filter((p) => `${p.customer} ${p.reference}`.toLowerCase().includes(query))
+      : emptyPolicies;
+  const today = snapshot?.today ?? data.today;
+  const dashboard = useMemo(() => {
+    if (tab !== 'dashboard' || !snapshot) return null;
+    return 'owners' in snapshot ? snapshot : dashboardFromRoster(snapshot);
+  }, [tab, snapshot]);
+  const totals = useMemo(() => {
+    const counts: CareCounts = { policies: 0, late: 0, groups: {} };
+    for (const owner of dashboard?.owners ?? []) {
+      if (ownerId && ownerId !== owner.agentId) continue;
+      counts.policies += owner.policies;
+      counts.late += owner.late;
+      for (const kind of eventKinds)
+        counts.groups[kind] = (counts.groups[kind] ?? 0) + (owner.groups[kind] ?? 0);
+    }
+    return counts;
+  }, [dashboard, ownerId]);
+  const includePlanned = grouped && includeFuture;
+  const queue = useMemo(() => {
+    const rows: { p: CarePolicy; e: CareEvent; level: ReturnType<typeof alertLevel> }[] = [];
+    if (tab !== 'queue') return rows;
+    for (const p of ownerPolicies) {
+      if (p.closed) continue;
+      for (const e of p.events) {
+        if (e.outcome || (group && e.kind !== group)) continue;
+        const level = alertLevel(e, today);
+        if (level !== 'ตามแผน' || includePlanned) rows.push({ p, e, level });
+      }
+    }
+    return rows.sort((a, b) => a.e.due.localeCompare(b.e.due));
+  }, [tab, ownerPolicies, group, includePlanned, today]);
+  const groups = useMemo(() => {
+    const byKind: Partial<Record<EventKind, typeof queue>> = {};
+    const byMonth: Partial<Record<number, typeof queue>> = {};
+    if (grouped) {
+      for (const row of queue) {
+        const kind = row.e.kind;
+        byKind[kind] ??= [];
+        byKind[kind].push(row);
+        if (kind === 'birthday') {
+          const month = Number(row.p.birthday?.slice(0, 2) || 0);
+          byMonth[month] ??= [];
+          byMonth[month].push(row);
+        }
+      }
+    }
+    return { byKind, byMonth };
+  }, [queue, grouped]);
   const recipient = (e: CareEvent) =>
     e.recipient === 'team' ? 'เลขา / ทีมดูแล' : 'ตัวแทนเจ้าของกรมธรรม์';
   function openTask(policy: CarePolicy, event: CareEvent) {
@@ -323,6 +409,16 @@ export function CustomerCare({ data, request, submittingTask, onSubmitTask, spac
       </div>
     );
   }
+  const ownerOptions = useMemo(() => {
+    const ownerIds = new Set(
+      data.users.filter((u) => u.role === 'Agent' && u.active).map((u) => u.id),
+    );
+    for (const p of policies) ownerIds.add(p.agentId);
+    for (const o of dashboard?.owners ?? []) ownerIds.add(o.agentId);
+    return [...ownerIds]
+      .map((id) => ({ id, name: ownerNames.get(id) || id }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'th'));
+  }, [data.users, policies, dashboard, ownerNames]);
   if (taskDraft) {
     return (
       <TaskForm
@@ -338,14 +434,6 @@ export function CustomerCare({ data, request, submittingTask, onSubmitTask, spac
       />
     );
   }
-  const ownerNames = new Map(data.users.map((u) => [u.id, u.name]));
-  const ownerIds = new Set([
-    ...data.users.filter((u) => u.role === 'Agent' && u.active).map((u) => u.id),
-    ...policies.map((p) => p.agentId),
-  ]);
-  const ownerOptions = [...ownerIds]
-    .map((id) => ({ id, name: ownerNames.get(id) || id }))
-    .sort((a, b) => a.name.localeCompare(b.name, 'th'));
   const ownerFilter = isManager(data.user) && (
     <label>
       ตัวแทนผู้ดูแล
@@ -400,21 +488,22 @@ export function CustomerCare({ data, request, submittingTask, onSubmitTask, spac
         </div>
       )}
       {notice && <p role="status">{notice}</p>}
-      {!feed && !error && <p role="status">กำลังโหลดกรมธรรม์…</p>}
-      {feed && tab === 'dashboard' && (
+      {scope && !(scope === 'dashboard' ? snapshot : feed) && !error && (
+        <p role="status">กำลังโหลดกรมธรรม์…</p>
+      )}
+      {dashboard && (
         <article className="panel">
-          <h2>สรุปการแจ้งเตือน · {dateLabel(feed.today)}</h2>
+          <h2>สรุปการแจ้งเตือน · {dateLabel(dashboard.today)}</h2>
           {ownerFilter}
           <div className={styles.alertTotal}>
             <span>
-              กรมธรรม์ทั้งหมด <strong>{ownerPolicies.length.toLocaleString('th-TH')} ฉบับ</strong>
+              กรมธรรม์ทั้งหมด <strong>{totals.policies.toLocaleString('th-TH')} ฉบับ</strong>
             </span>
             <span>
-              นัดที่ถึงช่วงแจ้งเตือน <strong>{alerts.length} นัด</strong>
+              นัดที่ถึงช่วงแจ้งเตือน{' '}
+              <strong>{Object.values(totals.groups).reduce((sum, n) => sum + n, 0)} นัด</strong>
             </span>
-            <span className={styles.late}>
-              เกินนัด {alerts.filter(({ level }) => level === 'เกินนัด').length} นัด
-            </span>
+            <span className={styles.late}>เกินนัด {totals.late} นัด</span>
           </div>
           <ul className={styles.alertGroups} aria-label="จำนวนแจ้งเตือนตามกลุ่ม">
             {eventKinds.map((kind) => (
@@ -430,7 +519,7 @@ export function CustomerCare({ data, request, submittingTask, onSubmitTask, spac
                   }}
                 >
                   <span>{careLabels[kind]}</span>
-                  <strong>{alerts.filter(({ e }) => e.kind === kind).length} นัด</strong>
+                  <strong>{totals.groups[kind] ?? 0} นัด</strong>
                 </Link>
               </li>
             ))}
@@ -479,8 +568,8 @@ export function CustomerCare({ data, request, submittingTask, onSubmitTask, spac
             <p>{grouped && includeFuture ? 'ยังไม่มีนัดที่รอติดตาม' : 'ยังไม่มีนัดที่ถึงช่วงแจ้งเตือน'}</p>
           ) : grouped ? (
             eventKinds.map((kind) => {
-              const rows = queue.filter(({ e }) => e.kind === kind);
-              if (!rows.length) return null;
+              const rows = groups.byKind[kind];
+              if (!rows?.length) return null;
               return (
                 <details key={kind} className={styles.queueGroup}>
                   <summary>
@@ -488,10 +577,8 @@ export function CustomerCare({ data, request, submittingTask, onSubmitTask, spac
                   </summary>
                   {kind === 'birthday'
                     ? [...Array.from({ length: 12 }, (_, i) => i + 1), 0].map((month) => {
-                        const birthdays = rows.filter(
-                          ({ p }) => Number(p.birthday?.slice(0, 2) || 0) === month,
-                        );
-                        if (!birthdays.length) return null;
+                        const birthdays = groups.byMonth[month];
+                        if (!birthdays?.length) return null;
                         return (
                           <section key={month}>
                             <h3>{month ? monthName(month) : 'ไม่ระบุเดือนเกิด'}</h3>
@@ -532,7 +619,7 @@ export function CustomerCare({ data, request, submittingTask, onSubmitTask, spac
           {!matchingPolicies.length && <p>ไม่พบกรมธรรม์</p>}
         </article>
       )}
-      {feed && tab === 'register' && (
+      {tab === 'register' && (
         <form
           className={styles.createForm}
           onSubmit={(e) => {
@@ -814,10 +901,7 @@ export function CustomerCare({ data, request, submittingTask, onSubmitTask, spac
             .map((e) => (
               <p key={e.id}>
                 <strong>{careLabels[e.kind]}</strong> · {outcomes[e.outcome]} ·{' '}
-                {new Intl.DateTimeFormat('th-TH', {
-                  timeZone: 'Asia/Bangkok',
-                  dateStyle: 'medium',
-                }).format(new Date(e.completedAt))}
+                {thaiDate.format(new Date(e.completedAt))}
                 {e.resultNote && ' · ' + e.resultNote}
                 {e.taskId && (
                   <>

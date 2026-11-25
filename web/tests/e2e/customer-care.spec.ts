@@ -17,13 +17,18 @@ test('agent sees the personal queue and registry without a team filter', async (
     customerCareEnabled: true,
   };
   await page.route('**/api/bootstrap*', (r) => r.fulfill({ json: ctx }));
-  await page.route('**/api/customer-care*', (r) =>
-    r.fulfill({
-      json: r.request().url().endsWith('scope=alerts')
-        ? { total: 0, late: 0 }
-        : { today: ctx.today, policies: [] },
-    }),
-  );
+  const scopes: string[] = [];
+  await page.route('**/api/customer-care*', (r) => {
+    const scope = new URL(r.request().url()).searchParams.get('scope') ?? 'roster';
+    scopes.push(scope);
+    if (scope === 'access') return r.fulfill({ json: { authorized: true } });
+    return r.fulfill({
+      json:
+        scope === 'dashboard'
+          ? { today: ctx.today, owners: [] }
+          : { today: ctx.today, policies: [] },
+    });
+  });
   await page.goto('/rinlyn/customer-care');
   await expect(page).toHaveURL(/\/rinlyn\/customer-care\/dashboard$/);
   const owner = page.getByRole('combobox', { name: 'ตัวแทนผู้ดูแล', exact: true });
@@ -38,6 +43,7 @@ test('agent sees the personal queue and registry without a team filter', async (
     'เตือนล่วงหน้า 60 วัน',
   );
   await expect(owner).toHaveCount(0);
+  expect(scopes).toEqual(['dashboard']);
   await page.getByRole('link', { name: 'คิวแจ้งเตือน', exact: true }).click();
   await expect(page.getByText('ยังไม่มีนัดที่ถึงช่วงแจ้งเตือน')).toBeVisible();
   await expect(owner).toHaveCount(0);
@@ -53,6 +59,9 @@ test('agent sees the personal queue and registry without a team filter', async (
   await page.goForward();
   await page.reload();
   await expect(page.getByLabel('ชื่อลูกค้า')).toBeVisible();
+  expect(scopes).toEqual(['dashboard', 'roster']);
+  await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+  await expect.poll(() => scopes.at(-1)).toBe('access');
   await page.goto('/rinlyn/customer-care/policies');
   await expect(page.getByRole('searchbox')).toBeVisible();
 });
@@ -103,21 +112,35 @@ test('reminders group active appointments by type and recorded birth month', asy
     r.fulfill({
       json: r.request().url().endsWith('scope=alerts')
         ? { total: 2, late: 1 }
-        : {
-            policies: [
-              policy,
-              { ...policy, id: 'closed', closed: true },
-              { ...policy, id: 'unscheduled', reference: 'DEMO-C', customer: 'คุณมะลิ', events: [] },
-              {
-                ...policy,
-                id: 'second',
-                agentId: h.other.id,
-                reference: 'DEMO-B',
-                events: [{ ...event, id: 'second-birthday' }],
-              },
-            ],
-            today,
-          },
+        : r.request().url().endsWith('scope=dashboard')
+          ? {
+              today,
+              owners: [
+                { agentId: h.agent.id, policies: 3, late: 1, groups: { birthday: 1, maturity: 1 } },
+                { agentId: h.other.id, policies: 1, late: 0, groups: { birthday: 1 } },
+              ],
+            }
+          : {
+              policies: [
+                policy,
+                { ...policy, id: 'closed', closed: true },
+                {
+                  ...policy,
+                  id: 'unscheduled',
+                  reference: 'DEMO-C',
+                  customer: 'คุณมะลิ',
+                  events: [],
+                },
+                {
+                  ...policy,
+                  id: 'second',
+                  agentId: h.other.id,
+                  reference: 'DEMO-B',
+                  events: [{ ...event, id: 'second-birthday' }],
+                },
+              ],
+              today,
+            },
     }),
   );
   await page.goto('/rinlyn/customer-care');

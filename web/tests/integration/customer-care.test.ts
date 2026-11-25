@@ -2,8 +2,19 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import test from 'node:test';
 import { database, repository, config } from '../fixtures';
-import { careAlerts, careRoster, saveCare } from '../../src/server/services/customer-care';
-import { initialCare, alertLevel, shiftDate, nextPremium } from '../../src/domain/customer-care';
+import {
+  careAlerts,
+  careDashboard,
+  careRoster,
+  saveCare,
+} from '../../src/server/services/customer-care';
+import {
+  initialCare,
+  alertLevel,
+  dashboardFromRoster,
+  shiftDate,
+  nextPremium,
+} from '../../src/domain/customer-care';
 import { todayBangkok } from '../../src/domain/model';
 import { createCareTask } from '../../src/server/services/care-task';
 import { NeonTaskRepository } from '../../src/server/task-store/repository';
@@ -76,6 +87,56 @@ for (const mode of ['Airtable', 'Neon']) {
     }
   });
 }
+
+test('dashboard totals match the scoped queue, including closed policies and the alert boundary', async () => {
+  const { db, engine } = await database();
+  const h = repository(),
+    today = todayBangkok();
+  const c = { db, config, repo: h.repo, user: h.secretary };
+  try {
+    for (const user of [h.agent, h.other]) {
+      const id = randomUUID();
+      await saveCare(c, {
+        action: 'create',
+        operation: id,
+        agentId: user.id,
+        kind: 'health',
+        customer: 'test',
+        reference: 'ref',
+        started: shiftDate(today, -10),
+      });
+      if (user === h.other) {
+        await saveCare(c, { action: 'close', operation: randomUUID(), policyId: id });
+      } else {
+        for (const days of [7, 8])
+          await saveCare(c, {
+            action: 'schedule',
+            operation: randomUUID(),
+            policyId: id,
+            kind: 'service',
+            due: shiftDate(today, days),
+            recipient: 'team',
+            note: '',
+          });
+      }
+    }
+    for (const user of [h.secretary, h.agent, h.other]) {
+      const context = { ...c, user };
+      const summary = await careDashboard(context);
+      const expected = dashboardFromRoster(await careRoster(context));
+      assert.deepEqual(summary, {
+        ...expected,
+        owners: expected.owners.sort((a, b) => a.agentId.localeCompare(b.agentId)),
+      });
+    }
+    const summary = await careDashboard({ ...c, user: h.agent });
+    assert.deepEqual(summary.owners, [
+      { agentId: h.agent.id, policies: 1, late: 1, groups: { welcome: 1, service: 1 } },
+    ]);
+  } finally {
+    await engine.close();
+  }
+});
 
 test('annual reviews clamp leap day and customer care alerts use explicit policy dates', () => {
   const entries = initialCare('2024-02-29', '2027-02-20', '2027-03-01', '2027-10-31');

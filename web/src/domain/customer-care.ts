@@ -92,6 +92,36 @@ export function alertLevel(event: Pick<CareEvent, 'kind' | 'due'>, today: string
   if (event.due <= shiftDate(today, leadDays[event.kind])) return 'ใกล้ถึงนัด';
   return 'ตามแผน';
 }
+export type CareCounts = {
+  policies: number;
+  late: number;
+  groups: Partial<Record<EventKind, number>>;
+};
+export type CareDashboard = { today: string; owners: (CareCounts & { agentId: string })[] };
+export type CareRoster = { today: string; policies: CarePolicy[] };
+
+// Reuse the roster already loaded for the queue when returning to the dashboard.
+export function dashboardFromRoster({ today, policies }: CareRoster): CareDashboard {
+  const owners = new Map<string, CareDashboard['owners'][number]>();
+  for (const policy of policies) {
+    let owner = owners.get(policy.agentId);
+    if (!owner) {
+      owner = { agentId: policy.agentId, policies: 0, late: 0, groups: {} };
+      owners.set(policy.agentId, owner);
+    }
+    owner.policies++;
+    if (policy.closed) continue;
+    for (const event of policy.events) {
+      if (event.outcome) continue;
+      const level = alertLevel(event, today);
+      if (level === 'ตามแผน') continue;
+      if (level === 'เกินนัด') owner.late++;
+      owner.groups[event.kind] = (owner.groups[event.kind] ?? 0) + 1;
+    }
+  }
+  return { today, owners: [...owners.values()] };
+}
+
 export function annualOnOrAfter(anchor: string, from: string) {
   const year = Number(from.slice(0, 4));
   const due = anniversary(anchor, year);
