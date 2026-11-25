@@ -8,7 +8,7 @@ import { TaskForm } from './task-form';
 import { Brand } from './brand';
 import { CareAlerts } from './care-alerts';
 import { CategoryBadge, PriorityBadge, categoryClass } from './task-appearance';
-import { carePaths, spacePath } from '@/domain/space-link';
+import { carePaths, parseSpacePath, spacePath } from '@/domain/space-link';
 import {
   isManager,
   isOpen,
@@ -83,7 +83,7 @@ const nav: { page: Page; href: string; symbol: string; manager?: boolean; agent?
   { page: 'tasks', href: '/tasks', symbol: '▤' },
   { page: 'inbox', href: '/inbox', symbol: '↙', manager: true },
   { page: 'followups', href: '/followups', symbol: '◷' },
-  { page: 'customer-care', href: carePaths.queue, symbol: '♡' },
+  { page: 'customer-care', href: carePaths.overview, symbol: '♡' },
   { page: 'calendar', href: '/calendar', symbol: '▦' },
   { page: 'reports', href: '/reports', symbol: '▥', manager: true },
   { page: 'team', href: '/team', symbol: '♧', manager: true },
@@ -269,7 +269,13 @@ export function Workspace({
       if (response.status === 401) {
         setData(null);
         setDetail(null);
-        const returnTo = page === 'customer-care' ? window.location.pathname : destination;
+        const currentPath = window.location.pathname + window.location.search;
+        const returnTo =
+          page === 'customer-care'
+            ? parseSpacePath(currentPath)
+              ? currentPath
+              : window.location.pathname
+            : destination;
         router.replace('/login?returnTo=' + encodeURIComponent(returnTo));
         throw new Error('กรุณาเข้าสู่ระบบอีกครั้ง');
       }

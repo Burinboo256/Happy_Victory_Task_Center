@@ -25,8 +25,12 @@ test('agent sees the personal queue and registry without a team filter', async (
     }),
   );
   await page.goto('/rinlyn/customer-care');
-  await expect(page).toHaveURL(/\/rinlyn\/customer-care\/queue$/);
+  await expect(page).toHaveURL(/\/rinlyn\/customer-care$/);
   const owner = page.getByRole('combobox', { name: 'ตัวแทนผู้ดูแล', exact: true });
+  const groups = page.getByRole('list', { name: 'จำนวนแจ้งเตือนตามกลุ่ม' });
+  await expect(groups.getByRole('link', { name: /0 นัด/ })).toHaveCount(9);
+  await expect(owner).toHaveCount(0);
+  await page.getByRole('link', { name: 'คิวแจ้งเตือน', exact: true }).click();
   await expect(page.getByText('ยังไม่มีนัดที่ถึงช่วงแจ้งเตือน')).toBeVisible();
   await expect(owner).toHaveCount(0);
   await page.getByRole('link', { name: 'ทะเบียนกรมธรรม์' }).click();
@@ -132,6 +136,24 @@ test('reminders group active appointments by type and recorded birth month', asy
   const rows = page.getByRole('button', { name: /ลูกค้าตัวอย่าง ·/ });
   const owner = page.getByRole('combobox', { name: 'ตัวแทนผู้ดูแล', exact: true });
   await expect(owner).toHaveValue('');
+  const groups = page.getByRole('list', { name: 'จำนวนแจ้งเตือนตามกลุ่ม' });
+  await expect(page.getByText('นัดที่ถึงช่วงแจ้งเตือน 3 นัด')).toBeVisible();
+  await expect(page.getByText('เกินนัด 1 นัด', { exact: true })).toBeVisible();
+  await expect(groups.getByRole('link', { name: 'วันเกิดลูกค้า 2 นัด' })).toBeVisible();
+  await expect(groups.getByRole('link', { name: 'ยืนยันการชำระเบี้ย 0 นัด' })).toBeVisible();
+  await owner.selectOption(h.other.id);
+  await groups.getByRole('link', { name: 'วันเกิดลูกค้า 1 นัด' }).click();
+  await expect(page).toHaveURL(/\/queue\?group=birthday$/);
+  await expect(rows).toHaveCount(1);
+  await expect(rows).toContainText('DEMO-B');
+  await page.goBack();
+  await expect(owner).toHaveValue(h.other.id);
+  await owner.selectOption('');
+  await groups.getByRole('link', { name: 'ติดตามครบสัญญา 1 นัด' }).click();
+  await page.reload();
+  await expect(rows).toHaveCount(1);
+  await expect(rows).toContainText('ติดตามครบสัญญา');
+  await page.getByRole('link', { name: 'ดูทุกกลุ่ม' }).click();
   await expect(rows).toHaveCount(3);
   await owner.selectOption(h.other.id);
   await expect(rows).toHaveCount(1);

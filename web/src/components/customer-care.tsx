@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { carePaths, spacePath } from '@/domain/space-link';
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import {
@@ -15,6 +15,7 @@ import {
   policyKinds,
   type CareEvent,
   type CarePolicy,
+  type EventKind,
   type Outcome,
 } from '@/domain/customer-care';
 import { isManager, type Bootstrap } from '@/domain/model';
@@ -148,10 +149,14 @@ export function CustomerCare({ data, request, submittingTask, onSubmitTask, spac
   const [feed, setFeed] = useState<Feed | null>(null),
     [selected, setSelected] = useState('');
   const pathname = usePathname();
-  const tab = pathname.split('/').at(-1);
-  function navigate(view: keyof typeof carePaths) {
-    const path = spacePath(spaceSlug, carePaths[view]);
-    if (window.location.pathname !== path) window.history.pushState(null, '', path);
+  const tab =
+    pathname === spacePath(spaceSlug, carePaths.overview) ? 'overview' : pathname.split('/').at(-1);
+  const params = useSearchParams();
+  const group = eventKinds.find((kind) => kind === params.get('group'));
+  function navigate(view: keyof typeof carePaths, kind?: EventKind) {
+    const path = spacePath(spaceSlug, carePaths[view]) + (kind ? `?group=${kind}` : '');
+    if (window.location.pathname + window.location.search !== path)
+      window.history.pushState(null, '', path);
   }
   const [search, setSearch] = useState(''),
     [error, setError] = useState(''),
@@ -250,15 +255,19 @@ export function CustomerCare({ data, request, submittingTask, onSubmitTask, spac
   const matchingPolicies = ownerPolicies.filter((p) =>
     `${p.customer} ${p.reference}`.toLowerCase().includes(query),
   );
-  const queue = ownerPolicies
+  const appointments = ownerPolicies
     .filter((p) => !p.closed)
     .flatMap((p) =>
       p.events
         .filter((e) => !e.outcome)
         .map((e) => ({ p, e, level: alertLevel(e, feed?.today ?? data.today) })),
     )
-    .filter((r) => r.level !== 'ตามแผน' || (grouped && includeFuture))
     .sort((a, b) => a.e.due.localeCompare(b.e.due));
+  const alerts = appointments.filter((r) => r.level !== 'ตามแผน');
+  const visibleAppointments = grouped && includeFuture ? appointments : alerts;
+  const queue = group
+    ? visibleAppointments.filter(({ e }) => e.kind === group)
+    : visibleAppointments;
   const recipient = (e: CareEvent) =>
     e.recipient === 'team' ? 'เลขา / ทีมดูแล' : 'ตัวแทนเจ้าของกรมธรรม์';
   function openTask(policy: CarePolicy, event: CareEvent) {
@@ -346,6 +355,7 @@ export function CustomerCare({ data, request, submittingTask, onSubmitTask, spac
       <nav aria-label="เมนูดูแลลูกค้า">
         {(
           [
+            ['overview', 'ภาพรวมการแจ้งเตือน'],
             ['queue', 'คิวแจ้งเตือน'],
             ['policies', 'ทะเบียนกรมธรรม์'],
             ['register', 'เพิ่มกรมธรรม์'],
@@ -382,10 +392,58 @@ export function CustomerCare({ data, request, submittingTask, onSubmitTask, spac
       )}
       {notice && <p role="status">{notice}</p>}
       {!feed && !error && <p role="status">กำลังโหลดกรมธรรม์…</p>}
+      {feed && tab === 'overview' && (
+        <article className="panel">
+          <h2>สรุปการแจ้งเตือน · {dateLabel(feed.today)}</h2>
+          {ownerFilter}
+          <div className={styles.alertTotal}>
+            <span>
+              นัดที่ถึงช่วงแจ้งเตือน <strong>{alerts.length} นัด</strong>
+            </span>
+            <span className={styles.late}>
+              เกินนัด {alerts.filter(({ level }) => level === 'เกินนัด').length} นัด
+            </span>
+          </div>
+          <ul className={styles.alertGroups} aria-label="จำนวนแจ้งเตือนตามกลุ่ม">
+            {eventKinds.map((kind) => (
+              <li key={kind}>
+                <Link
+                  href={spacePath(spaceSlug, carePaths.queue) + '?group=' + kind}
+                  prefetch={false}
+                  onNavigate={(event) => {
+                    event.preventDefault();
+                    setGrouped(false);
+                    setIncludeFuture(false);
+                    navigate('queue', kind);
+                  }}
+                >
+                  <span>{careLabels[kind]}</span>
+                  <strong>{alerts.filter(({ e }) => e.kind === kind).length} นัด</strong>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </article>
+      )}
       {feed && tab === 'queue' && (
         <article className="panel">
           <h2>คิวติดตาม · {dateLabel(feed.today)}</h2>
           {ownerFilter}
+          {group && (
+            <p>
+              <b>{careLabels[group]}</b>
+              {' · '}
+              <Link
+                href={spacePath(spaceSlug, carePaths.queue)}
+                onNavigate={(event) => {
+                  event.preventDefault();
+                  navigate('queue');
+                }}
+              >
+                ดูทุกกลุ่ม
+              </Link>
+            </p>
+          )}
           <fieldset className={styles.queueViews} aria-label="มุมมองคิวแจ้งเตือน">
             <button type="button" aria-pressed={!grouped} onClick={() => setGrouped(false)}>
               ตามวันนัด

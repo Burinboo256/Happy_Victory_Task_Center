@@ -1,3 +1,5 @@
+import { eventKinds } from './customer-care';
+
 // Root-level application routes cannot be Space links.
 export const reservedSpaceSlugs = new Set([
   'api',
@@ -35,6 +37,7 @@ export const spaceViews = [
   'notifications',
 ] as const;
 export const carePaths = {
+  overview: '/customer-care',
   queue: '/customer-care/queue',
   policies: '/customer-care/policies',
   register: '/customer-care/register',
@@ -44,7 +47,6 @@ const pages = new Set([
   '/tasks',
   '/tasks/new',
   '/forms',
-  '/customer-care',
   ...Object.values(carePaths),
   ...spaceViews.map((v) => '/' + v),
 ]);
@@ -58,6 +60,9 @@ export function isWorkspacePath(value: string) {
   const [path, query, extra] = value.split('?');
   if (!query || extra !== undefined) return false;
   const params = new URLSearchParams(query);
+  if (path === carePaths.queue) {
+    return params.size === 1 && eventKinds.some((kind) => kind === params.get('group'));
+  }
   const key = path === '/forms' ? 'q' : path === '/tasks' ? 'status' : '';
   return (
     !!key &&
