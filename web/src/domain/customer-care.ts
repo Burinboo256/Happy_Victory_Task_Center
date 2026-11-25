@@ -2,6 +2,7 @@ export const policyKinds = ['life', 'health', 'critical', 'accident', 'savings',
 export type PolicyKind = (typeof policyKinds)[number];
 export const frequencies = ['monthly', 'quarterly', 'yearly'] as const;
 export type PaymentFrequency = (typeof frequencies)[number];
+export const premiumAmountPattern = /^[0-9]{1,10}(?:\.[0-9]{1,2})?$/;
 export const paymentLabels = { monthly: 'รายเดือน', quarterly: 'รายไตรมาส', yearly: 'รายปี' };
 export const insurance: Record<PolicyKind, [string, string]> = {
   life: ['ชีวิต', 'ทบทวนผู้รับประโยชน์ ผู้พึ่งพิง และภาระครอบครัวกับตัวแทน'],
@@ -67,6 +68,7 @@ export type CarePolicy = {
   reviewDate: string | null;
   birthday: string | null;
   frequency: PaymentFrequency | null;
+  premiumAmount: string | null;
   ends: string | null;
   closed: boolean;
   events: CareEvent[];

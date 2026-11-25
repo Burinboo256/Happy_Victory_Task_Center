@@ -44,6 +44,7 @@ test('care registration, history, handoff and repeat requests stay scoped to the
       code: 'CARE_CONFLICT',
     });
     const [policy] = (await careRoster(agent)).policies;
+    assert.equal(policy.premiumAmount, null);
     assert.equal(policy.events.length, 4);
     assert.equal((await careRoster(other)).policies.length, 0);
     assert.deepEqual(await careAlerts(other), { total: 0, late: 0 });
@@ -102,14 +103,19 @@ test('birthday, review and contractual instalments repeat after completion and p
     reviewDate: year + '-07-10',
     birthday: '02-29',
     frequency: 'quarterly',
+    premiumAmount: '12500.50',
     premium: year + '-01-31',
     ends: year + 1 + '-06-30',
   };
   try {
+    for (const premiumAmount of ['-1', '100.123', 'oops', '10000000000']) {
+      await assert.rejects(saveCare(c, { ...create, premiumAmount }), { name: 'ZodError' });
+    }
     await assert.rejects(saveCare(c, { ...create, birthday: '02-30' }));
     await assert.rejects(saveCare(c, { ...create, premium: undefined }), { code: 'CARE_DATE' });
     await saveCare(c, create);
     const policy = (await careRoster(c)).policies[0];
+    assert.equal(policy.premiumAmount, '12500.50');
     assert.deepEqual(
       [policy.birthday, policy.reviewDate, policy.frequency],
       ['02-29', create.reviewDate, 'quarterly'],

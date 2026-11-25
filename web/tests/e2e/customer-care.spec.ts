@@ -15,6 +15,7 @@ test('reminders group active appointments by type and recorded birth month', asy
     started: '2025-01-01',
     birthday: '10-31',
     reviewDate: null,
+    premiumAmount: null,
     frequency: null,
     closed: false,
     ends: null,
@@ -151,6 +152,7 @@ test('secretary opens care from Space, creates policy and hands next contact to 
         birthday: v.birthday,
         frequency: v.frequency,
         reviewDate: v.reviewDate,
+        premiumAmount: v.premiumAmount ?? null,
         closed: false,
         ends: null,
         events: [
@@ -189,10 +191,12 @@ test('secretary opens care from Space, creates policy and hands next contact to 
   await page.getByLabel('เดือนเกิด').selectOption('02');
   await page.getByLabel('วันที่เกิด').selectOption('29');
   await page.getByLabel('ประเภทการชำระเงิน').selectOption('quarterly');
+  await page.getByLabel('ยอดเบี้ยที่ต้องชำระต่อรอบ').fill('12500.50');
   await page.getByLabel('วันชำระเบี้ยครั้งถัดไป').fill('2026-12-31');
   await page.getByRole('button', { name: 'บันทึกและสร้างแผนติดตาม' }).click();
   await expect(page.getByRole('heading', { name: /ลูกค้าทดลอง A/ })).toBeVisible();
   await expect(page.getByText(/วันเกิด 29 กุมภาพันธ์.*รอบชำระเบี้ย รายไตรมาส/)).toBeVisible();
+  await expect(page.getByText(/ยอดเบี้ยต่อรอบ 12,500\.50 บาท/)).toBeVisible();
   await page.getByRole('button', { name: 'คิวแจ้งเตือน' }).click();
   await page.getByRole('button', { name: /ลูกค้าทดลอง A · ส่งมอบ/ }).click();
   await page.getByLabel('ผลการติดตาม').selectOption('handoff');

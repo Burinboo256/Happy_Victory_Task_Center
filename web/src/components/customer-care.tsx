@@ -8,6 +8,7 @@ import {
   outcomes,
   frequencies,
   paymentLabels,
+  premiumAmountPattern,
   policyKinds,
   type CareEvent,
   type CarePolicy,
@@ -115,6 +116,17 @@ function CareScheduleFields() {
           <label>
             <span>วันชำระเบี้ยครั้งถัดไปตามเอกสาร{frequency && requiredMark}</span>
             <input type="date" name="premium" required={!!frequency} />
+          </label>
+          <label>
+            ยอดเบี้ยที่ต้องชำระต่อรอบ (บาท)
+            <input
+              name="premiumAmount"
+              inputMode="decimal"
+              pattern={premiumAmountPattern.source}
+              maxLength={13}
+              placeholder="เช่น 12500.50"
+              title="กรอกตัวเลขโดยไม่ใส่จุลภาค และระบุสตางค์ได้ไม่เกิน 2 ตำแหน่ง"
+            />
           </label>
         </div>
       </fieldset>
@@ -410,6 +422,7 @@ export function CustomerCare({ data, request, submittingTask, onSubmitTask }: Pr
                 ...v,
                 action: 'create',
                 premium: v.premium || undefined,
+                premiumAmount: v.premiumAmount || undefined,
                 ends: v.ends || undefined,
                 reviewDate: v.reviewDate || undefined,
                 birthday: v.birthday || undefined,
@@ -520,6 +533,8 @@ export function CustomerCare({ data, request, submittingTask, onSubmitTask }: Pr
                 ' ' +
                 monthName(Number(policy.birthday.slice(0, 2)))}
             {' · รอบชำระเบี้ย ' + (policy.frequency ? paymentLabels[policy.frequency] : 'ยังไม่ระบุ')}
+            {policy.premiumAmount != null &&
+              ` · ยอดเบี้ยต่อรอบ ${Number(policy.premiumAmount).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท`}
           </p>
           {policy.closed ? (
             <p>สิ้นสุดการติดตามแล้ว</p>

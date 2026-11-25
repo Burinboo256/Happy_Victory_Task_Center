@@ -154,4 +154,11 @@ export const operationalMigrations = [
       'ALTER TABLE hvr_care_events ADD COLUMN cycle_due date',
     ],
   },
+  {
+    name: '019_care_premium_amount.sql',
+    checksum: '37ce1452b2137f46362f4b913de60d5663dc207cc880a5ccad65cd51ab8c746e',
+    statements: [
+      'ALTER TABLE hvr_care_policies\n  ADD COLUMN premium_amount numeric(12, 2) CHECK (premium_amount >= 0)',
+    ],
+  },
 ] as const;

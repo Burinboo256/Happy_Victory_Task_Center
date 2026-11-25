@@ -5,6 +5,7 @@ import {
   shiftDate,
   nextPremium,
   frequencies,
+  premiumAmountPattern,
   eventKinds,
   initialCare,
   leadDays,
@@ -35,6 +36,7 @@ const command = z.discriminatedUnion('action', [
       kind: z.enum(policyKinds),
       started: day,
       premium: day.optional(),
+      premiumAmount: z.string().regex(premiumAmountPattern).optional(),
       ends: day.optional(),
       reviewDate: day.optional(),
       birthday: z
@@ -84,7 +86,7 @@ export async function careAlerts(c: Context) {
 export async function careRoster(c: Context) {
   const result = await c.db.query<CarePolicy>(
     `SELECT p.id,p.customer,p.reference,p.agent_id AS "agentId",p.kind,p.started::text,p.ends::text,p.closed,
-      p.review_date::text AS "reviewDate",p.birthday_md AS birthday,p.payment_frequency AS frequency,
+      p.review_date::text AS "reviewDate",p.birthday_md AS birthday,p.payment_frequency AS frequency,p.premium_amount::text AS "premiumAmount",
       COALESCE(jsonb_agg(jsonb_build_object('id',e.id,'kind',e.kind,'due',e.due::text,'recipient',e.recipient,'note',e.note,'outcome',e.outcome,'resultNote',e.result_note,'completedAt',e.completed_at) ORDER BY e.due,e.id) FILTER (WHERE e.id IS NOT NULL),'[]') AS events
       FROM hvr_care_policies p LEFT JOIN hvr_care_events e ON e.policy_id=p.id
       WHERE p.environment=$1 AND ($2 OR p.agent_id=$3) GROUP BY p.id ORDER BY p.closed,p.customer,p.reference`,
@@ -146,8 +148,8 @@ export async function saveCare(c: Context, input: unknown) {
     }
     if (data.action === 'create') {
       const row = await db.query(
-        `INSERT INTO hvr_care_policies(id,environment,customer,reference,agent_id,kind,started,ends,review_date,birthday_md,payment_frequency,premium_anchor)
-        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) ON CONFLICT DO NOTHING RETURNING id`,
+        `INSERT INTO hvr_care_policies(id,environment,customer,reference,agent_id,kind,started,ends,review_date,birthday_md,payment_frequency,premium_anchor,premium_amount)
+        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) ON CONFLICT DO NOTHING RETURNING id`,
         [
           data.operation,
           c.config.APP_ENV,
@@ -161,6 +163,7 @@ export async function saveCare(c: Context, input: unknown) {
           data.birthday,
           data.frequency,
           data.premium,
+          data.premiumAmount,
         ],
       );
       if (!row.rows.length) throw new AppError(409, 'CARE_DUPLICATE', 'ตัวแทนมีกรมธรรม์อ้างอิงนี้อยู่แล้ว');
