@@ -21,6 +21,12 @@ const dateLabel = (value: string) =>
     new Date(value + 'T12:00:00+07:00'),
   );
 const endpoint = '/api/customer-care';
+const requiredMark = (
+  <span className="case-required-marker" aria-hidden="true">
+    {' '}
+    *
+  </span>
+);
 const monthName = (month: number) =>
   new Intl.DateTimeFormat('th-TH', { month: 'long', timeZone: 'UTC' }).format(
     new Date(Date.UTC(2000, month - 1, 1)),
@@ -32,70 +38,84 @@ function CareScheduleFields() {
   const days = month ? new Date(Date.UTC(2000, Number(month), 0)).getUTCDate() : 31;
   return (
     <>
-      <fieldset className={styles.grid}>
-        <legend>Coverage Review · ทบทวนความเพียงพอของความคุ้มครองทุกปี</legend>
+      <fieldset className={styles.group}>
+        <legend>
+          ทบทวนความคุ้มครองประจำปี <small lang="en">Coverage Review</small>
+        </legend>
         <label>
           วันทบทวนครั้งแรก
           <input type="date" name="reviewDate" />
           <small>เว้นว่างเพื่อใช้วันครบรอบกรมธรรม์</small>
         </label>
       </fieldset>
-      <fieldset className={styles.grid}>
-        <legend>Birthday · วันเกิดลูกค้าทุกปี</legend>
-        <label>
-          เดือนเกิด
-          <select
-            value={month}
-            onChange={(e) => {
-              const m = e.target.value;
-              setMonth(m);
-              if (!m || Number(day) > new Date(Date.UTC(2000, Number(m), 0)).getUTCDate())
-                setDay('');
-            }}
-          >
-            <option value="">ยังไม่ระบุ</option>
-            {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-              <option key={m} value={String(m).padStart(2, '0')}>
-                {monthName(m)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          วันที่เกิด
-          <select
-            disabled={!month}
-            required={!!month}
-            value={day}
-            onChange={(e) => setDay(e.target.value)}
-          >
-            <option value="">เลือกวัน</option>
-            {Array.from({ length: days }, (_, i) => i + 1).map((d) => (
-              <option key={d} value={String(d).padStart(2, '0')}>
-                {d}
-              </option>
-            ))}
-          </select>
-        </label>
+      <fieldset className={styles.group}>
+        <legend>
+          วันเกิดลูกค้า <small lang="en">Birthday</small>
+        </legend>
+        <div className={styles.birthdayPair}>
+          <label>
+            เดือนเกิด
+            <select
+              value={month}
+              onChange={(e) => {
+                const m = e.target.value;
+                setMonth(m);
+                if (!m || Number(day) > new Date(Date.UTC(2000, Number(m), 0)).getUTCDate())
+                  setDay('');
+              }}
+            >
+              <option value="">ยังไม่ระบุ</option>
+              {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                <option key={m} value={String(m).padStart(2, '0')}>
+                  {monthName(m)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span>วันที่เกิด{month && requiredMark}</span>
+            <select
+              disabled={!month}
+              required={!!month}
+              value={day}
+              onChange={(e) => setDay(e.target.value)}
+            >
+              <option value="">เลือกวัน</option>
+              {Array.from({ length: days }, (_, i) => i + 1).map((d) => (
+                <option key={d} value={String(d).padStart(2, '0')}>
+                  {d}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
         <input type="hidden" name="birthday" value={month && day ? month + '-' + day : ''} />
       </fieldset>
-      <fieldset className={styles.grid}>
-        <legend>Policy Status · รอบชำระเบี้ย</legend>
-        <label>
-          ประเภทการชำระเงิน
-          <select name="frequency" value={frequency} onChange={(e) => setFrequency(e.target.value)}>
-            <option value="">ยังไม่ระบุ</option>
-            {frequencies.map((f) => (
-              <option key={f} value={f}>
-                {paymentLabels[f]}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          วันชำระเบี้ยครั้งถัดไปตามเอกสาร{frequency ? ' *' : ''}
-          <input type="date" name="premium" required={!!frequency} />
-        </label>
+      <fieldset className={styles.group}>
+        <legend>
+          รอบชำระเบี้ย <small lang="en">Policy Status</small>
+        </legend>
+        <div className={styles.pair}>
+          <label>
+            ประเภทการชำระเงิน
+            <select
+              name="frequency"
+              value={frequency}
+              onChange={(e) => setFrequency(e.target.value)}
+            >
+              <option value="">ยังไม่ระบุ</option>
+              {frequencies.map((f) => (
+                <option key={f} value={f}>
+                  {paymentLabels[f]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span>วันชำระเบี้ยครั้งถัดไปตามเอกสาร{frequency && requiredMark}</span>
+            <input type="date" name="premium" required={!!frequency} />
+          </label>
+        </div>
       </fieldset>
     </>
   );
@@ -287,7 +307,7 @@ export function CustomerCare({ data, request }: Props) {
       )}
       {feed && tab === 'create' && (
         <form
-          className="panel"
+          className={styles.createForm}
           onSubmit={(e) => {
             const v = form(e);
             void save(
@@ -304,57 +324,79 @@ export function CustomerCare({ data, request }: Props) {
             );
           }}
         >
-          <h2>เพิ่มกรมธรรม์</h2>
-          <fieldset disabled={readonly} className={styles.grid}>
-            <label>
-              ชื่อลูกค้า *<input name="customer" required maxLength={100} />
-            </label>
-            <label>
-              รหัสอ้างอิงกรมธรรม์ *<input name="reference" required maxLength={64} />
-            </label>
-            <label>
-              ประเภทประกัน *
-              <select name="kind">
-                {policyKinds.map((k) => (
-                  <option key={k} value={k}>
-                    {insurance[k][0]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              ตัวแทนผู้ดูแล *
-              <select
-                required
-                name="agentId"
-                defaultValue={isManager(data.user) ? '' : data.user.id}
-              >
-                <option value="" disabled>
-                  เลือกตัวแทน
-                </option>
-                {data.users
-                  .filter((u) => u.active && u.role === 'Agent')
-                  .map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name}
+          <header className={styles.formHeading}>
+            <h2>เพิ่มกรมธรรม์</h2>
+            <small>{requiredMark} จำเป็นต้องกรอก</small>
+          </header>
+          <div className={styles.columns}>
+            <section className={styles.formCard} aria-labelledby="policy-details">
+              <h3 id="policy-details">ข้อมูลลูกค้าและกรมธรรม์</h3>
+              <fieldset disabled={readonly} className={styles.group}>
+                <legend>ลูกค้าและผู้ดูแล</legend>
+                <label>
+                  <span>ชื่อลูกค้า{requiredMark}</span>
+                  <input name="customer" required maxLength={100} />
+                </label>
+                <label>
+                  <span>ตัวแทนผู้ดูแล{requiredMark}</span>
+                  <select
+                    required
+                    name="agentId"
+                    defaultValue={isManager(data.user) ? '' : data.user.id}
+                  >
+                    <option value="" disabled>
+                      เลือกตัวแทน
                     </option>
-                  ))}
-              </select>
-            </label>
-            <label>
-              วันเริ่มกรมธรรม์ *<input type="date" required name="started" />
-            </label>
-            <label>
-              วันครบสัญญาตามเอกสาร
-              <input type="date" name="ends" />
-            </label>
-          </fieldset>
-          <fieldset disabled={readonly}>
-            <CareScheduleFields />
-          </fieldset>
-          <button type="submit" className="btn primary" disabled={readonly}>
-            บันทึกและสร้างแผนติดตาม
-          </button>
+                    {data.users
+                      .filter((u) => u.active && u.role === 'Agent')
+                      .map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.name}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+              </fieldset>
+              <fieldset disabled={readonly} className={styles.group}>
+                <legend>รายละเอียดกรมธรรม์</legend>
+                <div className={styles.pair}>
+                  <label>
+                    <span>รหัสอ้างอิงกรมธรรม์{requiredMark}</span>
+                    <input name="reference" required maxLength={64} />
+                  </label>
+                  <label>
+                    <span>ประเภทประกัน{requiredMark}</span>
+                    <select name="kind" required>
+                      {policyKinds.map((k) => (
+                        <option key={k} value={k}>
+                          {insurance[k][0]}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    <span>วันเริ่มกรมธรรม์{requiredMark}</span>
+                    <input type="date" required name="started" />
+                  </label>
+                  <label>
+                    วันครบสัญญาตามเอกสาร
+                    <input type="date" name="ends" />
+                  </label>
+                </div>
+              </fieldset>
+            </section>
+            <section className={styles.formCard} aria-labelledby="policy-care">
+              <h3 id="policy-care">แผนติดตามลูกค้า</h3>
+              <fieldset disabled={readonly} aria-labelledby="policy-care">
+                <CareScheduleFields />
+              </fieldset>
+            </section>
+          </div>
+          <div className={styles.formActions}>
+            <button type="submit" className="btn primary" disabled={readonly}>
+              บันทึกและสร้างแผนติดตาม
+            </button>
+          </div>
         </form>
       )}
       {tab === 'policies' && policy && (

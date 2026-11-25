@@ -7,8 +7,7 @@
   flex-wrap: wrap;
   gap: 8px;
 }
-.care article,
-.care form.panel {
+.care article {
   padding: clamp(14px, 3vw, 28px);
 }
 .care fieldset {
@@ -67,4 +66,110 @@
 .care summary {
   cursor: pointer;
   font-weight: 700;
+}
+.createForm {
+  container-type: inline-size;
+  min-width: 0;
+}
+.formHeading,
+.formActions {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.formHeading {
+  margin: 4px 0 14px;
+}
+.formHeading h2,
+.formCard h3 {
+  margin: 0;
+}
+.formHeading small,
+.group small {
+  color: var(--muted);
+}
+.columns {
+  display: grid;
+  gap: 16px;
+}
+.formCard {
+  min-width: 0;
+  padding: clamp(16px, 2.3vw, 26px);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: white;
+  container-type: inline-size;
+}
+.formCard h3 {
+  font-size: 1.12rem;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+.createForm fieldset {
+  margin: 0;
+}
+.createForm .group {
+  margin-top: 18px;
+}
+.group legend {
+  font-weight: 650;
+  color: #773d57;
+  padding: 0;
+  margin-bottom: 8px;
+}
+.group legend small {
+  font-size: 0.8rem;
+  font-weight: normal;
+  display: inline-block;
+  margin-inline-start: 4px;
+}
+.createForm label {
+  min-width: 0;
+  align-content: start;
+  margin: 0;
+  gap: 5px;
+}
+.group > label + label {
+  margin-top: 10px;
+}
+.group label small {
+  font-size: 0.85rem;
+}
+.pair,
+.birthdayPair {
+  display: grid;
+  gap: 12px;
+}
+.birthdayPair {
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+}
+.createForm input:not([type="hidden"]),
+.createForm select {
+  min-height: 44px;
+  background-color: white;
+  box-sizing: border-box;
+}
+.createForm :disabled {
+  color: var(--muted);
+}
+.formActions {
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+@container (min-width: 370px) {
+  .pair {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: end;
+  }
+}
+@container (min-width: 820px) {
+  .columns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@container (max-width: 480px) {
+  .formActions button {
+    width: 100%;
+  }
 }
