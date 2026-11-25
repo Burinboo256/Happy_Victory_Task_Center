@@ -29,6 +29,13 @@ test('agent sees the personal queue and registry without a team filter', async (
   const owner = page.getByRole('combobox', { name: 'ตัวแทนผู้ดูแล', exact: true });
   const groups = page.getByRole('list', { name: 'จำนวนแจ้งเตือนตามกลุ่ม' });
   await expect(groups.getByRole('link', { name: /0 นัด/ })).toHaveCount(9);
+  const guide = page.getByRole('list', { name: 'เงื่อนไขทั้ง 9 กลุ่ม' });
+  await expect(guide).toBeHidden();
+  await page.getByText('เงื่อนไขการแจ้งเตือนแต่ละกลุ่ม', { exact: true }).click();
+  await expect(guide.getByRole('listitem')).toHaveCount(9);
+  await expect(guide.getByRole('listitem').filter({ hasText: 'ติดตามครบสัญญา' })).toContainText(
+    'เตือนล่วงหน้า 60 วัน',
+  );
   await expect(owner).toHaveCount(0);
   await page.getByRole('link', { name: 'คิวแจ้งเตือน', exact: true }).click();
   await expect(page.getByText('ยังไม่มีนัดที่ถึงช่วงแจ้งเตือน')).toBeVisible();

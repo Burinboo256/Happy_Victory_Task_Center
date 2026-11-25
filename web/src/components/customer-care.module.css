@@ -117,6 +117,30 @@
 .care details {
   margin: 18px 0;
 }
+.alertGuide {
+  border-top: 1px solid var(--line);
+}
+.alertGuide summary {
+  padding-block: 12px;
+}
+.alertGuide ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 14px 22px;
+  padding: 0;
+  list-style: none;
+}
+.alertGuide li {
+  border-top: 1px solid var(--line);
+  padding-block: 10px;
+}
+.alertGuide li h3,
+.alertGuide li p {
+  margin: 4px 0;
+}
+.alertGuide li strong {
+  color: #773d57;
+}
 .care summary {
   cursor: pointer;
   font-weight: 700;

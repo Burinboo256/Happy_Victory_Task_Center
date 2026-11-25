@@ -20,6 +20,7 @@ import {
 } from '@/domain/customer-care';
 import { isManager, type Bootstrap } from '@/domain/model';
 import { TaskForm, type TaskDraft, type TaskFormProps } from './task-form';
+import { CustomerCareAlertGuide } from './customer-care-alert-guide';
 import styles from './customer-care.module.css';
 
 const dateLabel = (value: string) =>
@@ -421,6 +422,7 @@ export function CustomerCare({ data, request, submittingTask, onSubmitTask, spac
               </li>
             ))}
           </ul>
+          <CustomerCareAlertGuide />
         </article>
       )}
       {feed && tab === 'queue' && (
