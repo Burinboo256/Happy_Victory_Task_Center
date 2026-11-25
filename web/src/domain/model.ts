@@ -104,6 +104,7 @@ export interface Bootstrap {
   csrfToken: string;
   writesEnabled: boolean;
   formsEnabled?: boolean;
+  customerCareEnabled?: boolean;
 }
 export interface Detail {
   caseWorkflow?: import('./case-workflow').CaseView;

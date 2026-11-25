@@ -34,7 +34,14 @@ export const spaceViews = [
   'history',
   'notifications',
 ] as const;
-const pages = new Set(['/', '/tasks', '/tasks/new', '/forms', ...spaceViews.map((v) => '/' + v)]);
+const pages = new Set([
+  '/',
+  '/tasks',
+  '/tasks/new',
+  '/forms',
+  '/customer-care',
+  ...spaceViews.map((v) => '/' + v),
+]);
 export function isWorkspacePath(value: string) {
   if (
     pages.has(value) ||

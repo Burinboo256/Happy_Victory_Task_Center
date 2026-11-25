@@ -1,0 +1,70 @@
+.care {
+  display: grid;
+  gap: 16px;
+}
+.care nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.care article,
+.care form.panel {
+  padding: clamp(14px, 3vw, 28px);
+}
+.care fieldset {
+  padding: 0;
+  border: 0;
+  margin: 12px 0;
+  min-width: 0;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  align-items: end;
+  gap: 12px;
+}
+.care label {
+  display: grid;
+  gap: 4px;
+  margin: 8px 0;
+}
+.care input,
+.care select {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  padding: 9px;
+  border: 1px solid #cbbec5;
+  border-radius: 7px;
+  font: inherit;
+}
+.row {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  width: 100%;
+  text-align: left;
+  padding: 12px 0;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid #e8dce1;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.row small {
+  flex-basis: 100%;
+}
+.late {
+  color: #a12828;
+  font-weight: 700;
+}
+.care details {
+  margin: 18px 0;
+}
+.care summary {
+  cursor: pointer;
+  font-weight: 700;
+}

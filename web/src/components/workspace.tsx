@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { Brand } from './brand';
+import { CareAlerts } from './care-alerts';
 import { CategoryBadge, PriorityBadge, categoryClass } from './task-appearance';
 import { spacePath } from '@/domain/space-link';
 import {
@@ -22,6 +23,9 @@ import {
 } from '@/domain/model';
 
 const loadingPanel = () => <p role="status">กำลังโหลดส่วนนี้…</p>;
+const CustomerCare = dynamic(() => import('./customer-care').then((m) => m.CustomerCare), {
+  loading: loadingPanel,
+});
 const OnboardingPanel = dynamic(() => import('./onboarding').then((m) => m.OnboardingPanel), {
   loading: loadingPanel,
 });
@@ -45,6 +49,7 @@ const FormsLibrary = dynamic(() => import('./forms').then((m) => m.FormsLibrary)
 });
 
 export type Page =
+  | 'customer-care'
   | 'dashboard'
   | 'tasks'
   | 'inbox'
@@ -58,6 +63,7 @@ export type Page =
   | 'new'
   | 'detail';
 const names: Record<Page, string> = {
+  'customer-care': 'ดูแลลูกค้าและกรมธรรม์',
   dashboard: 'ภาพรวมงาน',
   tasks: 'รายการงาน',
   inbox: 'งานเข้าใหม่',
@@ -76,6 +82,7 @@ const nav: { page: Page; href: string; symbol: string; manager?: boolean; agent?
   { page: 'tasks', href: '/tasks', symbol: '▤' },
   { page: 'inbox', href: '/inbox', symbol: '↙', manager: true },
   { page: 'followups', href: '/followups', symbol: '◷' },
+  { page: 'customer-care', href: '/customer-care', symbol: '♡' },
   { page: 'calendar', href: '/calendar', symbol: '▦' },
   { page: 'reports', href: '/reports', symbol: '▥', manager: true },
   { page: 'team', href: '/team', symbol: '♧', manager: true },
@@ -296,7 +303,7 @@ export function Workspace({
         const value: Bootstrap & { detail?: Detail } = await request(
           taskId
             ? '/api/bootstrap?scope=context&taskId=' + encodeURIComponent(taskId)
-            : ['new', 'detail', 'notifications', 'forms'].includes(page)
+            : ['new', 'detail', 'notifications', 'forms', 'customer-care'].includes(page)
               ? '/api/bootstrap?scope=context'
               : '/api/bootstrap',
           { signal },
@@ -734,6 +741,12 @@ export function Workspace({
     </div>
   );
   const content = () => {
+    if (page === 'customer-care')
+      return data.customerCareEnabled ? (
+        <CustomerCare data={data} request={request} />
+      ) : (
+        <p>ยังไม่เปิดบริการใน Space นี้</p>
+      );
     if (page === 'forms')
       return (
         <FormsLibrary
@@ -1426,6 +1439,7 @@ export function Workspace({
               (n) =>
                 (!n.manager || manager) &&
                 (!n.agent || !manager) &&
+                (n.page !== 'customer-care' || (data.customerCareEnabled && !!spaceSlug)) &&
                 (n.page !== 'forms' || data.formsEnabled),
             )
             .map((n) => (
@@ -1531,7 +1545,7 @@ export function Workspace({
                     : 'ทุกความคืบหน้า อยู่ในพื้นที่เดียวกัน'}
               </p>
             </div>
-            {page !== 'new' && page !== 'forms' && (
+            {page !== 'new' && page !== 'forms' && page !== 'customer-care' && (
               <Link className="btn primary" href={href('/tasks/new')}>
                 + ส่งงานใหม่
               </Link>
@@ -1553,6 +1567,9 @@ export function Workspace({
             </div>
           )}
           {content()}
+          {page === 'dashboard' && data.customerCareEnabled && spaceSlug && (
+            <CareAlerts href={href('/customer-care')} request={request} />
+          )}
           <footer className="footer">
             <span>
               <strong>Happy Victory</strong> RINLYN Secretary

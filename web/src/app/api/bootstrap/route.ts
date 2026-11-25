@@ -34,6 +34,7 @@ export function GET(request: Request) {
       csrfToken: c.csrfToken,
       writesEnabled: state.writes,
       formsEnabled: c.config.FORMS_ENABLED,
+      customerCareEnabled: c.config.APP_ENV !== 'production' && !!c.config.workspace,
       workspace: c.config.workspace,
       ...(c.repo instanceof NeonTaskRepository
         ? {

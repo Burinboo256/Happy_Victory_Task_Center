@@ -135,4 +135,15 @@ export const operationalMigrations = [
       "CREATE TABLE hvr_task_sync_reviews (\n  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,\n  environment text NOT NULL,\n  kind text NOT NULL,\n  record_id text NOT NULL,\n  version bigint NOT NULL,\n  evidence text NOT NULL,\n  resolution text NOT NULL CHECK(resolution IN ('confirmed','retry')),\n  created_at timestamptz NOT NULL DEFAULT clock_timestamp()\n)",
     ],
   },
+  {
+    name: '017_customer_care.sql',
+    checksum: '50e235836d4408c6681674a7459a5e16e5a4e7549c714680aa6b12901ab89f0e',
+    statements: [
+      'CREATE TABLE hvr_care_policies (\n  id uuid PRIMARY KEY,\n  environment text NOT NULL,\n  customer text NOT NULL,\n  reference text NOT NULL,\n  agent_id text NOT NULL,\n  kind text NOT NULL,\n  started date NOT NULL,\n  ends date,\n  closed boolean NOT NULL DEFAULT false,\n  UNIQUE (environment, agent_id, reference),\n  CHECK (ends IS NULL OR ends >= started)\n)',
+      'CREATE INDEX hvr_care_owner ON hvr_care_policies(environment, agent_id)',
+      "CREATE TABLE hvr_care_events (\n  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),\n  policy_id uuid NOT NULL REFERENCES hvr_care_policies(id),\n  kind text NOT NULL,\n  due date NOT NULL,\n  recipient text NOT NULL CHECK (recipient IN ('team','agent')),\n  note text NOT NULL DEFAULT '',\n  outcome text,\n  result_note text,\n  completed_at timestamptz,\n  completed_by text\n)",
+      'CREATE INDEX hvr_care_queue ON hvr_care_events(policy_id, due)',
+      'CREATE TABLE hvr_care_operations (\n  environment text NOT NULL,\n  actor text NOT NULL,\n  id uuid NOT NULL,\n  payload_hash text NOT NULL,\n  PRIMARY KEY(environment, actor, id)\n)',
+    ],
+  },
 ] as const;
